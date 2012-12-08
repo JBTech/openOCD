@@ -24,6 +24,9 @@
 
 #include <helper/types.h>
 
+#define NBR_DEFINED_REGISTERS	((int)(sizeof(or1k_core_reg_list_arch_info) \
+				/ sizeof(struct or1k_core_reg)))
+
 #define GROUP0		(0  << 11)
 #define GROUP1		(1  << 11)
 #define GROUP2		(2  << 11)

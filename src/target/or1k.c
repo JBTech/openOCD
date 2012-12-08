@@ -180,18 +180,28 @@ int or1k_restore_context(struct target *target)
 static int or1k_read_core_reg(struct target *target, int num)
 {
 	uint32_t reg_value;
+	int retval;
 
 	/* get pointers to arch-specific information */
 	struct or1k_common *or1k = target_to_or1k(target);
 
-	if ((num < 0) || (num >= OR1KNUMCOREREGS))
+	if ((num < 0) || (num >= NBR_DEFINED_REGISTERS))
 		return ERROR_COMMAND_SYNTAX_ERROR;
 
-	reg_value = or1k->core_regs[num];
-	buf_set_u32(or1k->core_cache->reg_list[num].value, 0, 32, reg_value);
-	LOG_DEBUG("read core reg %i value 0x%" PRIx32 "", num , reg_value);
-	or1k->core_cache->reg_list[num].valid = 1;
-	or1k->core_cache->reg_list[num].dirty = 0;
+	if ((num >= 0) && (num < OR1KNUMCOREREGS)) {
+		reg_value = or1k->core_regs[num];
+		buf_set_u32(or1k->core_cache->reg_list[num].value, 0, 32, reg_value);
+		LOG_DEBUG("read core reg %i value 0x%" PRIx32 "", num , reg_value);
+		or1k->core_cache->reg_list[num].valid = 1;
+		or1k->core_cache->reg_list[num].dirty = 0;
+	} else {
+		/* This is an spr, always read value from HW */
+		retval = or1k_jtag_read_cpu(&or1k->jtag, or1k_core_reg_list_arch_info[num].spr_num, 1, &reg_value);
+		if (retval != ERROR_OK)
+			return retval;
+		buf_set_u32(or1k->core_cache->reg_list[num].value, 0, 32, reg_value);
+		LOG_DEBUG("read spr reg %i value 0x%" PRIx32 "", num , reg_value);
+	}
 
 	return ERROR_OK;
 }
@@ -235,16 +245,25 @@ static int or1k_set_core_reg(struct reg *reg, uint8_t *buf)
 {
 	struct or1k_core_reg *or1k_reg = reg->arch_info;
 	struct target *target = or1k_reg->target;
+	struct or1k_common *or1k = target_to_or1k(target);
 	uint32_t value = buf_get_u32(buf, 0, 32);
+	int retval;
 
 	if (target->state != TARGET_HALTED)
 	{
 		return ERROR_TARGET_NOT_HALTED;
 	}
 
-	buf_set_u32(reg->value, 0, 32, value);
-	reg->dirty = 1;
-	reg->valid = 1;
+	if (or1k_reg->list_num < OR1KNUMCOREREGS) {
+		buf_set_u32(reg->value, 0, 32, value);
+		reg->dirty = 1;
+		reg->valid = 1;
+	} else {
+		/* This is an spr, write it to the HW */
+		retval = or1k_jtag_write_cpu(&or1k->jtag, or1k_reg->spr_num, 1, &value);
+		if (retval != ERROR_OK)
+			return retval;
+	}
 
 	return ERROR_OK;
 }
@@ -260,9 +279,9 @@ static struct reg_cache *or1k_build_reg_cache(struct target *target)
 	struct or1k_common *or1k = target_to_or1k(target);
 	struct reg_cache **cache_p = register_get_last_cache_p(&target->reg_cache);
 	struct reg_cache *cache = malloc(sizeof(struct reg_cache));
-	struct reg *reg_list = malloc(sizeof(struct reg) * num_regs);
+	struct reg *reg_list = malloc(sizeof(struct reg) * (NBR_DEFINED_REGISTERS));
 	struct or1k_core_reg *arch_info = 
-		malloc(sizeof(struct or1k_core_reg) * num_regs);
+		malloc(sizeof(struct or1k_core_reg) * NBR_DEFINED_REGISTERS);
 	int i;
 
 	/* Build the process context cache */
@@ -273,7 +292,7 @@ static struct reg_cache *or1k_build_reg_cache(struct target *target)
 	(*cache_p) = cache;
 	or1k->core_cache = cache;
 
-	for (i = 0; i < num_regs; i++)
+	for (i = 0; i < NBR_DEFINED_REGISTERS; i++)
 	{
 		arch_info[i] = or1k_core_reg_list_arch_info[i];
 		arch_info[i].target = target;
@@ -934,15 +953,23 @@ int or1k_get_gdb_reg_list(struct target *target, struct reg **reg_list[],
 
 	LOG_DEBUG(" - ");
 
-	/* We will have this called whenever GDB connects. */
-	or1k_save_context(target);
-	
-	*reg_list_size = OR1KNUMCOREREGS;
-	/* this is free()'d back in gdb_server.c's gdb_get_register_packet() */
-	*reg_list = malloc(sizeof(struct reg*) * (*reg_list_size));
+	if (*reg_list_size == COMES_FROM_G_PACKET || *reg_list_size == COMES_FROM_g_PACKET) {
+		/* We will have this called whenever GDB connects. */
+		or1k_save_context(target);
 
-	for (i = 0; i < OR1KNUMCOREREGS; i++)
-		(*reg_list)[i] = &or1k->core_cache->reg_list[i];
+		*reg_list_size = OR1KNUMCOREREGS;
+		/* this is free()'d back in gdb_server.c's gdb_get_register_packet() */
+		*reg_list = malloc(sizeof(struct reg*) * (*reg_list_size));
+
+		for (i = 0; i < OR1KNUMCOREREGS; i++)
+			(*reg_list)[i] = &or1k->core_cache->reg_list[i];
+	} else {
+		*reg_list_size = NBR_DEFINED_REGISTERS;
+		*reg_list = malloc(sizeof(struct reg*) * (*reg_list_size));
+
+		for (i = 0; i < NBR_DEFINED_REGISTERS; i++)
+			(*reg_list)[i] = &or1k->core_cache->reg_list[i];
+	}
 
 	return ERROR_OK;
 
