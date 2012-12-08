@@ -1829,7 +1829,6 @@ static int gdb_query_packet(struct connection *connection,
 		filename = malloc(1024);
 		memset(filename, 0, 1024);
 		strncpy(filename, gdb_tdesc_path, 1023);
-		strncat(filename, annex, 1023-strlen(filename));
 
 		retval = fileio_open(&fileio, filename, FILEIO_READ, FILEIO_BINARY);
 
