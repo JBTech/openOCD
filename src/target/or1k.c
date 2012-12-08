@@ -34,53 +34,51 @@
 #include "server/server.h"
 #include "server/gdb_server.h"
 
-static char* or1k_core_reg_list[] =
+struct or1k_core_reg or1k_core_reg_list_arch_info[] =
 {
-	"r0", "r1", "r2", "r3", "r4", "r5", "r6", "r7", "r8", 
-	"r9", "r10", "r11", "r12", "r13", "r14", "r15", "r16",
-	"r17", "r18", "r19", "r20", "r21", "r22", "r23", "r24",
-	"r25", "r26", "r27", "r28", "r29", "r30", "r31",
-	"ppc", "npc", "sr"
+	{"r0"      , 0,  GROUP0 + 1024, NULL, NULL},
+	{"r1"      , 1,  GROUP0 + 1025, NULL, NULL},
+	{"r2"      , 2,  GROUP0 + 1026, NULL, NULL},
+	{"r3"      , 3,  GROUP0 + 1027, NULL, NULL},
+	{"r4"      , 4,  GROUP0 + 1028, NULL, NULL},
+	{"r5"      , 5,  GROUP0 + 1029, NULL, NULL},
+	{"r6"      , 6,  GROUP0 + 1030, NULL, NULL},
+	{"r7"      , 7,  GROUP0 + 1031, NULL, NULL},
+	{"r8"      , 8,  GROUP0 + 1032, NULL, NULL},
+	{"r9"      , 9,  GROUP0 + 1033, NULL, NULL},
+	{"r10"     , 10, GROUP0 + 1034, NULL, NULL},
+	{"r11"     , 11, GROUP0 + 1035, NULL, NULL},
+	{"r12"     , 12, GROUP0 + 1036, NULL, NULL},
+	{"r13"     , 13, GROUP0 + 1037, NULL, NULL},
+	{"r14"     , 14, GROUP0 + 1038, NULL, NULL},
+	{"r15"     , 15, GROUP0 + 1039, NULL, NULL},
+	{"r16"     , 16, GROUP0 + 1040, NULL, NULL},
+	{"r17"     , 17, GROUP0 + 1041, NULL, NULL},
+	{"r18"     , 18, GROUP0 + 1042, NULL, NULL},
+	{"r19"     , 19, GROUP0 + 1043, NULL, NULL},
+	{"r20"     , 20, GROUP0 + 1044, NULL, NULL},
+	{"r21"     , 21, GROUP0 + 1045, NULL, NULL},
+	{"r22"     , 22, GROUP0 + 1046, NULL, NULL},
+	{"r23"     , 23, GROUP0 + 1047, NULL, NULL},
+	{"r24"     , 24, GROUP0 + 1048, NULL, NULL},
+	{"r25"     , 25, GROUP0 + 1049, NULL, NULL},
+	{"r26"     , 26, GROUP0 + 1050, NULL, NULL},
+	{"r27"     , 27, GROUP0 + 1051, NULL, NULL},
+	{"r28"     , 28, GROUP0 + 1052, NULL, NULL},
+	{"r29"     , 29, GROUP0 + 1053, NULL, NULL},
+	{"r30"     , 30, GROUP0 + 1054, NULL, NULL},
+	{"r31"     , 31, GROUP0 + 1055, NULL, NULL},
+
+	{"ppc"     , 32, GROUP0 + 18, NULL, NULL},
+	{"npc"     , 33, GROUP0 + 16, NULL, NULL},
+	{"sr"      , 34, GROUP0 + 17, NULL, NULL},
+
+	{"cpucfgr" , 35, GROUP0 + 2, NULL, NULL},
+
+	{"ttmr"    , 36, GROUP10 + 0, NULL, NULL},
+	{"ttcr"    , 37, GROUP10 + 1, NULL, NULL},
 };
 
-struct or1k_core_reg or1k_core_reg_list_arch_info[OR1KNUMCOREREGS] =
-{
-	{0, 1024, NULL, NULL,},
-	{1, 1025, NULL, NULL},
-	{2, 1026, NULL, NULL},
-	{3, 1027, NULL, NULL},
-	{4, 1028, NULL, NULL},
-	{5, 1029, NULL, NULL},
-	{6, 1030, NULL, NULL},
-	{7, 1031, NULL, NULL},
-	{8, 1032, NULL, NULL},
-	{9, 1033, NULL, NULL},
-	{10, 1034, NULL, NULL},
-	{11, 1035, NULL, NULL},
-	{12, 1036, NULL, NULL},
-	{13, 1037, NULL, NULL},
-	{14, 1038, NULL, NULL},
-	{15, 1039, NULL, NULL},
-	{16, 1040, NULL, NULL},
-	{17, 1041, NULL, NULL},
-	{18, 1042, NULL, NULL},
-	{19, 1043, NULL, NULL},
-	{20, 1044, NULL, NULL},
-	{21, 1045, NULL, NULL},
-	{22, 1046, NULL, NULL},
-	{23, 1047, NULL, NULL},
-	{24, 1048, NULL, NULL},
-	{25, 1049, NULL, NULL},
-	{26, 1050, NULL, NULL},
-	{27, 1051, NULL, NULL},
-	{28, 1052, NULL, NULL},
-	{29, 1053, NULL, NULL},
-	{30, 1054, NULL, NULL},
-	{31, 1055, NULL, NULL},
-	{32, 18, NULL, NULL},
-	{33, 16, NULL, NULL},
-	{34, 17, NULL, NULL},
-};
 
 static int or1k_read_core_reg(struct target *target, int num);
 static int or1k_write_core_reg(struct target *target, int num);
@@ -280,7 +278,7 @@ static struct reg_cache *or1k_build_reg_cache(struct target *target)
 		arch_info[i] = or1k_core_reg_list_arch_info[i];
 		arch_info[i].target = target;
 		arch_info[i].or1k_common = or1k;
-		reg_list[i].name = or1k_core_reg_list[i];
+		reg_list[i].name = or1k_core_reg_list_arch_info[i].name;
 		reg_list[i].size = 32;
 		reg_list[i].value = calloc(1, 4);
 		reg_list[i].dirty = 0;

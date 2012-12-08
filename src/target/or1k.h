@@ -24,6 +24,18 @@
 
 #include <helper/types.h>
 
+#define GROUP0		(0  << 11)
+#define GROUP1		(1  << 11)
+#define GROUP2		(2  << 11)
+#define GROUP3		(3  << 11)
+#define GROUP4		(4  << 11)
+#define GROUP5		(5  << 11)
+#define GROUP6		(6  << 11)
+#define GROUP7		(7  << 11)
+#define GROUP8		(8  << 11)
+#define GROUP9		(9  << 11)
+#define GROUP10		(10 << 11)
+
 struct target;
 
 /* OR1K registers */
@@ -82,6 +94,7 @@ target_to_or1k(struct target *target)
 
 struct or1k_core_reg
 {
+	const char *name;
 	uint32_t list_num; /* Index in register cache */
 	uint32_t spr_num; /* Number in architecture's SPR space */
 	struct target *target;
@@ -90,7 +103,7 @@ struct or1k_core_reg
 };
 
 /* Make this available to or1k_jtag.h */
-extern struct or1k_core_reg or1k_core_reg_list_arch_info[OR1KNUMCOREREGS];
+extern struct or1k_core_reg or1k_core_reg_list_arch_info[];
 
 /*! ORBIS32 Trap instruction */
 #define OR1K_TRAP_INSTR  0x21000001
