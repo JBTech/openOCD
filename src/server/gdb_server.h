@@ -36,6 +36,11 @@ struct reg;
 
 #define GDB_BUFFER_SIZE 16384
 
+#define COMES_FROM_g_PACKET	0
+#define COMES_FROM_G_PACKET	1
+#define COMES_FROM_p_PACKET	2
+#define COMES_FROM_P_PACKET	3
+
 int gdb_target_add_all(struct target *target);
 int gdb_register_commands(struct command_context *command_context);
 

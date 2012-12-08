@@ -977,7 +977,7 @@ static int gdb_get_registers_packet(struct connection *connection,
 {
 	struct target *target = get_target_from_connection(connection);
 	struct reg **reg_list;
-	int reg_list_size;
+	int reg_list_size = COMES_FROM_g_PACKET;
 	int retval;
 	int reg_packet_size = 0;
 	char *reg_packet;
@@ -1033,7 +1033,7 @@ static int gdb_set_registers_packet(struct connection *connection,
 	struct target *target = get_target_from_connection(connection);
 	int i;
 	struct reg **reg_list;
-	int reg_list_size;
+	int reg_list_size = COMES_FROM_G_PACKET;
 	int retval;
 	char *packet_p;
 
@@ -1088,7 +1088,7 @@ static int gdb_get_register_packet(struct connection *connection,
 	char *reg_packet;
 	int reg_num = strtoul(packet + 1, NULL, 16);
 	struct reg **reg_list;
-	int reg_list_size;
+	int reg_list_size = COMES_FROM_p_PACKET;
 	int retval;
 
 #ifdef _DEBUG_GDB_IO_
@@ -1127,7 +1127,7 @@ static int gdb_set_register_packet(struct connection *connection,
 	uint8_t *bin_buf;
 	int reg_num = strtoul(packet + 1, &separator, 16);
 	struct reg **reg_list;
-	int reg_list_size;
+	int reg_list_size = COMES_FROM_P_PACKET;
 	int retval;
 
 	LOG_DEBUG("-");
