@@ -36,6 +36,8 @@ struct reg;
 
 #define GDB_BUFFER_SIZE 16384
 
+#define QXFER_CHUNK_SIZE	(4096 - 2)
+
 #define COMES_FROM_g_PACKET	0
 #define COMES_FROM_G_PACKET	1
 #define COMES_FROM_p_PACKET	2
