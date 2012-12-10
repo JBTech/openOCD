@@ -36,47 +36,204 @@
 
 struct or1k_core_reg or1k_core_reg_list_arch_info[] =
 {
-	{"r0"      , 0,  GROUP0 + 1024, NULL, NULL},
-	{"r1"      , 1,  GROUP0 + 1025, NULL, NULL},
-	{"r2"      , 2,  GROUP0 + 1026, NULL, NULL},
-	{"r3"      , 3,  GROUP0 + 1027, NULL, NULL},
-	{"r4"      , 4,  GROUP0 + 1028, NULL, NULL},
-	{"r5"      , 5,  GROUP0 + 1029, NULL, NULL},
-	{"r6"      , 6,  GROUP0 + 1030, NULL, NULL},
-	{"r7"      , 7,  GROUP0 + 1031, NULL, NULL},
-	{"r8"      , 8,  GROUP0 + 1032, NULL, NULL},
-	{"r9"      , 9,  GROUP0 + 1033, NULL, NULL},
-	{"r10"     , 10, GROUP0 + 1034, NULL, NULL},
-	{"r11"     , 11, GROUP0 + 1035, NULL, NULL},
-	{"r12"     , 12, GROUP0 + 1036, NULL, NULL},
-	{"r13"     , 13, GROUP0 + 1037, NULL, NULL},
-	{"r14"     , 14, GROUP0 + 1038, NULL, NULL},
-	{"r15"     , 15, GROUP0 + 1039, NULL, NULL},
-	{"r16"     , 16, GROUP0 + 1040, NULL, NULL},
-	{"r17"     , 17, GROUP0 + 1041, NULL, NULL},
-	{"r18"     , 18, GROUP0 + 1042, NULL, NULL},
-	{"r19"     , 19, GROUP0 + 1043, NULL, NULL},
-	{"r20"     , 20, GROUP0 + 1044, NULL, NULL},
-	{"r21"     , 21, GROUP0 + 1045, NULL, NULL},
-	{"r22"     , 22, GROUP0 + 1046, NULL, NULL},
-	{"r23"     , 23, GROUP0 + 1047, NULL, NULL},
-	{"r24"     , 24, GROUP0 + 1048, NULL, NULL},
-	{"r25"     , 25, GROUP0 + 1049, NULL, NULL},
-	{"r26"     , 26, GROUP0 + 1050, NULL, NULL},
-	{"r27"     , 27, GROUP0 + 1051, NULL, NULL},
-	{"r28"     , 28, GROUP0 + 1052, NULL, NULL},
-	{"r29"     , 29, GROUP0 + 1053, NULL, NULL},
-	{"r30"     , 30, GROUP0 + 1054, NULL, NULL},
-	{"r31"     , 31, GROUP0 + 1055, NULL, NULL},
+	[0]   = {"r0"       , 0,  GROUP0 + 1024, NULL, NULL},
+	[1]   = {"r1"       , 1,  GROUP0 + 1025, NULL, NULL},
+	[2]   = {"r2"       , 2,  GROUP0 + 1026, NULL, NULL},
+	[3]   = {"r3"       , 3,  GROUP0 + 1027, NULL, NULL},
+	[4]   = {"r4"       , 4,  GROUP0 + 1028, NULL, NULL},
+	[5]   = {"r5"       , 5,  GROUP0 + 1029, NULL, NULL},
+	[6]   = {"r6"       , 6,  GROUP0 + 1030, NULL, NULL},
+	[7]   = {"r7"       , 7,  GROUP0 + 1031, NULL, NULL},
+	[8]   = {"r8"       , 8,  GROUP0 + 1032, NULL, NULL},
+	[9]   = {"r9"       , 9,  GROUP0 + 1033, NULL, NULL},
+	[10]  = {"r10"      , 10, GROUP0 + 1034, NULL, NULL},
+	[11]  = {"r11"      , 11, GROUP0 + 1035, NULL, NULL},
+	[12]  = {"r12"      , 12, GROUP0 + 1036, NULL, NULL},
+	[13]  = {"r13"      , 13, GROUP0 + 1037, NULL, NULL},
+	[14]  = {"r14"      , 14, GROUP0 + 1038, NULL, NULL},
+	[15]  = {"r15"      , 15, GROUP0 + 1039, NULL, NULL},
+	[16]  = {"r16"      , 16, GROUP0 + 1040, NULL, NULL},
+	[17]  = {"r17"      , 17, GROUP0 + 1041, NULL, NULL},
+	[18]  = {"r18"      , 18, GROUP0 + 1042, NULL, NULL},
+	[19]  = {"r19"      , 19, GROUP0 + 1043, NULL, NULL},
+	[20]  = {"r20"      , 20, GROUP0 + 1044, NULL, NULL},
+	[21]  = {"r21"      , 21, GROUP0 + 1045, NULL, NULL},
+	[22]  = {"r22"      , 22, GROUP0 + 1046, NULL, NULL},
+	[23]  = {"r23"      , 23, GROUP0 + 1047, NULL, NULL},
+	[24]  = {"r24"      , 24, GROUP0 + 1048, NULL, NULL},
+	[25]  = {"r25"      , 25, GROUP0 + 1049, NULL, NULL},
+	[26]  = {"r26"      , 26, GROUP0 + 1050, NULL, NULL},
+	[27]  = {"r27"      , 27, GROUP0 + 1051, NULL, NULL},
+	[28]  = {"r28"      , 28, GROUP0 + 1052, NULL, NULL},
+	[29]  = {"r29"      , 29, GROUP0 + 1053, NULL, NULL},
+	[30]  = {"r30"      , 30, GROUP0 + 1054, NULL, NULL},
+	[31]  = {"r31"      , 31, GROUP0 + 1055, NULL, NULL},
+	[32]  = {"ppc"      , 32, GROUP0 + 18,   NULL, NULL},
+	[33]  = {"npc"      , 33, GROUP0 + 16,   NULL, NULL},
+	[34]  = {"sr"       , 34, GROUP0 + 17,   NULL, NULL},
+	[35]  = {"vr"       , 35, GROUP0 + 0,    NULL, NULL},
+	[36]  = {"upr"      , 36, GROUP0 + 1,    NULL, NULL},
+	[37]  = {"cpucfgr"  , 37, GROUP0 + 2,    NULL, NULL},
+	[38]  = {"dmmucfgr" , 38, GROUP0 + 3,    NULL, NULL},
+	[39]  = {"immucfgr" , 39, GROUP0 + 4,    NULL, NULL},
+	[40]  = {"dccfgr"   , 40, GROUP0 + 5,    NULL, NULL},
+	[41]  = {"iccfgr"   , 41, GROUP0 + 6,    NULL, NULL},
+	[42]  = {"dcfgr"    , 42, GROUP0 + 7,    NULL, NULL},
+	[43]  = {"pccfgr"   , 43, GROUP0 + 8,    NULL, NULL},
+	[44]  = {"fpcsr"    , 44, GROUP0 + 20,   NULL, NULL},
+	[45]  = {"epcr0"    , 45, GROUP0 + 32,   NULL, NULL},
+	[46]  = {"epcr1"    , 46, GROUP0 + 33,   NULL, NULL},
+	[47]  = {"epcr2"    , 47, GROUP0 + 34,   NULL, NULL},
+	[48]  = {"epcr3"    , 48, GROUP0 + 35,   NULL, NULL},
+	[49]  = {"epcr4"    , 49, GROUP0 + 36,   NULL, NULL},
+	[50]  = {"epcr5"    , 50, GROUP0 + 37,   NULL, NULL},
+	[51]  = {"epcr6"    , 51, GROUP0 + 38,   NULL, NULL},
+	[52]  = {"epcr7"    , 52, GROUP0 + 39,   NULL, NULL},
+	[53]  = {"epcr8"    , 53, GROUP0 + 40,   NULL, NULL},
+	[54]  = {"epcr9"    , 54, GROUP0 + 41,   NULL, NULL},
+	[55]  = {"epcr10"   , 55, GROUP0 + 42,   NULL, NULL},
+	[56]  = {"epcr11"   , 56, GROUP0 + 43,   NULL, NULL},
+	[57]  = {"epcr12"   , 57, GROUP0 + 44,   NULL, NULL},
+	[58]  = {"epcr13"   , 58, GROUP0 + 45,   NULL, NULL},
+	[59]  = {"epcr14"   , 59, GROUP0 + 46,   NULL, NULL},
+	[60]  = {"epcr15"   , 60, GROUP0 + 47,   NULL, NULL},
+	[61]  = {"eear0"    , 61, GROUP0 + 48,   NULL, NULL},
+	[62]  = {"eear1"    , 62, GROUP0 + 49,   NULL, NULL},
+	[63]  = {"eear2"    , 63, GROUP0 + 50,   NULL, NULL},
+	[64]  = {"eear3"    , 64, GROUP0 + 51,   NULL, NULL},
+	[65]  = {"eear4"    , 65, GROUP0 + 52,   NULL, NULL},
+	[66]  = {"eear5"    , 66, GROUP0 + 53,   NULL, NULL},
+	[67]  = {"eear6"    , 67, GROUP0 + 54,   NULL, NULL},
+	[68]  = {"eear7"    , 68, GROUP0 + 55,   NULL, NULL},
+	[69]  = {"eear8"    , 69, GROUP0 + 56,   NULL, NULL},
+	[70]  = {"eear9"    , 70, GROUP0 + 57,   NULL, NULL},
+	[71]  = {"eear10"   , 71, GROUP0 + 58,   NULL, NULL},
+	[72]  = {"eear11"   , 72, GROUP0 + 59,   NULL, NULL},
+	[73]  = {"eear12"   , 73, GROUP0 + 60,   NULL, NULL},
+	[74]  = {"eear13"   , 74, GROUP0 + 61,   NULL, NULL},
+	[75]  = {"eear14"   , 75, GROUP0 + 62,   NULL, NULL},
+	[76]  = {"eear15"   , 76, GROUP0 + 63,   NULL, NULL},
+	[77]  = {"esr0"     , 77, GROUP0 + 64,   NULL, NULL},
+	[78]  = {"esr1"     , 78, GROUP0 + 65,   NULL, NULL},
+	[79]  = {"esr2"     , 79, GROUP0 + 66,   NULL, NULL},
+	[80]  = {"esr3"     , 80, GROUP0 + 67,   NULL, NULL},
+	[81]  = {"esr4"     , 81, GROUP0 + 68,   NULL, NULL},
+	[82]  = {"esr5"     , 82, GROUP0 + 69,   NULL, NULL},
+	[83]  = {"esr6"     , 83, GROUP0 + 70,   NULL, NULL},
+	[84]  = {"esr7"     , 84, GROUP0 + 71,   NULL, NULL},
+	[85]  = {"esr8"     , 85, GROUP0 + 72,   NULL, NULL},
+	[86]  = {"esr9"     , 86, GROUP0 + 73,   NULL, NULL},
+	[87]  = {"esr10"    , 87, GROUP0 + 74,   NULL, NULL},
+	[88]  = {"esr11"    , 88, GROUP0 + 75,   NULL, NULL},
+	[89]  = {"esr12"    , 89, GROUP0 + 76,   NULL, NULL},
+	[90]  = {"esr13"    , 90, GROUP0 + 77,   NULL, NULL},
+	[91]  = {"esr14"    , 91, GROUP0 + 78,   NULL, NULL},
+	[92]  = {"esr15"    , 92, GROUP0 + 79,   NULL, NULL},
 
-	{"ppc"     , 32, GROUP0 + 18, NULL, NULL},
-	{"npc"     , 33, GROUP0 + 16, NULL, NULL},
-	{"sr"      , 34, GROUP0 + 17, NULL, NULL},
+	[93]   = {"dmmuucr" , 93,  GROUP1 + 0,   NULL, NULL},
+	[94]   = {"dmmuupr" , 94,  GROUP1 + 1,   NULL, NULL},
+	[95]   = {"dtlbeir" , 95,  GROUP1 + 2,   NULL, NULL},
+	[96]   = {"datbmr0" , 96,  GROUP1 + 4,   NULL, NULL},
+	[97]   = {"datbmr1" , 97,  GROUP1 + 5,   NULL, NULL},
+	[98]   = {"datbmr2" , 98,  GROUP1 + 6,   NULL, NULL},
+	[99]   = {"datbmr3" , 99,  GROUP1 + 7,   NULL, NULL},
+	[100]  = {"datbtr0" , 100, GROUP1 + 8,   NULL, NULL},
+	[101]  = {"datbtr1" , 101, GROUP1 + 9,   NULL, NULL},
+	[102]  = {"datbtr2" , 102, GROUP1 + 10,  NULL, NULL},
+	[103]  = {"datbtr3" , 103, GROUP1 + 11,  NULL, NULL},
+/*
+	[104..231]   dtlbw0mr0 - 127, GROUP1 512 - 639
+	[232..359]   dtlbw0tr0 - 127, GROUP1 640 - 767
+	[360..487]   dtlbw1mr0 - 127, GROUP1 768 - 895
+	[488..615]   dtlbw1tr0 - 127, GROUP1 896 - 1023
+	[616..743]   dtlbw2mr0 - 127, GROUP1 1024 - 1151
+	[744..871]   dtlbw2tr0 - 127, GROUP1 1152 - 1279
+	[872..999]   dtlbw3mr0 - 127, GROUP1 1280 - 1407
+	[1000..1127] dtlbw3tr0 - 127, GROUP1 1408 - 1535
+*/
+	[1128] = {"immucr"  , 1128, GROUP2 + 0,  NULL, NULL},
+	[1129] = {"immupr"  , 1129, GROUP2 + 1,  NULL, NULL},
+	[1130] = {"itlbeir" , 1130, GROUP2 + 2,  NULL, NULL},
+	[1131] = {"iatbmr0" , 1131, GROUP2 + 4,  NULL, NULL},
+	[1132] = {"iatbmr1" , 1132, GROUP2 + 5,  NULL, NULL},
+	[1133] = {"iatbmr2" , 1133, GROUP2 + 6,  NULL, NULL},
+	[1134] = {"iatbmr3" , 1134, GROUP2 + 7,  NULL, NULL},
+	[1135] = {"iatbtr0" , 1135, GROUP2 + 8,  NULL, NULL},
+	[1136] = {"iatbtr1" , 1136, GROUP2 + 9,  NULL, NULL},
+	[1137] = {"iatbtr2" , 1137, GROUP2 + 10, NULL, NULL},
+	[1138] = {"iatbtr3" , 1138, GROUP2 + 11, NULL, NULL},
+/*
+	[1139..1266] itlbw0mr0 - 127, GROUP2 512 - 639
+	[1266..1394] itlbw0tr0 - 127, GROUP2 640 - 767
+	[1395..1522] itlbw1mr0 - 127, GROUP2 768 - 895
+	[1523..1650] itlbw1tr0 - 127, GROUP2 896 - 1023
+	[1651..1778] itlbw2mr0 - 127, GROUP2 1024 - 1151
+	[1779..1906] itlbw2tr0 - 127, GROUP2 1152 - 1279
+	[1907..2034] itlbw3mr0 - 127, GROUP2 1280 - 1407
+	[2035..2162] itlbw3tr0 - 127, GROUP2 1408 - 1535
+*/
+	[2163] = {"dccr"    , 2163, GROUP3 + 0,  NULL, NULL},
+	[2164] = {"dcbpr"   , 2164, GROUP3 + 1,  NULL, NULL},
+	[2165] = {"dcbfr"   , 2165, GROUP3 + 2,  NULL, NULL},
+	[2166] = {"dcbir"   , 2166, GROUP3 + 3,  NULL, NULL},
+	[2167] = {"dcbwr"   , 2167, GROUP3 + 4,  NULL, NULL},
+	[2168] = {"dcblr"   , 2168, GROUP3 + 5,  NULL, NULL},
 
-	{"cpucfgr" , 35, GROUP0 + 2, NULL, NULL},
+	[2169] = {"iccr"    , 2169, GROUP4 + 0,  NULL, NULL},
+	[2170] = {"icbpr"   , 2170, GROUP4 + 1,  NULL, NULL},
+	[2171] = {"icbir"   , 2171, GROUP4 + 2,  NULL, NULL},
+	[2172] = {"icblr"   , 2172, GROUP4 + 3,  NULL, NULL},
 
-	{"ttmr"    , 36, GROUP10 + 0, NULL, NULL},
-	{"ttcr"    , 37, GROUP10 + 1, NULL, NULL},
+	[2173] = {"maclo"   , 2173, GROUP5 + 0,  NULL, NULL},
+	[2174] = {"machi"   , 2174, GROUP5 + 1,  NULL, NULL},
+
+	[2175] = {"dvr0"    , 2175, GROUP6 + 0,  NULL, NULL},
+	[2176] = {"dvr1"    , 2176, GROUP6 + 1,  NULL, NULL},
+	[2177] = {"dvr2"    , 2177, GROUP6 + 2,  NULL, NULL},
+	[2178] = {"dvr3"    , 2178, GROUP6 + 3,  NULL, NULL},
+	[2179] = {"dvr4"    , 2179, GROUP6 + 4,  NULL, NULL},
+	[2180] = {"dvr5"    , 2180, GROUP6 + 5,  NULL, NULL},
+	[2181] = {"dvr6"    , 2181, GROUP6 + 6,  NULL, NULL},
+	[2182] = {"dvr7"    , 2182, GROUP6 + 7,  NULL, NULL},
+	[2183] = {"dcr0"    , 2183, GROUP6 + 8,  NULL, NULL},
+	[2184] = {"dcr1"    , 2184, GROUP6 + 9,  NULL, NULL},
+	[2185] = {"dcr2"    , 2185, GROUP6 + 10, NULL, NULL},
+	[2186] = {"dcr3"    , 2186, GROUP6 + 11, NULL, NULL},
+	[2187] = {"dcr4"    , 2187, GROUP6 + 12, NULL, NULL},
+	[2188] = {"dcr5"    , 2188, GROUP6 + 13, NULL, NULL},
+	[2189] = {"dcr6"    , 2189, GROUP6 + 14, NULL, NULL},
+	[2190] = {"dcr7"    , 2190, GROUP6 + 15, NULL, NULL},
+	[2191] = {"dmr1"    , 2191, GROUP6 + 16, NULL, NULL},
+	[2192] = {"dmr2"    , 2192, GROUP6 + 17, NULL, NULL},
+	[2193] = {"dcwr0"   , 2193, GROUP6 + 18, NULL, NULL},
+	[2194] = {"dcwr1"   , 2194, GROUP6 + 19, NULL, NULL},
+	[2195] = {"dsr"     , 2195, GROUP6 + 20, NULL, NULL},
+	[2196] = {"drr"     , 2196, GROUP6 + 21, NULL, NULL},
+
+	[2197] = {"pccr0"   , 2197, GROUP7 + 0,  NULL, NULL},
+	[2198] = {"pccr1"   , 2198, GROUP7 + 1,  NULL, NULL},
+	[2199] = {"pccr2"   , 2199, GROUP7 + 2,  NULL, NULL},
+	[2200] = {"pccr3"   , 2200, GROUP7 + 3,  NULL, NULL},
+	[2201] = {"pccr4"   , 2201, GROUP7 + 4,  NULL, NULL},
+	[2202] = {"pccr5"   , 2202, GROUP7 + 5,  NULL, NULL},
+	[2203] = {"pccr6"   , 2203, GROUP7 + 6,  NULL, NULL},
+	[2204] = {"pccr7"   , 2204, GROUP7 + 7,  NULL, NULL},
+	[2205] = {"pcmr0"   , 2205, GROUP7 + 8,  NULL, NULL},
+	[2206] = {"pcmr1"   , 2206, GROUP7 + 9,  NULL, NULL},
+	[2207] = {"pcmr2"   , 2207, GROUP7 + 10, NULL, NULL},
+	[2208] = {"pcmr3"   , 2208, GROUP7 + 11, NULL, NULL},
+	[2209] = {"pcmr4"   , 2209, GROUP7 + 12, NULL, NULL},
+	[2210] = {"pcmr5"   , 2210, GROUP7 + 13, NULL, NULL},
+	[2211] = {"pcmr6"   , 2211, GROUP7 + 14, NULL, NULL},
+	[2212] = {"pcmr7"   , 2212, GROUP7 + 15, NULL, NULL},
+
+	[2213] = {"pmr"     , 2213, GROUP8 + 0,  NULL, NULL},
+
+	[2214] = {"picmr"   , 2214, GROUP9 + 0,  NULL, NULL},
+	[2215] = {"picsr"   , 2215, GROUP9 + 2,  NULL, NULL},
+
+	[2216] = {"ttmr"    , 2216, GROUP10 + 0, NULL, NULL},
+	[2217] = {"ttcr"    , 2217, GROUP10 + 1, NULL, NULL},
 };
 
 
@@ -882,8 +1039,32 @@ static int or1k_init_target(struct command_context *cmd_ctx,
 		struct target *target)
 {
 	struct or1k_common *or1k = target_to_or1k(target);
+	int i, way;
+	char name[10];
 
 	or1k->jtag.tap = target->tap;
+
+	memset(&or1k_core_reg_list_arch_info[104], 0, sizeof(struct or1k_core_reg) * 128 * 8);
+
+	for (way = 0; way < 4; way++) {
+		for (i = 0; i < 128; i++) {
+			sprintf(name, "dtlbw%dmr%d", way, i);
+			or1k_core_reg_list_arch_info[i].name = name;
+			or1k_core_reg_list_arch_info[i].list_num = GROUP1 + 104 + (i * way);
+			or1k_core_reg_list_arch_info[i].spr_num = GROUP1 + 512 + (i * way);
+		}
+	}
+
+	memset(&or1k_core_reg_list_arch_info[1139], 0, sizeof(struct or1k_core_reg) * 128 * 8);
+
+	for (way = 0; way < 4; way++) {
+		for (i = 0; i < 128; i++) {
+			sprintf(name, "itlbw%dmr%d", way, i);
+			or1k_core_reg_list_arch_info[i].name = name;
+			or1k_core_reg_list_arch_info[i].list_num = GROUP2 + 1139 + (i * way);
+			or1k_core_reg_list_arch_info[i].spr_num = GROUP2 + 512 + (i * way);
+		}
+	}
 
 	or1k_build_reg_cache(target);
 	return ERROR_OK;
