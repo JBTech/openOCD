@@ -228,6 +228,16 @@
   <reg name="dtlbw0mr107"  bitsize="32"/>
   <reg name="dtlbw0mr108"  bitsize="32"/>
   <reg name="dtlbw0mr109"  bitsize="32"/>
+  <reg name="dtlbw0mr110"  bitsize="32"/>
+  <reg name="dtlbw0mr111"  bitsize="32"/>
+  <reg name="dtlbw0mr112"  bitsize="32"/>
+  <reg name="dtlbw0mr113"  bitsize="32"/>
+  <reg name="dtlbw0mr114"  bitsize="32"/>
+  <reg name="dtlbw0mr115"  bitsize="32"/>
+  <reg name="dtlbw0mr116"  bitsize="32"/>
+  <reg name="dtlbw0mr117"  bitsize="32"/>
+  <reg name="dtlbw0mr118"  bitsize="32"/>
+  <reg name="dtlbw0mr119"  bitsize="32"/>
   <reg name="dtlbw0mr120"  bitsize="32"/>
   <reg name="dtlbw0mr121"  bitsize="32"/>
   <reg name="dtlbw0mr122"  bitsize="32"/>
@@ -346,6 +356,16 @@
   <reg name="dtlbw0tr107"  bitsize="32"/>
   <reg name="dtlbw0tr108"  bitsize="32"/>
   <reg name="dtlbw0tr109"  bitsize="32"/>
+  <reg name="dtlbw0tr110"  bitsize="32"/>
+  <reg name="dtlbw0tr111"  bitsize="32"/>
+  <reg name="dtlbw0tr112"  bitsize="32"/>
+  <reg name="dtlbw0tr113"  bitsize="32"/>
+  <reg name="dtlbw0tr114"  bitsize="32"/>
+  <reg name="dtlbw0tr115"  bitsize="32"/>
+  <reg name="dtlbw0tr116"  bitsize="32"/>
+  <reg name="dtlbw0tr117"  bitsize="32"/>
+  <reg name="dtlbw0tr118"  bitsize="32"/>
+  <reg name="dtlbw0tr119"  bitsize="32"/>
   <reg name="dtlbw0tr120"  bitsize="32"/>
   <reg name="dtlbw0tr121"  bitsize="32"/>
   <reg name="dtlbw0tr122"  bitsize="32"/>
@@ -464,6 +484,16 @@
   <reg name="dtlbw1mr107"  bitsize="32"/>
   <reg name="dtlbw1mr108"  bitsize="32"/>
   <reg name="dtlbw1mr109"  bitsize="32"/>
+  <reg name="dtlbw1mr110"  bitsize="32"/>
+  <reg name="dtlbw1mr111"  bitsize="32"/>
+  <reg name="dtlbw1mr112"  bitsize="32"/>
+  <reg name="dtlbw1mr113"  bitsize="32"/>
+  <reg name="dtlbw1mr114"  bitsize="32"/>
+  <reg name="dtlbw1mr115"  bitsize="32"/>
+  <reg name="dtlbw1mr116"  bitsize="32"/>
+  <reg name="dtlbw1mr117"  bitsize="32"/>
+  <reg name="dtlbw1mr118"  bitsize="32"/>
+  <reg name="dtlbw1mr119"  bitsize="32"/>
   <reg name="dtlbw1mr120"  bitsize="32"/>
   <reg name="dtlbw1mr121"  bitsize="32"/>
   <reg name="dtlbw1mr122"  bitsize="32"/>
@@ -582,6 +612,16 @@
   <reg name="dtlbw1tr107"  bitsize="32"/>
   <reg name="dtlbw1tr108"  bitsize="32"/>
   <reg name="dtlbw1tr109"  bitsize="32"/>
+  <reg name="dtlbw1tr110"  bitsize="32"/>
+  <reg name="dtlbw1tr111"  bitsize="32"/>
+  <reg name="dtlbw1tr112"  bitsize="32"/>
+  <reg name="dtlbw1tr113"  bitsize="32"/>
+  <reg name="dtlbw1tr114"  bitsize="32"/>
+  <reg name="dtlbw1tr115"  bitsize="32"/>
+  <reg name="dtlbw1tr116"  bitsize="32"/>
+  <reg name="dtlbw1tr117"  bitsize="32"/>
+  <reg name="dtlbw1tr118"  bitsize="32"/>
+  <reg name="dtlbw1tr119"  bitsize="32"/>
   <reg name="dtlbw1tr120"  bitsize="32"/>
   <reg name="dtlbw1tr121"  bitsize="32"/>
   <reg name="dtlbw1tr122"  bitsize="32"/>
@@ -700,6 +740,16 @@
   <reg name="dtlbw2mr107"  bitsize="32"/>
   <reg name="dtlbw2mr108"  bitsize="32"/>
   <reg name="dtlbw2mr109"  bitsize="32"/>
+  <reg name="dtlbw2mr110"  bitsize="32"/>
+  <reg name="dtlbw2mr111"  bitsize="32"/>
+  <reg name="dtlbw2mr112"  bitsize="32"/>
+  <reg name="dtlbw2mr113"  bitsize="32"/>
+  <reg name="dtlbw2mr114"  bitsize="32"/>
+  <reg name="dtlbw2mr115"  bitsize="32"/>
+  <reg name="dtlbw2mr116"  bitsize="32"/>
+  <reg name="dtlbw2mr117"  bitsize="32"/>
+  <reg name="dtlbw2mr118"  bitsize="32"/>
+  <reg name="dtlbw2mr119"  bitsize="32"/>
   <reg name="dtlbw2mr120"  bitsize="32"/>
   <reg name="dtlbw2mr121"  bitsize="32"/>
   <reg name="dtlbw2mr122"  bitsize="32"/>
@@ -818,6 +868,16 @@
   <reg name="dtlbw2tr107"  bitsize="32"/>
   <reg name="dtlbw2tr108"  bitsize="32"/>
   <reg name="dtlbw2tr109"  bitsize="32"/>
+  <reg name="dtlbw2tr110"  bitsize="32"/>
+  <reg name="dtlbw2tr111"  bitsize="32"/>
+  <reg name="dtlbw2tr112"  bitsize="32"/>
+  <reg name="dtlbw2tr113"  bitsize="32"/>
+  <reg name="dtlbw2tr114"  bitsize="32"/>
+  <reg name="dtlbw2tr115"  bitsize="32"/>
+  <reg name="dtlbw2tr116"  bitsize="32"/>
+  <reg name="dtlbw2tr117"  bitsize="32"/>
+  <reg name="dtlbw2tr118"  bitsize="32"/>
+  <reg name="dtlbw2tr119"  bitsize="32"/>
   <reg name="dtlbw2tr120"  bitsize="32"/>
   <reg name="dtlbw2tr121"  bitsize="32"/>
   <reg name="dtlbw2tr122"  bitsize="32"/>
@@ -936,6 +996,16 @@
   <reg name="dtlbw3mr107"  bitsize="32"/>
   <reg name="dtlbw3mr108"  bitsize="32"/>
   <reg name="dtlbw3mr109"  bitsize="32"/>
+  <reg name="dtlbw3mr110"  bitsize="32"/>
+  <reg name="dtlbw3mr111"  bitsize="32"/>
+  <reg name="dtlbw3mr112"  bitsize="32"/>
+  <reg name="dtlbw3mr113"  bitsize="32"/>
+  <reg name="dtlbw3mr114"  bitsize="32"/>
+  <reg name="dtlbw3mr115"  bitsize="32"/>
+  <reg name="dtlbw3mr116"  bitsize="32"/>
+  <reg name="dtlbw3mr117"  bitsize="32"/>
+  <reg name="dtlbw3mr118"  bitsize="32"/>
+  <reg name="dtlbw3mr119"  bitsize="32"/>
   <reg name="dtlbw3mr120"  bitsize="32"/>
   <reg name="dtlbw3mr121"  bitsize="32"/>
   <reg name="dtlbw3mr122"  bitsize="32"/>
@@ -1054,6 +1124,16 @@
   <reg name="dtlbw3tr107"  bitsize="32"/>
   <reg name="dtlbw3tr108"  bitsize="32"/>
   <reg name="dtlbw3tr109"  bitsize="32"/>
+  <reg name="dtlbw3tr110"  bitsize="32"/>
+  <reg name="dtlbw3tr111"  bitsize="32"/>
+  <reg name="dtlbw3tr112"  bitsize="32"/>
+  <reg name="dtlbw3tr113"  bitsize="32"/>
+  <reg name="dtlbw3tr114"  bitsize="32"/>
+  <reg name="dtlbw3tr115"  bitsize="32"/>
+  <reg name="dtlbw3tr116"  bitsize="32"/>
+  <reg name="dtlbw3tr117"  bitsize="32"/>
+  <reg name="dtlbw3tr118"  bitsize="32"/>
+  <reg name="dtlbw3tr119"  bitsize="32"/>
   <reg name="dtlbw3tr120"  bitsize="32"/>
   <reg name="dtlbw3tr121"  bitsize="32"/>
   <reg name="dtlbw3tr122"  bitsize="32"/>
@@ -1065,7 +1145,7 @@
 </feature>
 
 <feature name="org.gnu.gdb.or32.group2">
-  <reg name="immucr"      bitsize="32" regnum="1048"/>
+  <reg name="immucr"      bitsize="32" regnum="1128"/>
   <reg name="immupr"      bitsize="32"/>
   <reg name="itlbeir"      bitsize="32"/>
   <reg name="iatbmr0"      bitsize="32"/>
@@ -1186,6 +1266,16 @@
   <reg name="itlbw0mr107"  bitsize="32"/>
   <reg name="itlbw0mr108"  bitsize="32"/>
   <reg name="itlbw0mr109"  bitsize="32"/>
+  <reg name="itlbw0mr110"  bitsize="32"/>
+  <reg name="itlbw0mr111"  bitsize="32"/>
+  <reg name="itlbw0mr112"  bitsize="32"/>
+  <reg name="itlbw0mr113"  bitsize="32"/>
+  <reg name="itlbw0mr114"  bitsize="32"/>
+  <reg name="itlbw0mr115"  bitsize="32"/>
+  <reg name="itlbw0mr116"  bitsize="32"/>
+  <reg name="itlbw0mr117"  bitsize="32"/>
+  <reg name="itlbw0mr118"  bitsize="32"/>
+  <reg name="itlbw0mr119"  bitsize="32"/>
   <reg name="itlbw0mr120"  bitsize="32"/>
   <reg name="itlbw0mr121"  bitsize="32"/>
   <reg name="itlbw0mr122"  bitsize="32"/>
@@ -1304,6 +1394,16 @@
   <reg name="itlbw0tr107"  bitsize="32"/>
   <reg name="itlbw0tr108"  bitsize="32"/>
   <reg name="itlbw0tr109"  bitsize="32"/>
+  <reg name="itlbw0tr110"  bitsize="32"/>
+  <reg name="itlbw0tr111"  bitsize="32"/>
+  <reg name="itlbw0tr112"  bitsize="32"/>
+  <reg name="itlbw0tr113"  bitsize="32"/>
+  <reg name="itlbw0tr114"  bitsize="32"/>
+  <reg name="itlbw0tr115"  bitsize="32"/>
+  <reg name="itlbw0tr116"  bitsize="32"/>
+  <reg name="itlbw0tr117"  bitsize="32"/>
+  <reg name="itlbw0tr118"  bitsize="32"/>
+  <reg name="itlbw0tr119"  bitsize="32"/>
   <reg name="itlbw0tr120"  bitsize="32"/>
   <reg name="itlbw0tr121"  bitsize="32"/>
   <reg name="itlbw0tr122"  bitsize="32"/>
@@ -1422,6 +1522,16 @@
   <reg name="itlbw1mr107"  bitsize="32"/>
   <reg name="itlbw1mr108"  bitsize="32"/>
   <reg name="itlbw1mr109"  bitsize="32"/>
+  <reg name="itlbw1mr110"  bitsize="32"/>
+  <reg name="itlbw1mr111"  bitsize="32"/>
+  <reg name="itlbw1mr112"  bitsize="32"/>
+  <reg name="itlbw1mr113"  bitsize="32"/>
+  <reg name="itlbw1mr114"  bitsize="32"/>
+  <reg name="itlbw1mr115"  bitsize="32"/>
+  <reg name="itlbw1mr116"  bitsize="32"/>
+  <reg name="itlbw1mr117"  bitsize="32"/>
+  <reg name="itlbw1mr118"  bitsize="32"/>
+  <reg name="itlbw1mr119"  bitsize="32"/>
   <reg name="itlbw1mr120"  bitsize="32"/>
   <reg name="itlbw1mr121"  bitsize="32"/>
   <reg name="itlbw1mr122"  bitsize="32"/>
@@ -1540,6 +1650,16 @@
   <reg name="itlbw1tr107"  bitsize="32"/>
   <reg name="itlbw1tr108"  bitsize="32"/>
   <reg name="itlbw1tr109"  bitsize="32"/>
+  <reg name="itlbw1tr110"  bitsize="32"/>
+  <reg name="itlbw1tr111"  bitsize="32"/>
+  <reg name="itlbw1tr112"  bitsize="32"/>
+  <reg name="itlbw1tr113"  bitsize="32"/>
+  <reg name="itlbw1tr114"  bitsize="32"/>
+  <reg name="itlbw1tr115"  bitsize="32"/>
+  <reg name="itlbw1tr116"  bitsize="32"/>
+  <reg name="itlbw1tr117"  bitsize="32"/>
+  <reg name="itlbw1tr118"  bitsize="32"/>
+  <reg name="itlbw1tr119"  bitsize="32"/>
   <reg name="itlbw1tr120"  bitsize="32"/>
   <reg name="itlbw1tr121"  bitsize="32"/>
   <reg name="itlbw1tr122"  bitsize="32"/>
@@ -1658,6 +1778,16 @@
   <reg name="itlbw2mr107"  bitsize="32"/>
   <reg name="itlbw2mr108"  bitsize="32"/>
   <reg name="itlbw2mr109"  bitsize="32"/>
+  <reg name="itlbw2mr110"  bitsize="32"/>
+  <reg name="itlbw2mr111"  bitsize="32"/>
+  <reg name="itlbw2mr112"  bitsize="32"/>
+  <reg name="itlbw2mr113"  bitsize="32"/>
+  <reg name="itlbw2mr114"  bitsize="32"/>
+  <reg name="itlbw2mr115"  bitsize="32"/>
+  <reg name="itlbw2mr116"  bitsize="32"/>
+  <reg name="itlbw2mr117"  bitsize="32"/>
+  <reg name="itlbw2mr118"  bitsize="32"/>
+  <reg name="itlbw2mr119"  bitsize="32"/>
   <reg name="itlbw2mr120"  bitsize="32"/>
   <reg name="itlbw2mr121"  bitsize="32"/>
   <reg name="itlbw2mr122"  bitsize="32"/>
@@ -1776,6 +1906,16 @@
   <reg name="itlbw2tr107"  bitsize="32"/>
   <reg name="itlbw2tr108"  bitsize="32"/>
   <reg name="itlbw2tr109"  bitsize="32"/>
+  <reg name="itlbw2tr110"  bitsize="32"/>
+  <reg name="itlbw2tr111"  bitsize="32"/>
+  <reg name="itlbw2tr112"  bitsize="32"/>
+  <reg name="itlbw2tr113"  bitsize="32"/>
+  <reg name="itlbw2tr114"  bitsize="32"/>
+  <reg name="itlbw2tr115"  bitsize="32"/>
+  <reg name="itlbw2tr116"  bitsize="32"/>
+  <reg name="itlbw2tr117"  bitsize="32"/>
+  <reg name="itlbw2tr118"  bitsize="32"/>
+  <reg name="itlbw2tr119"  bitsize="32"/>
   <reg name="itlbw2tr120"  bitsize="32"/>
   <reg name="itlbw2tr121"  bitsize="32"/>
   <reg name="itlbw2tr122"  bitsize="32"/>
@@ -1894,6 +2034,16 @@
   <reg name="itlbw3mr107"  bitsize="32"/>
   <reg name="itlbw3mr108"  bitsize="32"/>
   <reg name="itlbw3mr109"  bitsize="32"/>
+  <reg name="itlbw3mr110"  bitsize="32"/>
+  <reg name="itlbw3mr111"  bitsize="32"/>
+  <reg name="itlbw3mr112"  bitsize="32"/>
+  <reg name="itlbw3mr113"  bitsize="32"/>
+  <reg name="itlbw3mr114"  bitsize="32"/>
+  <reg name="itlbw3mr115"  bitsize="32"/>
+  <reg name="itlbw3mr116"  bitsize="32"/>
+  <reg name="itlbw3mr117"  bitsize="32"/>
+  <reg name="itlbw3mr118"  bitsize="32"/>
+  <reg name="itlbw3mr119"  bitsize="32"/>
   <reg name="itlbw3mr120"  bitsize="32"/>
   <reg name="itlbw3mr121"  bitsize="32"/>
   <reg name="itlbw3mr122"  bitsize="32"/>
@@ -2012,6 +2162,16 @@
   <reg name="itlbw3tr107"  bitsize="32"/>
   <reg name="itlbw3tr108"  bitsize="32"/>
   <reg name="itlbw3tr109"  bitsize="32"/>
+  <reg name="itlbw3tr110"  bitsize="32"/>
+  <reg name="itlbw3tr111"  bitsize="32"/>
+  <reg name="itlbw3tr112"  bitsize="32"/>
+  <reg name="itlbw3tr113"  bitsize="32"/>
+  <reg name="itlbw3tr114"  bitsize="32"/>
+  <reg name="itlbw3tr115"  bitsize="32"/>
+  <reg name="itlbw3tr116"  bitsize="32"/>
+  <reg name="itlbw3tr117"  bitsize="32"/>
+  <reg name="itlbw3tr118"  bitsize="32"/>
+  <reg name="itlbw3tr119"  bitsize="32"/>
   <reg name="itlbw3tr120"  bitsize="32"/>
   <reg name="itlbw3tr121"  bitsize="32"/>
   <reg name="itlbw3tr122"  bitsize="32"/>
@@ -2023,7 +2183,7 @@
 </feature>
 
 <feature name="org.gnu.gdb.or32.group3">
-  <reg name="dccr"         bitsize="32" regnum="2003"/>
+  <reg name="dccr"         bitsize="32" regnum="2163"/>
   <reg name="dcbpr"        bitsize="32"/>
   <reg name="dcbfr"        bitsize="32"/>
   <reg name="dcbir"        bitsize="32"/>
@@ -2032,19 +2192,19 @@
 </feature>
 
 <feature name="org.gnu.gdb.or32.group4">
-  <reg name="iccr"         bitsize="32" regnum="2009"/>
+  <reg name="iccr"         bitsize="32" regnum="2169"/>
   <reg name="icbpr"        bitsize="32"/>
   <reg name="icbir"        bitsize="32"/>
   <reg name="icblr"        bitsize="32"/>
 </feature>
 
 <feature name="org.gnu.gdb.or32.group5">
-  <reg name="maclo"         bitsize="32" regnum="2013"/>
+  <reg name="maclo"         bitsize="32" regnum="2173"/>
   <reg name="machi"         bitsize="32"/>
 </feature> 
 
 <feature name="org.gnu.gdb.or32.group6">
-  <reg name="dvr0"         bitsize="32" regnum="2015"/>
+  <reg name="dvr0"         bitsize="32" regnum="2175"/>
   <reg name="dvr1"         bitsize="32"/>
   <reg name="dvr2"         bitsize="32"/>
   <reg name="dvr3"         bitsize="32"/>
@@ -2069,7 +2229,7 @@
 </feature> 
 
 <feature name="org.gnu.gdb.or32.group7">
-  <reg name="pccr0"         bitsize="32" regnum="2037"/>
+  <reg name="pccr0"         bitsize="32" regnum="2197"/>
   <reg name="pccr1"         bitsize="32"/>
   <reg name="pccr2"         bitsize="32"/>
   <reg name="pccr3"         bitsize="32"/>
@@ -2087,18 +2247,17 @@
   <reg name="pcmr7"         bitsize="32"/>
 </feature> 
 
-
 <feature name="org.gnu.gdb.or32.group8">
-  <reg name="pmr"          bitsize="32" regnum="2053"/>
+  <reg name="pmr"          bitsize="32" regnum="2213"/>
 </feature> 
 
 <feature name="org.gnu.gdb.or32.group9">
-  <reg name="picmr"          bitsize="32" regnum="2054"/>
+  <reg name="picmr"          bitsize="32" regnum="2214"/>
   <reg name="picsr"          bitsize="32"/>
 </feature> 
 
 <feature name="org.gnu.gdb.or32.group10">
-  <reg name="ttmr"        bitsize="32" regnum="2056"/>
+  <reg name="ttmr"        bitsize="32" regnum="2216"/>
   <reg name="ttcr"        bitsize="32"/>
 </feature>
 
