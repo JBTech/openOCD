@@ -1039,30 +1039,40 @@ static int or1k_init_target(struct command_context *cmd_ctx,
 		struct target *target)
 {
 	struct or1k_common *or1k = target_to_or1k(target);
-	int i, way;
+	int i, way, reg_num;
 	char name[10];
 
 	or1k->jtag.tap = target->tap;
 
 	memset(&or1k_core_reg_list_arch_info[104], 0, sizeof(struct or1k_core_reg) * 128 * 8);
-
-	for (way = 0; way < 4; way++) {
-		for (i = 0; i < 128; i++) {
-			sprintf(name, "dtlbw%dmr%d", way, i);
-			or1k_core_reg_list_arch_info[i].name = name;
-			or1k_core_reg_list_arch_info[i].list_num = GROUP1 + 104 + (i * way);
-			or1k_core_reg_list_arch_info[i].spr_num = GROUP1 + 512 + (i * way);
-		}
-	}
-
 	memset(&or1k_core_reg_list_arch_info[1139], 0, sizeof(struct or1k_core_reg) * 128 * 8);
 
 	for (way = 0; way < 4; way++) {
 		for (i = 0; i < 128; i++) {
+
+			sprintf(name, "dtlbw%dmr%d", way, i);
+			reg_num = 104 + i + (way * 256);
+			or1k_core_reg_list_arch_info[reg_num].name = name;
+			or1k_core_reg_list_arch_info[reg_num].list_num = reg_num;
+			or1k_core_reg_list_arch_info[reg_num].spr_num = GROUP1 + 512 + i + (way * 256);
+
+			sprintf(name, "dtlbw%dtr%d", way, i);
+			reg_num = 232 + i + (way * 256);
+			or1k_core_reg_list_arch_info[reg_num].name = name;
+			or1k_core_reg_list_arch_info[reg_num].list_num = reg_num;
+			or1k_core_reg_list_arch_info[reg_num].spr_num = GROUP1 + 640 + i + (way * 256);
+
 			sprintf(name, "itlbw%dmr%d", way, i);
-			or1k_core_reg_list_arch_info[i].name = name;
-			or1k_core_reg_list_arch_info[i].list_num = GROUP2 + 1139 + (i * way);
-			or1k_core_reg_list_arch_info[i].spr_num = GROUP2 + 512 + (i * way);
+			reg_num = 1139 + i + (way * 256);
+			or1k_core_reg_list_arch_info[reg_num].name = name;
+			or1k_core_reg_list_arch_info[reg_num].list_num = reg_num;
+			or1k_core_reg_list_arch_info[reg_num].spr_num = GROUP2 + 512 + i + (way * 256);
+
+			sprintf(name, "itlbw%dtr%d", way, i);
+			reg_num = 1266 + i + (way * 256);
+			or1k_core_reg_list_arch_info[reg_num].name = name;
+			or1k_core_reg_list_arch_info[reg_num].list_num = reg_num;
+			or1k_core_reg_list_arch_info[reg_num].spr_num = GROUP2 + 640 + i + (way * 256);
 		}
 	}
 
