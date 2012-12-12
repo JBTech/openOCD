@@ -89,6 +89,8 @@ struct gdb_connection {
 struct connection *current_rsp_connection = NULL;
 int gdb_rsp_resp_error = ERROR_OK;
 
+static int remaining_xfer = -1;
+
 static struct gdb_connection *current_gdb_connection;
 
 static int gdb_breakpoint_override;
@@ -1805,11 +1807,7 @@ static int gdb_query_packet(struct connection *connection,
 		   && (flash_get_bank_count() > 0))
 		return gdb_memory_map(connection, packet, packet_size);
 	else if (strncmp(packet, "qXfer:features:read:", 20) == 0) {
-		char *xml = NULL;
-		int size = 0;
-		int pos = 0;
 		int retval = ERROR_OK;
-		char *filename;
 		char *filebuffer = NULL;
 		int offset;
 		unsigned int length;
@@ -1817,7 +1815,6 @@ static int gdb_query_packet(struct connection *connection,
 		struct fileio fileio;
 		size_t read_bytes;
 		int filesize;
-		static int remaining_xfer = -1;
 
 		/* skip command character */
 		packet += 20;
@@ -1827,14 +1824,13 @@ static int gdb_query_packet(struct connection *connection,
 			return ERROR_OK;
 		}
 
-		/* open target xml file */
-		filename = malloc(1024);
-		memset(filename, 0, 1024);
-		strncpy(filename, gdb_tdesc_path, 1023);
+		if (strcmp(annex, "target.xml") != 0) {
+			gdb_send_error(connection, 01);
+			return ERROR_OK;
+		}
 
-		retval = fileio_open(&fileio, filename, FILEIO_READ, FILEIO_BINARY);
-
-		free(filename);
+		/* Read the xml file */
+		retval = fileio_open(&fileio, gdb_tdesc_path, FILEIO_READ, FILEIO_BINARY);
 
 		if (retval != ERROR_OK) {
 			fileio_close(&fileio);
@@ -1847,14 +1843,15 @@ static int gdb_query_packet(struct connection *connection,
 		if (remaining_xfer == -1)
 			remaining_xfer = DIV_ROUND_UP(filesize, QXFER_CHUNK_SIZE);
 
-		filebuffer = malloc(QXFER_CHUNK_SIZE + 2);
-		memset(filebuffer, 0, QXFER_CHUNK_SIZE);
+		filebuffer = malloc(QXFER_CHUNK_SIZE + 1);
+		memset(filebuffer, 0, QXFER_CHUNK_SIZE + 1);
 
 		if (remaining_xfer > 1) {
 
 			filebuffer[0] = 'm';
 
-			retval = fileio_seek(&fileio, (DIV_ROUND_UP(filesize, QXFER_CHUNK_SIZE) - remaining_xfer) * QXFER_CHUNK_SIZE);
+			retval = fileio_seek(&fileio, (DIV_ROUND_UP(filesize, QXFER_CHUNK_SIZE)
+						- remaining_xfer) * QXFER_CHUNK_SIZE);
 
 			if (retval != ERROR_OK) {
 				fileio_close(&fileio);
@@ -1863,7 +1860,7 @@ static int gdb_query_packet(struct connection *connection,
 				return ERROR_OK;
 			}
 
-			retval = fileio_read(&fileio, QXFER_CHUNK_SIZE, filebuffer + 1, &read_bytes);
+			retval = fileio_read(&fileio, QXFER_CHUNK_SIZE, &filebuffer[1], &read_bytes);
 
 			if (retval != ERROR_OK) {
 				free(filebuffer);
@@ -1872,32 +1869,17 @@ static int gdb_query_packet(struct connection *connection,
 				return ERROR_OK;
 			}
 
-			pos = 0;
-			xml = NULL;
-			xml_printf(&retval,
-				&xml,
-				&pos,
-				&size, \
-				filebuffer);
-
-			if (retval != ERROR_OK) {
-				fileio_close(&fileio);
-				gdb_error(connection, retval);
-				return retval;
-			}
-			gdb_put_packet(connection, xml, strlen(xml));
-
-			free(xml);
+			gdb_put_packet(connection, filebuffer, QXFER_CHUNK_SIZE + 1);
 			remaining_xfer--;
 
 		} else {
 
-			filebuffer = malloc(QXFER_CHUNK_SIZE + 2);
-			memset(filebuffer, 0, QXFER_CHUNK_SIZE);
+			filebuffer = malloc(QXFER_CHUNK_SIZE + 1);
+			memset(filebuffer, 0, QXFER_CHUNK_SIZE + 1);
 
 			filebuffer[0] = 'l';
 
-			retval = fileio_seek(&fileio, (filesize  / (QXFER_CHUNK_SIZE)) * (QXFER_CHUNK_SIZE));
+			retval = fileio_seek(&fileio, filesize - (filesize % QXFER_CHUNK_SIZE));
 
 			if (retval != ERROR_OK) {
 				fileio_close(&fileio);
@@ -1906,7 +1888,8 @@ static int gdb_query_packet(struct connection *connection,
 				return ERROR_OK;
 			}
 
-			retval = fileio_read(&fileio, filesize - (QXFER_CHUNK_SIZE), filebuffer + 1, &read_bytes);
+			retval = fileio_read(&fileio, filesize % QXFER_CHUNK_SIZE,
+						&filebuffer[1], &read_bytes);
 
 			if (retval != ERROR_OK) {
 				fileio_close(&fileio);
@@ -1915,22 +1898,7 @@ static int gdb_query_packet(struct connection *connection,
 				return ERROR_OK;
 			}
 
-			pos = 0;
-			xml = NULL;
-			xml_printf(&retval,
-				&xml,
-				&pos,
-				&size, \
-				filebuffer);
-
-			if (retval != ERROR_OK) {
-				gdb_error(connection, retval);
-				return retval;
-			}
-
-			gdb_put_packet(connection, xml, strlen(xml));
-
-			free(xml);
+			gdb_put_packet(connection, filebuffer, (filesize % QXFER_CHUNK_SIZE) + 1);
 			remaining_xfer = -1;
 		}
 
