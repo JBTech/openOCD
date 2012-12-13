@@ -1889,7 +1889,6 @@ static int gdb_query_packet(struct connection *connection,
 		char *annex;
 		int len = 0;
 		char *tdesc_filename;
-		int error = 0;
 
 		/* skip command character */
 		packet += 20;
@@ -1906,22 +1905,19 @@ static int gdb_query_packet(struct connection *connection,
 
 		if (!strcmp(target->gdb_tdesc_path, "auto")) {
 			asprintf(&tdesc_filename, "%s.xml", target->cmd_name);
-			if (fileio_exist(tdesc_filename) != ENOENT) {
+			if (fileio_exist(tdesc_filename) == ENOENT) {
 				retval = target_generate_tdesc_file(target);
-				if (retval != ERROR_OK)
-					error = 1;
-			} else
-				error = 1;
-
-			free(tdesc_filename);
-
-			if (error) {
-				gdb_send_error(connection, 01);
-				return ERROR_OK;
+				if (retval != ERROR_OK) {
+					gdb_send_error(connection, 01);
+					return ERROR_OK;
+				}
 			}
-		}
+		} else
+			asprintf(&tdesc_filename, "%s", target->gdb_tdesc_path);
 
-		retval = prepare_file_chunks(target, target->gdb_tdesc_path, filebuffer, &len);
+		retval = prepare_file_chunks(target, tdesc_filename, filebuffer, &len);
+		free(tdesc_filename);
+
 		if (retval != ERROR_OK) {
 			gdb_send_error(connection, 01);
 			return ERROR_OK;

@@ -181,7 +181,7 @@ struct target {
 	struct gdb_service *gdb_service;
 
 	/* Path to the target description file */
-	const char *gdb_tdesc_path;
+	char *gdb_tdesc_path;
 	/* Remaining transfert when replying to qXfer */
 	int remaining_xfer;
 };
