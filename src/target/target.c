@@ -5036,6 +5036,9 @@ static int target_create(Jim_GetOptInfo *goi)
 	/* don't use tdesc by default */
 	target->gdb_tdesc_path = NULL;
 
+	/* No pending transfert */
+	target->remaining_xfer = -1;
+
 	/* create the target specific commands */
 	if (target->type->commands) {
 		e = register_commands(cmd_ctx, NULL, target->type->commands);

@@ -1702,13 +1702,12 @@ static int gdb_memory_map(struct connection *connection,
 	return ERROR_OK;
 }
 
-static int prepare_file_chunks(const char *filename, void *buffer, int *len)
+static int prepare_file_chunks(struct target *target, const char *filename, void *buffer, int *len)
 {
 	struct fileio fileio;
 	size_t read_bytes;
 	int filesize;
 	int retval;
-	static int remaining_xfer = -1;
 	char *filebuffer;
 
 	filebuffer = (char *)buffer;
@@ -1722,17 +1721,17 @@ static int prepare_file_chunks(const char *filename, void *buffer, int *len)
 
 	fileio_size(&fileio, &filesize);
 
-	if (remaining_xfer == -1)
-		remaining_xfer = DIV_ROUND_UP(filesize, QXFER_CHUNK_SIZE);
+	if (target->remaining_xfer == -1)
+		target->remaining_xfer = DIV_ROUND_UP(filesize, QXFER_CHUNK_SIZE);
 
 	memset(filebuffer, 0, QXFER_CHUNK_SIZE + 1);
 
-	if (remaining_xfer > 1) {
+	if (target->remaining_xfer > 1) {
 
 		filebuffer[0] = 'm';
 
 		retval = fileio_seek(&fileio, (DIV_ROUND_UP(filesize, QXFER_CHUNK_SIZE)
-					- remaining_xfer) * QXFER_CHUNK_SIZE);
+					- target->remaining_xfer) * QXFER_CHUNK_SIZE);
 
 		if (retval != ERROR_OK) {
 			fileio_close(&fileio);
@@ -1746,7 +1745,7 @@ static int prepare_file_chunks(const char *filename, void *buffer, int *len)
 			return retval;
 		}
 
-		remaining_xfer--;
+		target->remaining_xfer--;
 
 		*len = QXFER_CHUNK_SIZE + 1;
 
@@ -1771,7 +1770,7 @@ static int prepare_file_chunks(const char *filename, void *buffer, int *len)
 			return retval;
 		}
 
-		remaining_xfer = -1;
+		target->remaining_xfer = -1;
 
 		*len = (filesize % QXFER_CHUNK_SIZE) + 1;
 	}
@@ -1903,7 +1902,7 @@ static int gdb_query_packet(struct connection *connection,
 			return ERROR_OK;
 		}
 
-		retval = prepare_file_chunks(target->gdb_tdesc_path, filebuffer, &len);
+		retval = prepare_file_chunks(target, target->gdb_tdesc_path, filebuffer, &len);
 		if (retval != ERROR_OK) {
 			gdb_send_error(connection, 01);
 			return ERROR_OK;
