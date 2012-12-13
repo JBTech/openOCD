@@ -179,6 +179,9 @@ struct target {
 	 * the target attached to the gdb is changing dynamically by changing
 	 * gdb_service->target pointer */
 	struct gdb_service *gdb_service;
+
+	/* Path to the target description file */
+	const char *gdb_tdesc_path;
 };
 
 struct target_list {

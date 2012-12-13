@@ -4740,6 +4740,24 @@ static int jim_target_invoke_event(Jim_Interp *interp, int argc, Jim_Obj *const 
 	return JIM_OK;
 }
 
+
+static int jim_target_tdesc(Jim_Interp *interp, int argc, Jim_Obj *const *argv)
+{
+	Jim_GetOptInfo goi;
+	Jim_GetOpt_Setup(&goi, interp, argc - 1, argv + 1);
+
+	if (goi.argc != 1) {
+		const char *cmd_name = Jim_GetString(argv[0], NULL);
+		Jim_SetResultFormatted(goi.interp, "usage: %s tdesc <filename>", cmd_name);
+		return JIM_ERR;
+	}
+
+	struct target *target = Jim_CmdPrivData(goi.interp);
+	target->gdb_tdesc_path = strdup(Jim_GetString(argv[1], NULL));
+
+	return JIM_OK;
+}
+
 static const struct command_registration target_instance_command_handlers[] = {
 	{
 		.name = "configure",
@@ -4867,6 +4885,13 @@ static const struct command_registration target_instance_command_handlers[] = {
 		.jim_handler = jim_target_invoke_event,
 		.help = "invoke handler for specified event",
 		.usage = "event_name",
+	},
+	{
+		.name = "tdesc",
+		.mode = COMMAND_EXEC,
+		.jim_handler = jim_target_tdesc,
+		.usage = "path to tdesc file | auto",
+		.help = "Set the path to the XML target description file"
 	},
 	COMMAND_REGISTRATION_DONE
 };
@@ -5007,6 +5032,9 @@ static int target_create(Jim_GetOptInfo *goi)
 
 	cp = Jim_GetString(new_cmd, NULL);
 	target->cmd_name = strdup(cp);
+
+	/* don't use tdesc by default */
+	target->gdb_tdesc_path = NULL;
 
 	/* create the target specific commands */
 	if (target->type->commands) {
