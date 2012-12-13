@@ -431,6 +431,12 @@ struct target *get_current_target(struct command_context *cmd_ctx)
 	return target;
 }
 
+int target_generate_tdesc_file(struct target *target)
+{
+	printf("TODO: need to generate %s.xml\n", target->cmd_name);
+	return ERROR_OK;
+}
+
 int target_poll(struct target *target)
 {
 	int retval;
