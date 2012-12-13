@@ -89,8 +89,6 @@ struct gdb_connection {
 struct connection *current_rsp_connection = NULL;
 int gdb_rsp_resp_error = ERROR_OK;
 
-static int remaining_xfer = -1;
-
 static struct gdb_connection *current_gdb_connection;
 
 static int gdb_breakpoint_override;
@@ -1705,6 +1703,85 @@ static int gdb_memory_map(struct connection *connection,
 	return ERROR_OK;
 }
 
+static int prepare_file_chunks(const char *filename, void *buffer, int *len)
+{
+	struct fileio fileio;
+	size_t read_bytes;
+	int filesize;
+	int retval;
+	static int remaining_xfer = -1;
+	char *filebuffer;
+
+	filebuffer = (char *)buffer;
+
+	retval = fileio_open(&fileio, filename, FILEIO_READ, FILEIO_BINARY);
+
+	if (retval != ERROR_OK) {
+		fileio_close(&fileio);
+		return retval;
+	}
+
+	fileio_size(&fileio, &filesize);
+
+	if (remaining_xfer == -1)
+		remaining_xfer = DIV_ROUND_UP(filesize, QXFER_CHUNK_SIZE);
+
+	memset(filebuffer, 0, QXFER_CHUNK_SIZE + 1);
+
+	if (remaining_xfer > 1) {
+
+		filebuffer[0] = 'm';
+
+		retval = fileio_seek(&fileio, (DIV_ROUND_UP(filesize, QXFER_CHUNK_SIZE)
+					- remaining_xfer) * QXFER_CHUNK_SIZE);
+
+		if (retval != ERROR_OK) {
+			fileio_close(&fileio);
+			return retval;
+		}
+
+		retval = fileio_read(&fileio, QXFER_CHUNK_SIZE, &filebuffer[1], &read_bytes);
+
+		if (retval != ERROR_OK) {
+			fileio_close(&fileio);
+			return retval;
+		}
+
+		remaining_xfer--;
+
+		*len = QXFER_CHUNK_SIZE + 1;
+
+	} else {
+
+		memset(filebuffer, 0, QXFER_CHUNK_SIZE + 1);
+
+		filebuffer[0] = 'l';
+
+		retval = fileio_seek(&fileio, filesize - (filesize % QXFER_CHUNK_SIZE));
+
+		if (retval != ERROR_OK) {
+			fileio_close(&fileio);
+			return retval;
+		}
+
+		retval = fileio_read(&fileio, filesize % QXFER_CHUNK_SIZE,
+					&filebuffer[1], &read_bytes);
+
+		if (retval != ERROR_OK) {
+			fileio_close(&fileio);
+			return retval;
+		}
+
+		remaining_xfer = -1;
+
+		*len = (filesize % QXFER_CHUNK_SIZE) + 1;
+	}
+
+	fileio_close(&fileio);
+
+	return ERROR_OK;
+}
+
 static int gdb_query_packet(struct connection *connection,
 		char *packet, int packet_size)
 {
@@ -1808,13 +1885,11 @@ static int gdb_query_packet(struct connection *connection,
 		return gdb_memory_map(connection, packet, packet_size);
 	else if (strncmp(packet, "qXfer:features:read:", 20) == 0) {
 		int retval = ERROR_OK;
-		char *filebuffer = NULL;
+		char filebuffer[QXFER_CHUNK_SIZE + 1];
 		int offset;
 		unsigned int length;
 		char *annex;
-		struct fileio fileio;
-		size_t read_bytes;
-		int filesize;
+		int len = 0;
 
 		/* skip command character */
 		packet += 20;
@@ -1829,81 +1904,13 @@ static int gdb_query_packet(struct connection *connection,
 			return ERROR_OK;
 		}
 
-		/* Read the xml file */
-		retval = fileio_open(&fileio, gdb_tdesc_path, FILEIO_READ, FILEIO_BINARY);
-
+		retval = prepare_file_chunks(gdb_tdesc_path, filebuffer, &len);
 		if (retval != ERROR_OK) {
-			fileio_close(&fileio);
 			gdb_send_error(connection, 01);
 			return ERROR_OK;
 		}
 
-		fileio_size(&fileio, &filesize);
-
-		if (remaining_xfer == -1)
-			remaining_xfer = DIV_ROUND_UP(filesize, QXFER_CHUNK_SIZE);
-
-		filebuffer = malloc(QXFER_CHUNK_SIZE + 1);
-		memset(filebuffer, 0, QXFER_CHUNK_SIZE + 1);
-
-		if (remaining_xfer > 1) {
-
-			filebuffer[0] = 'm';
-
-			retval = fileio_seek(&fileio, (DIV_ROUND_UP(filesize, QXFER_CHUNK_SIZE)
-						- remaining_xfer) * QXFER_CHUNK_SIZE);
-
-			if (retval != ERROR_OK) {
-				fileio_close(&fileio);
-				free(filebuffer);
-				gdb_send_error(connection, 01);
-				return ERROR_OK;
-			}
-
-			retval = fileio_read(&fileio, QXFER_CHUNK_SIZE, &filebuffer[1], &read_bytes);
-
-			if (retval != ERROR_OK) {
-				free(filebuffer);
-				fileio_close(&fileio);
-				gdb_send_error(connection, 01);
-				return ERROR_OK;
-			}
-
-			gdb_put_packet(connection, filebuffer, QXFER_CHUNK_SIZE + 1);
-			remaining_xfer--;
-
-		} else {
-
-			filebuffer = malloc(QXFER_CHUNK_SIZE + 1);
-			memset(filebuffer, 0, QXFER_CHUNK_SIZE + 1);
-
-			filebuffer[0] = 'l';
-
-			retval = fileio_seek(&fileio, filesize - (filesize % QXFER_CHUNK_SIZE));
-
-			if (retval != ERROR_OK) {
-				fileio_close(&fileio);
-				free(filebuffer);
-				gdb_send_error(connection, 01);
-				return ERROR_OK;
-			}
-
-			retval = fileio_read(&fileio, filesize % QXFER_CHUNK_SIZE,
-						&filebuffer[1], &read_bytes);
-
-			if (retval != ERROR_OK) {
-				fileio_close(&fileio);
-				free(filebuffer);
-				gdb_send_error(connection, 01);
-				return ERROR_OK;
-			}
-
-			gdb_put_packet(connection, filebuffer, (filesize % QXFER_CHUNK_SIZE) + 1);
-			remaining_xfer = -1;
-		}
-
-		free(filebuffer);
-		fileio_close(&fileio);
+		gdb_put_packet(connection, filebuffer, len);
 
 		return ERROR_OK;
 	} else if (strncmp(packet, "QStartNoAckMode", 15) == 0) {
