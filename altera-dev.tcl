@@ -8,8 +8,6 @@ proc fpga_test_init {} {
     
 }
 
-gdb_tdesc_path "or32.xml"
-
 gdb_port 50001
 
 init
