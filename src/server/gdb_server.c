@@ -97,7 +97,6 @@ static enum breakpoint_type gdb_breakpoint_override_type;
 static int gdb_error(struct connection *connection, int retval);
 static const char *gdb_port;
 static const char *gdb_port_next;
-static const char *gdb_tdesc_path;
 static const char DIGITS[16] = "0123456789abcdef";
 
 static void gdb_log_callback(void *priv, const char *file, unsigned line,
@@ -1869,7 +1868,7 @@ static int gdb_query_packet(struct connection *connection,
 			"PacketSize=%x;qXfer:memory-map:read%c;qXfer:features:read%c;QStartNoAckMode+",
 			(GDB_BUFFER_SIZE - 1),
 			((gdb_use_memory_map == 1) && (flash_get_bank_count() > 0)) ? '+' : '-',
-			(gdb_tdesc_path) ? '+' : '-');
+			(target->gdb_tdesc_path) ? '+' : '-');
 
 		if (retval != ERROR_OK) {
 			gdb_send_error(connection, 01);
@@ -1904,7 +1903,7 @@ static int gdb_query_packet(struct connection *connection,
 			return ERROR_OK;
 		}
 
-		retval = prepare_file_chunks(gdb_tdesc_path, filebuffer, &len);
+		retval = prepare_file_chunks(target->gdb_tdesc_path, filebuffer, &len);
 		if (retval != ERROR_OK) {
 			gdb_send_error(connection, 01);
 			return ERROR_OK;
@@ -2487,19 +2486,6 @@ COMMAND_HANDLER(handle_gdb_breakpoint_override_command)
 	return ERROR_OK;
 }
 
-/* gdb_tdesc_path */
-COMMAND_HANDLER(handle_gdb_tdesc_path)
-{
-	if (CMD_ARGC == 0) {
-		gdb_tdesc_path = NULL;
-	} else if (CMD_ARGC == 1) {
-		if (gdb_tdesc_path)
-			free((void *)gdb_tdesc_path);
-		gdb_tdesc_path = strdup(CMD_ARGV[0]);
-	}
-	return ERROR_OK;
-}
-
 static const struct command_registration gdb_command_handlers[] = {
 	{
 		.name = "gdb_sync",
@@ -2552,13 +2538,6 @@ static const struct command_registration gdb_command_handlers[] = {
 			"to be used by gdb 'break' commands.",
 		.usage = "('hard'|'soft'|'disable')"
 	},
-	{
-		.name = "gdb_tdesc_path",
-		.handler = handle_gdb_tdesc_path,
-		.mode = COMMAND_CONFIG,
-		.help = "set or clear the path to the XML target description file(s)",
-		.usage = ""
-	},
 	COMMAND_REGISTRATION_DONE
 };
 
@@ -2566,6 +2545,5 @@ int gdb_register_commands(struct command_context *cmd_ctx)
 {
 	gdb_port = strdup("3333");
 	gdb_port_next = strdup("3333");
-	gdb_tdesc_path = NULL;
 	return register_commands(cmd_ctx, NULL, gdb_command_handlers);
 }
