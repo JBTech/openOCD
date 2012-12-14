@@ -1905,15 +1905,23 @@ static int gdb_query_packet(struct connection *connection,
 
 		if (!strcmp(target->gdb_tdesc_path, "auto")) {
 			asprintf(&tdesc_filename, "%s.xml", target->cmd_name);
-			if (fileio_exist(tdesc_filename) == ENOENT) {
+			if (fileio_exist(tdesc_filename) != FILE_EXIST) {
 				retval = target_generate_tdesc_file(target);
 				if (retval != ERROR_OK) {
 					gdb_send_error(connection, 01);
 					return ERROR_OK;
 				}
+				target->gdb_tdesc_path = realloc(target->gdb_tdesc_path, strlen(tdesc_filename));
+				strcpy(target->gdb_tdesc_path, tdesc_filename);
 			}
-		} else
-			asprintf(&tdesc_filename, "%s", target->gdb_tdesc_path);
+		} else {
+			if (target->gdb_tdesc_path)
+				asprintf(&tdesc_filename, "%s", target->gdb_tdesc_path);
+			else {
+				gdb_send_error(connection, 01);
+				return ERROR_OK;
+			}
+		}
 
 		retval = prepare_file_chunks(target, tdesc_filename, filebuffer, &len);
 		free(tdesc_filename);

@@ -29,6 +29,8 @@
 
 #define FILEIO_MAX_ERROR_STRING		(128)
 
+#define FILE_EXIST			0
+
 enum fileio_type {
 	FILEIO_TEXT,
 	FILEIO_BINARY,
