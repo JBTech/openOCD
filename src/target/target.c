@@ -431,12 +431,12 @@ struct target *get_current_target(struct command_context *cmd_ctx)
 	return target;
 }
 
-int target_generate_tdesc_file(struct target *target)
+int target_generate_tdesc_file(struct target *target, const char *filename)
 {
 	int retval;
 
 	if (target->type->generate_tdesc_file) {
-		retval = target->type->generate_tdesc_file(target);
+		retval = target->type->generate_tdesc_file(target, filename);
 		if (retval != ERROR_OK)
 			return retval;
 	} else {

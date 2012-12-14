@@ -490,7 +490,7 @@ int target_write_memory(struct target *target,
 int target_bulk_write_memory(struct target *target,
 		uint32_t address, uint32_t count, const uint8_t *buffer);
 
-int target_generate_tdesc_file(struct target *target);
+int target_generate_tdesc_file(struct target *target, const char *filename);
 
 /*
  * Write to target memory using the virtual address.

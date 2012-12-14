@@ -262,7 +262,7 @@ struct target_type {
 	 */
 	int (*check_reset)(struct target *target);
 
-	int (*generate_tdesc_file)(struct target *target);
+	int (*generate_tdesc_file)(struct target *target, const char *filename);
 };
 
 #endif /* TARGET_TYPE_H */
