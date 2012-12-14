@@ -57,6 +57,7 @@ int fileio_close(struct fileio *fileio);
 
 int fileio_seek(struct fileio *fileio, size_t position);
 int fileio_fgets(struct fileio *fileio, size_t size, void *buffer);
+int fileio_fputs(struct fileio *fileio_p, void *buffer);
 
 int fileio_read(struct fileio *fileio,
 		size_t size, void *buffer, size_t *size_read);
