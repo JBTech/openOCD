@@ -102,6 +102,7 @@ struct or1k_core_reg
 	uint32_t spr_num; /* Number in architecture's SPR space */
 	struct target *target;
 	struct or1k_common *or1k_common;
+	const char *feature; /* feature name in XML tdesc file */
 
 };
 

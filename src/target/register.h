@@ -28,6 +28,7 @@ struct target;
 
 struct reg {
 	const char *name;
+	const char *feature;
 	void *value;
 	bool dirty;
 	bool valid;
