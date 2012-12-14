@@ -1052,25 +1052,25 @@ static int or1k_init_target(struct command_context *cmd_ctx,
 
 			sprintf(name, "dtlbw%dmr%d", way, i);
 			reg_num = 104 + i + (way * 256);
-			or1k_core_reg_list_arch_info[reg_num].name = name;
+			or1k_core_reg_list_arch_info[reg_num].name = strdup(name);
 			or1k_core_reg_list_arch_info[reg_num].list_num = reg_num;
 			or1k_core_reg_list_arch_info[reg_num].spr_num = GROUP1 + 512 + i + (way * 256);
 
 			sprintf(name, "dtlbw%dtr%d", way, i);
 			reg_num = 232 + i + (way * 256);
-			or1k_core_reg_list_arch_info[reg_num].name = name;
+			or1k_core_reg_list_arch_info[reg_num].name = strdup(name);
 			or1k_core_reg_list_arch_info[reg_num].list_num = reg_num;
 			or1k_core_reg_list_arch_info[reg_num].spr_num = GROUP1 + 640 + i + (way * 256);
 
 			sprintf(name, "itlbw%dmr%d", way, i);
 			reg_num = 1139 + i + (way * 256);
-			or1k_core_reg_list_arch_info[reg_num].name = name;
+			or1k_core_reg_list_arch_info[reg_num].name = strdup(name);
 			or1k_core_reg_list_arch_info[reg_num].list_num = reg_num;
 			or1k_core_reg_list_arch_info[reg_num].spr_num = GROUP2 + 512 + i + (way * 256);
 
 			sprintf(name, "itlbw%dtr%d", way, i);
 			reg_num = 1266 + i + (way * 256);
-			or1k_core_reg_list_arch_info[reg_num].name = name;
+			or1k_core_reg_list_arch_info[reg_num].name = strdup(name);
 			or1k_core_reg_list_arch_info[reg_num].list_num = reg_num;
 			or1k_core_reg_list_arch_info[reg_num].spr_num = GROUP2 + 640 + i + (way * 256);
 		}
