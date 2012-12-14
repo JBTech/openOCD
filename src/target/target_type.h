@@ -261,6 +261,8 @@ struct target_type {
 	 * circumstances.
 	 */
 	int (*check_reset)(struct target *target);
+
+	int (*generate_tdesc_file)(struct target *target);
 };
 
 #endif /* TARGET_TYPE_H */
