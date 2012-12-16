@@ -166,7 +166,7 @@ struct or1k_core_reg or1k_core_reg_list_arch_info[] =
 	[1138] = {"iatbtr3" , 1138, GROUP2 + 11, NULL, NULL, "group2"},
 /*
 	[1139..1266] itlbw0mr0 - 127, GROUP2 512 - 639
-	[1266..1394] itlbw0tr0 - 127, GROUP2 640 - 767
+	[1267..1394] itlbw0tr0 - 127, GROUP2 640 - 767
 	[1395..1522] itlbw1mr0 - 127, GROUP2 768 - 895
 	[1523..1650] itlbw1tr0 - 127, GROUP2 896 - 1023
 	[1651..1778] itlbw2mr0 - 127, GROUP2 1024 - 1151
@@ -1107,7 +1107,7 @@ static int or1k_init_target(struct command_context *cmd_ctx,
 			or1k_core_reg_list_arch_info[reg_num].feature = "group2";
 
 			sprintf(name, "itlbw%dtr%d", way, i);
-			reg_num = 1266 + i + (way * 256);
+			reg_num = 1267 + i + (way * 256);
 			or1k_core_reg_list_arch_info[reg_num].name = strdup(name);
 			or1k_core_reg_list_arch_info[reg_num].list_num = reg_num;
 			or1k_core_reg_list_arch_info[reg_num].spr_num = GROUP2 + 640 + i + (way * 256);
