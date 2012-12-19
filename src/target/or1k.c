@@ -518,6 +518,7 @@ static int or1k_generate_tdesc(struct target *target, const char *filename)
 	char *buffer;
 	char **groups = NULL;
 	int current_feature;
+	int there_is_no_group_reg = 0;
 
 	retval = fileio_open(&fileio, filename, FILEIO_WRITE, FILEIO_TEXT);
 	if (retval != ERROR_OK)
@@ -549,17 +550,26 @@ static int or1k_generate_tdesc(struct target *target, const char *filename)
 		current_feature++;
 	}
 
-	sprintf(buffer, "  <feature name=\"org.gnu.gdb.or32.nogroup\">\n");
-	fileio_fputs(&fileio, buffer);
-		for (i = 0; i < NBR_DEFINED_REGISTERS; i++) {
-				if ((or1k->core_cache->reg_list[i].feature != NULL && !strcmp(or1k->core_cache->reg_list[i].feature, ""))
-				     || or1k->core_cache->reg_list[i].feature == NULL) {
-					sprintf(buffer, "    <reg name=\"%s\"           bitsize=\"%d\" regnum=\"%d\"/>\n",
-					or1k->core_cache->reg_list[i].name, or1k->core_cache->reg_list[i].size, i);
-					fileio_fputs(&fileio, buffer);
-				}
-		}
-	fileio_fputs(&fileio, "  </feature>\n");
+	for (i = 0; i < NBR_DEFINED_REGISTERS; i++) {
+			if ((or1k->core_cache->reg_list[i].feature != NULL && !strcmp(or1k->core_cache->reg_list[i].feature, ""))
+			     || or1k->core_cache->reg_list[i].feature == NULL) {
+				there_is_no_group_reg = 1;
+			}
+	}
+
+	if (there_is_no_group_reg) {
+		sprintf(buffer, "  <feature name=\"org.gnu.gdb.or32.nogroup\">\n");
+		fileio_fputs(&fileio, buffer);
+			for (i = 0; i < NBR_DEFINED_REGISTERS; i++) {
+					if ((or1k->core_cache->reg_list[i].feature != NULL && !strcmp(or1k->core_cache->reg_list[i].feature, ""))
+					     || or1k->core_cache->reg_list[i].feature == NULL) {
+						sprintf(buffer, "    <reg name=\"%s\"           bitsize=\"%d\" regnum=\"%d\"/>\n",
+						or1k->core_cache->reg_list[i].name, or1k->core_cache->reg_list[i].size, i);
+						fileio_fputs(&fileio, buffer);
+					}
+			}
+		fileio_fputs(&fileio, "  </feature>\n");
+	}
 
 	free(buffer);
 	free(groups);
