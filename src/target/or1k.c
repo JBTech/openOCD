@@ -469,9 +469,16 @@ static struct reg_cache *or1k_build_reg_cache(struct target *target)
 	return cache;
 }
 
-static int get_reg_features_list(struct target *target, char **feature_list[], int reg_list_size)
+static int get_reg_features_list(struct target *target, char **feature_list[])
 {
-	struct or1k_common *or1k = target_to_or1k(target);
+	struct reg **reg_list;
+	int reg_list_size;
+	int retval;
+
+	retval = target_get_gdb_reg_list(target, &reg_list, &reg_list_size, FULL_LIST);
+	if (retval != ERROR_OK)
+		return retval;
+
 	int current_feature = 0;
 	int i,j;
 
@@ -479,23 +486,25 @@ static int get_reg_features_list(struct target *target, char **feature_list[], i
 
 	for (i = 0; i < reg_list_size; i++) {
 
-		if (or1k->core_cache->reg_list[i].feature != NULL) {
-			if (strcmp(or1k->core_cache->reg_list[i].feature, "")) {
+		if (reg_list[i]->feature != NULL) {
+			if (strcmp(reg_list[i]->feature, "")) {
 
 				for (j = 0; j < (current_feature + 1); j++) {
 						if (!((*feature_list)[j])) {
-							(*feature_list)[current_feature++] = strdup(or1k->core_cache->reg_list[i].feature);
+							(*feature_list)[current_feature++] = strdup(reg_list[i]->feature);
 							*feature_list = realloc(*feature_list, sizeof(char *) * (current_feature + 1));
 							(*feature_list)[current_feature] = NULL;
 							break;
 						} else {
-							if (!strcmp((*feature_list)[j], or1k->core_cache->reg_list[i].feature))
+							if (!strcmp((*feature_list)[j], reg_list[i]->feature))
 								break;
 						}
 				}
 			}
 		}
 	}
+
+	free(reg_list);
 
 	return current_feature;
 }
@@ -507,7 +516,7 @@ static int or1k_generate_tdesc(struct target *target, const char *filename)
 	int retval;
 	int i;
 	char *buffer;
-	char **groups;
+	char **groups = NULL;
 	int current_feature;
 
 	retval = fileio_open(&fileio, filename, FILEIO_WRITE, FILEIO_TEXT);
@@ -519,7 +528,7 @@ static int or1k_generate_tdesc(struct target *target, const char *filename)
 	fileio_fputs(&fileio, "<target>\n");
 	fileio_fputs(&fileio, "  <architecture>or32</architecture>\n\n");
 
-	get_reg_features_list(target, &groups, NBR_DEFINED_REGISTERS);
+	get_reg_features_list(target, &groups);
 
 	current_feature = 0;
 	buffer = malloc(256);
