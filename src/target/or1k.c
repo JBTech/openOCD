@@ -1235,14 +1235,14 @@ int or1k_arch_state(struct target *target)
 }
 
 int or1k_get_gdb_reg_list(struct target *target, struct reg **reg_list[], 
-			  int *reg_list_size)
+			  int *reg_list_size, int list_type)
 {
 	struct or1k_common *or1k = target_to_or1k(target);
 	int i;
 
 	LOG_DEBUG(" - ");
 
-	if (*reg_list_size == COMES_FROM_G_PACKET || *reg_list_size == COMES_FROM_g_PACKET) {
+	if (list_type == G_REGISTERS_LIST) {
 		/* We will have this called whenever GDB connects. */
 		or1k_save_context(target);
 

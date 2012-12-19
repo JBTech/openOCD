@@ -976,7 +976,7 @@ static int gdb_get_registers_packet(struct connection *connection,
 {
 	struct target *target = get_target_from_connection(connection);
 	struct reg **reg_list;
-	int reg_list_size = COMES_FROM_g_PACKET;
+	int reg_list_size;
 	int retval;
 	int reg_packet_size = 0;
 	char *reg_packet;
@@ -990,7 +990,7 @@ static int gdb_get_registers_packet(struct connection *connection,
 	if ((target->rtos != NULL) && (ERROR_OK == rtos_get_gdb_reg_list(connection)))
 		return ERROR_OK;
 
-	retval = target_get_gdb_reg_list(target, &reg_list, &reg_list_size);
+	retval = target_get_gdb_reg_list(target, &reg_list, &reg_list_size, G_REGISTERS_LIST);
 	if (retval != ERROR_OK)
 		return gdb_error(connection, retval);
 
@@ -1032,7 +1032,7 @@ static int gdb_set_registers_packet(struct connection *connection,
 	struct target *target = get_target_from_connection(connection);
 	int i;
 	struct reg **reg_list;
-	int reg_list_size = COMES_FROM_G_PACKET;
+	int reg_list_size;
 	int retval;
 	char *packet_p;
 
@@ -1049,7 +1049,7 @@ static int gdb_set_registers_packet(struct connection *connection,
 		return ERROR_SERVER_REMOTE_CLOSED;
 	}
 
-	retval = target_get_gdb_reg_list(target, &reg_list, &reg_list_size);
+	retval = target_get_gdb_reg_list(target, &reg_list, &reg_list_size, G_REGISTERS_LIST);
 	if (retval != ERROR_OK)
 		return gdb_error(connection, retval);
 
@@ -1087,14 +1087,14 @@ static int gdb_get_register_packet(struct connection *connection,
 	char *reg_packet;
 	int reg_num = strtoul(packet + 1, NULL, 16);
 	struct reg **reg_list;
-	int reg_list_size = COMES_FROM_p_PACKET;
+	int reg_list_size;
 	int retval;
 
 #ifdef _DEBUG_GDB_IO_
 	LOG_DEBUG("-");
 #endif
 
-	retval = target_get_gdb_reg_list(target, &reg_list, &reg_list_size);
+	retval = target_get_gdb_reg_list(target, &reg_list, &reg_list_size, FULL_LIST);
 	if (retval != ERROR_OK)
 		return gdb_error(connection, retval);
 
@@ -1126,12 +1126,12 @@ static int gdb_set_register_packet(struct connection *connection,
 	uint8_t *bin_buf;
 	int reg_num = strtoul(packet + 1, &separator, 16);
 	struct reg **reg_list;
-	int reg_list_size = COMES_FROM_P_PACKET;
+	int reg_list_size;
 	int retval;
 
 	LOG_DEBUG("-");
 
-	retval = target_get_gdb_reg_list(target, &reg_list, &reg_list_size);
+	retval = target_get_gdb_reg_list(target, &reg_list, &reg_list_size, FULL_LIST);
 	if (retval != ERROR_OK)
 		return gdb_error(connection, retval);
 
