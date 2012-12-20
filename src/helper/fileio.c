@@ -205,24 +205,26 @@ static int fileio_local_fgets(struct fileio_internal *fileio,
 	return ERROR_OK;
 }
 
-static int fileio_local_fputs(struct fileio_internal *fileio, void *buffer)
-{
-	if (fputs(buffer, fileio->file) < 0)
-		return ERROR_FILEIO_OPERATION_FAILED;
-
-	return ERROR_OK;
-}
-
 int fileio_fgets(struct fileio *fileio_p, size_t size, void *buffer)
 {
 	struct fileio_internal *fileio = fileio_p->fp;
 	return fileio_local_fgets(fileio, size, buffer);
 }
 
-int fileio_fputs(struct fileio *fileio_p, void *buffer)
+int fileio_fprintf(struct fileio *fileio_p, char *format, ...)
 {
-	struct fileio_internal *fileio = fileio_p->fp;
-	return fileio_local_fputs(fileio, buffer);
+	va_list argList;
+
+	va_start(argList, format);
+
+	if (vfprintf(fileio_p->fp->file, format, argList) < 0) {
+		va_end(argList);
+		return ERROR_FILEIO_OPERATION_FAILED;
+	}
+
+	va_end(argList);
+
+	return ERROR_OK;
 }
 
 static int fileio_local_write(struct fileio_internal *fileio,
