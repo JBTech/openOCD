@@ -25,6 +25,7 @@
 #include "register.h"
 #include "algorithm.h"
 #include "target.h"
+#include "tdesc.h"
 #include "breakpoints.h"
 #include "target_type.h"
 #include "or1k_jtag.h"
@@ -232,10 +233,10 @@ struct or1k_core_reg or1k_core_reg_list_arch_info[] =
 	[2213] = {"pmr"     , 2213, GROUP8 + 0,  NULL, NULL, "group8"},
 
 	[2214] = {"picmr"   , 2214, GROUP9 + 0,  NULL, NULL, "pic"},
-	[2215] = {"picsr"   , 2215, GROUP9 + 2,  NULL, NULL, "pic"},
+	[2215] = {"picsr"   , 2215, GROUP9 + 2,  NULL, NULL, ""},
 
 	[2216] = {"ttmr"    , 2216, GROUP10 + 0, NULL, NULL, "timer"},
-	[2217] = {"ttcr"    , 2217, GROUP10 + 1, NULL, NULL, "timer"},
+	[2217] = {"ttcr"    , 2217, GROUP10 + 1, NULL, NULL, NULL},
 };
 
 
@@ -469,113 +470,40 @@ static struct reg_cache *or1k_build_reg_cache(struct target *target)
 	return cache;
 }
 
-static int get_reg_features_list(struct target *target, char **feature_list[])
+static int or1k_generate_tdesc(struct target *target, const char *filename)
 {
-	struct reg **reg_list;
-	int reg_list_size;
+	struct fileio fileio;
+	char **features = NULL;
+	int current_feature = 0;
 	int retval;
 
-	retval = target_get_gdb_reg_list(target, &reg_list, &reg_list_size, FULL_LIST);
+	/* Create the tdesc file, prepare the header and set the architecture
+	 * to or32 in the file.
+	 */
+	retval = open_and_init_tdesc_file(&fileio, filename, "or32");
 	if (retval != ERROR_OK)
 		return retval;
 
-	int current_feature = 0;
-	int i,j;
+	/* Get a list of available target registers features */
+	retval = get_reg_features_list(target, &features);
+	if (retval < 0)
+		return ERROR_FAIL;
 
-	*feature_list = calloc(1, sizeof(char *));
-
-	for (i = 0; i < reg_list_size; i++) {
-
-		if (reg_list[i]->feature != NULL) {
-			if (strcmp(reg_list[i]->feature, "")) {
-
-				for (j = 0; j < (current_feature + 1); j++) {
-						if (!((*feature_list)[j])) {
-							(*feature_list)[current_feature++] = strdup(reg_list[i]->feature);
-							*feature_list = realloc(*feature_list, sizeof(char *) * (current_feature + 1));
-							(*feature_list)[current_feature] = NULL;
-							break;
-						} else {
-							if (!strcmp((*feature_list)[j], reg_list[i]->feature))
-								break;
-						}
-				}
-			}
+	/* If we found some features associated with registers, create sections */
+	if (features != NULL) {
+		while (features[current_feature]) {
+			generate_feature_section(target, &fileio, features[current_feature]);
+			current_feature++;
 		}
 	}
 
-	free(reg_list);
-
-	return current_feature;
-}
-
-static int or1k_generate_tdesc(struct target *target, const char *filename)
-{
-	struct or1k_common *or1k = target_to_or1k(target);
-	struct fileio fileio;
-	int retval;
-	int i;
-	char *buffer;
-	char **groups = NULL;
-	int current_feature;
-	int there_is_no_group_reg = 0;
-
-	retval = fileio_open(&fileio, filename, FILEIO_WRITE, FILEIO_TEXT);
-	if (retval != ERROR_OK)
-		return ERROR_FAIL;
-
-	fileio_fputs(&fileio, "<?xml version=\"1.0\"?>\n");
-	fileio_fputs(&fileio, "<!DOCTYPE target SYSTEM \"gdb-target.dtd\">\n");
-	fileio_fputs(&fileio, "<target>\n");
-	fileio_fputs(&fileio, "  <architecture>or32</architecture>\n\n");
-
-	get_reg_features_list(target, &groups);
-
-	current_feature = 0;
-	buffer = malloc(256);
-
-	while (groups[current_feature]) {
-		sprintf(buffer, "  <feature name=\"org.gnu.gdb.or32.%s\">\n", groups[current_feature]);
-		fileio_fputs(&fileio, buffer);
-			for (i = 0; i < NBR_DEFINED_REGISTERS; i++) {
-				if (or1k->core_cache->reg_list[i].feature != NULL) {
-					if (!strcmp(or1k->core_cache->reg_list[i].feature, groups[current_feature])) {
-						sprintf(buffer, "    <reg name=\"%s\"           bitsize=\"%d\" regnum=\"%d\"/>\n",
-						or1k->core_cache->reg_list[i].name, or1k->core_cache->reg_list[i].size, i);
-						fileio_fputs(&fileio, buffer);
-					}
-				}
-			}
-		fileio_fputs(&fileio, "  </feature>\n");
-		current_feature++;
+	/* For registers without features, put them in "nogroup" feature */
+	if (count_reg_without_group(target) > 0) {
+		generate_feature_section(target, &fileio, NULL);
 	}
 
-	for (i = 0; i < NBR_DEFINED_REGISTERS; i++) {
-			if ((or1k->core_cache->reg_list[i].feature != NULL && !strcmp(or1k->core_cache->reg_list[i].feature, ""))
-			     || or1k->core_cache->reg_list[i].feature == NULL) {
-				there_is_no_group_reg = 1;
-			}
-	}
-
-	if (there_is_no_group_reg) {
-		sprintf(buffer, "  <feature name=\"org.gnu.gdb.or32.nogroup\">\n");
-		fileio_fputs(&fileio, buffer);
-			for (i = 0; i < NBR_DEFINED_REGISTERS; i++) {
-					if ((or1k->core_cache->reg_list[i].feature != NULL && !strcmp(or1k->core_cache->reg_list[i].feature, ""))
-					     || or1k->core_cache->reg_list[i].feature == NULL) {
-						sprintf(buffer, "    <reg name=\"%s\"           bitsize=\"%d\" regnum=\"%d\"/>\n",
-						or1k->core_cache->reg_list[i].name, or1k->core_cache->reg_list[i].size, i);
-						fileio_fputs(&fileio, buffer);
-					}
-			}
-		fileio_fputs(&fileio, "  </feature>\n");
-	}
-
-	free(buffer);
-	free(groups);
-
-	fileio_fputs(&fileio, "</target>\n");
-	fileio_close(&fileio);
+	free(features);
+	close_tdesc_file(&fileio);
 
 	return ERROR_OK;
 }
