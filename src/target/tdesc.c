@@ -29,11 +29,11 @@
 #include "fileio.h"
 
 /* Get the target registers list and write a tdesc feature section with
- * all registers matching feature_name. If feature_name is NULL, create
- * a "nogroup" feature with all registers without feature definition (""
- * or NULL).
+ * all registers matching feature_name. If feature_name is NULL or empty,
+ * create a "nogroup" feature with all registers without feature definition.
  */
-int generate_feature_section(struct target *target, struct fileio *fileio, const char *feature_name)
+int generate_feature_section(struct target *target, struct fileio *fileio,
+			     const char *arch_name, const char *feature_name)
 {
 	struct reg **reg_list;
 	int reg_list_size;
@@ -46,13 +46,18 @@ int generate_feature_section(struct target *target, struct fileio *fileio, const
 	if (retval != ERROR_OK)
 		return retval;
 
+	/* If the feature name passed to the function is NULL or empty
+	 * it means we want to create a "nogroup" feature section.
+	 */
 	if ((feature_name != NULL && !strcmp(feature_name, "")) || feature_name == NULL)
 		nogroup = 1;
 
 	if (nogroup)
-		fileio_fprintf(fileio,"  <feature name=\"org.gnu.gdb.or32.%s\">\n", "nogroup");
+		fileio_fprintf(fileio, "  <feature name=\"org.gnu.gdb.%s.%s\">\n",
+			       arch_name, "nogroup");
 	else
-		fileio_fprintf(fileio,"  <feature name=\"org.gnu.gdb.or32.%s\">\n", feature_name);
+		fileio_fprintf(fileio, "  <feature name=\"org.gnu.gdb.%s.%s\">\n",
+			       arch_name, feature_name);
 
 	for (i = 0; i < reg_list_size; i++) {
 		if (nogroup) {
@@ -62,15 +67,15 @@ int generate_feature_section(struct target *target, struct fileio *fileio, const
 			}
 		} else {
 			if (reg_list[i]->feature != NULL && strcmp(reg_list[i]->feature, "")) {
-				if (!strcmp(reg_list[i]->feature, feature_name)) {
+				if (!strcmp(reg_list[i]->feature, feature_name))
 					add_reg_to_group = 1;
-				}
 			}
 		}
 
 		if (add_reg_to_group) {
-			fileio_fprintf(fileio, "    <reg name=\"%s\"           bitsize=\"%d\" regnum=\"%d\"/>\n",
-			reg_list[i]->name, reg_list[i]->size, i);
+			fileio_fprintf(fileio, "    <reg name=\"%s\"   "
+				       "        bitsize=\"%d\" regnum=\"%d\"/>\n",
+				       reg_list[i]->name, reg_list[i]->size, i);
 			add_reg_to_group = 0;
 		}
 	}
@@ -91,7 +96,7 @@ int get_reg_features_list(struct target *target, char **feature_list[])
 	int reg_list_size;
 	int retval;
 	int tbl_sz = 0;
-	int i,j;
+	int i, j;
 
 	retval = target_get_gdb_reg_list(target, &reg_list, &reg_list_size, FULL_LIST);
 	if (retval != ERROR_OK) {
@@ -105,7 +110,7 @@ int get_reg_features_list(struct target *target, char **feature_list[])
 	for (i = 0; i < reg_list_size; i++) {
 		if (reg_list[i]->feature != NULL && strcmp(reg_list[i]->feature, "")) {
 			/* We found a feature, check if the feature is already in the
-			 * table. If not, add allocate a new entry for the table and
+			 * table. If not, allocate a new entry for the table and
 			 * put the new feature in it.
 			 */
 			for (j = 0; j < (tbl_sz + 1); j++) {
@@ -141,8 +146,9 @@ int count_reg_without_group(struct target *target)
 		return retval;
 
 	for (i = 0; i < reg_list_size; i++) {
-			if ((reg_list[i]->feature != NULL && !strcmp(reg_list[i]->feature, ""))
-			     || reg_list[i]->feature == NULL) {
+			if ((reg_list[i]->feature != NULL &&
+			     !strcmp(reg_list[i]->feature, "")) ||
+			     reg_list[i]->feature == NULL) {
 				reg_without_group++;
 			}
 	}
@@ -156,7 +162,8 @@ int count_reg_without_group(struct target *target)
  * gdb target description format and configure the architecture element with
  * the given arch_name.
  */
-int open_and_init_tdesc_file(struct fileio *fileio, const char *filename, const char *arch_name)
+int open_and_init_tdesc_file(struct fileio *fileio, const char *filename,
+			     const char *arch_name)
 {
 	int retval;
 

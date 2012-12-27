@@ -492,14 +492,14 @@ static int or1k_generate_tdesc(struct target *target, const char *filename)
 	/* If we found some features associated with registers, create sections */
 	if (features != NULL) {
 		while (features[current_feature]) {
-			generate_feature_section(target, &fileio, features[current_feature]);
+			generate_feature_section(target, &fileio, "or32", features[current_feature]);
 			current_feature++;
 		}
 	}
 
 	/* For registers without features, put them in "nogroup" feature */
 	if (count_reg_without_group(target) > 0) {
-		generate_feature_section(target, &fileio, NULL);
+		generate_feature_section(target, &fileio, "or32", NULL);
 	}
 
 	free(features);

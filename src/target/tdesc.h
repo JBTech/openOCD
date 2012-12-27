@@ -27,7 +27,7 @@
 #include "fileio.h"
 
 int generate_feature_section(struct target *target, struct fileio *fileio,
-				    const char *feature_name);
+			     const char *arch_name, const char *feature_name);
 
 int get_reg_features_list(struct target *target, char **feature_list[]);
 
