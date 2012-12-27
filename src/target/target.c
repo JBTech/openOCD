@@ -4755,22 +4755,17 @@ static int jim_target_invoke_event(Jim_Interp *interp, int argc, Jim_Obj *const 
 	target_handle_event(target, n->value);
 	return JIM_OK;
 }
-
-
-static int jim_target_tdesc(Jim_Interp *interp, int argc, Jim_Obj *const *argv)
+static int jim_target_tdesc(Jim_Interp *interp, int argc, Jim_Obj * const *argv)
 {
 	Jim_GetOptInfo goi;
 	Jim_GetOpt_Setup(&goi, interp, argc - 1, argv + 1);
-
 	if (goi.argc != 1) {
 		const char *cmd_name = Jim_GetString(argv[0], NULL);
 		Jim_SetResultFormatted(goi.interp, "usage: %s tdesc <filename>", cmd_name);
 		return JIM_ERR;
 	}
-
 	struct target *target = Jim_CmdPrivData(goi.interp);
 	target->gdb_tdesc_path = strdup(Jim_GetString(argv[1], NULL));
-
 	return JIM_OK;
 }
 
