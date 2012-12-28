@@ -74,9 +74,14 @@ int generate_feature_section(struct target *target, struct fileio *fileio,
 
 		if (add_reg_to_group) {
 			fileio_fprintf(fileio, "    <reg name=\"%s\"   "
-				       "        bitsize=\"%d\" regnum=\"%d\" group=\"%s\"/>\n",
-				       reg_list[i]->name, reg_list[i]->size, i, reg_list[i]->feature);
+				       "        bitsize=\"%d\" regnum=\"%d\"",
+				       reg_list[i]->name, reg_list[i]->size, i);
 			add_reg_to_group = 0;
+
+			if (reg_list[i]->group != NULL && strcmp(reg_list[i]->group, ""))
+				fileio_fprintf(fileio, " group=\"%s\"", reg_list[i]->group);
+
+			fileio_fprintf(fileio, "/>\n");
 		}
 	}
 
