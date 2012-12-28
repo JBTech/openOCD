@@ -103,6 +103,7 @@ struct or1k_core_reg
 	struct target *target;
 	struct or1k_common *or1k_common;
 	const char *feature; /* feature name in XML tdesc file */
+	const char *group;   /* register group in XML tdesc file */
 
 };
 
