@@ -1899,12 +1899,11 @@ static int gdb_query_packet(struct connection *connection,
 
 		if (!strcmp(target->gdb_tdesc_path, "auto")) {
 
-			tdesc_filename = malloc(sizeof(target->cmd_name) + 5);
+			tdesc_filename = malloc(strlen(target->cmd_name) + 5);
 			if (tdesc_filename == NULL)
 				goto error;
-			snprintf(tdesc_filename, sizeof(target->cmd_name) + 5,
+			snprintf(tdesc_filename, strlen(target->cmd_name) + 5,
 				 "%s.xml", target->cmd_name);
-
 			if (fileio_exist(tdesc_filename) != FILE_EXIST) {
 				retval = target_generate_tdesc_file(target, tdesc_filename);
 				if (retval != ERROR_OK)
