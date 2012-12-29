@@ -21,11 +21,7 @@
 #ifndef OR1K_H
 #define OR1K_H
 
-
 #include <helper/types.h>
-
-#define NBR_DEFINED_REGISTERS	((int)(sizeof(or1k_core_reg_list_arch_info) \
-				/ sizeof(struct or1k_core_reg)))
 
 #define GROUP0		(0  << 11)
 #define GROUP1		(1  << 11)
@@ -87,6 +83,7 @@ struct or1k_common
 	struct or1k_jtag jtag;
 	struct reg_cache *core_cache;
 	uint32_t core_regs[OR1KNUMCOREREGS];
+	int nb_regs;
 };
 
 static inline struct or1k_common *
@@ -108,7 +105,7 @@ struct or1k_core_reg
 };
 
 /* Make this available to or1k_jtag.h */
-extern struct or1k_core_reg or1k_core_reg_list_arch_info[];
+extern struct or1k_core_reg *or1k_core_reg_list_arch_info;
 
 /*! ORBIS32 Trap instruction */
 #define OR1K_TRAP_INSTR  0x21000001

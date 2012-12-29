@@ -37,7 +37,9 @@
 
 #include "fileio.h"
 
-struct or1k_core_reg or1k_core_reg_list_arch_info[] =
+struct or1k_core_reg *or1k_core_reg_list_arch_info;
+
+struct or1k_core_reg or1k_init_reg_list[] =
 {
 	[0]   = {"r0"       , 0,  GROUP0 + 1024, NULL, NULL, "group0", NULL},
 	[1]   = {"r1"       , 1,  GROUP0 + 1025, NULL, NULL, "group0", NULL},
@@ -239,6 +241,58 @@ struct or1k_core_reg or1k_core_reg_list_arch_info[] =
 	[2217] = {"ttcr"    , 2217, GROUP10 + 1, NULL, NULL, "group10", "timer"},
 };
 
+static int or1k_create_reg_list(struct target *target, struct or1k_core_reg *or1k_reg_list)
+{
+	struct or1k_common *or1k = target_to_or1k(target);
+	int i, way, reg_num;
+	char name[32];
+
+	memset(&or1k_init_reg_list[104], 0, sizeof(struct or1k_core_reg) * 128 * 8);
+	memset(&or1k_init_reg_list[1139], 0, sizeof(struct or1k_core_reg) * 128 * 8);
+
+	for (way = 0; way < 4; way++) {
+		for (i = 0; i < 128; i++) {
+
+			sprintf(name, "dtlbw%dmr%d", way, i);
+			reg_num = 104 + i + (way * 256);
+			or1k_init_reg_list[reg_num].name = strdup(name);
+			or1k_init_reg_list[reg_num].list_num = reg_num;
+			or1k_init_reg_list[reg_num].spr_num = GROUP1 + 512 + i + (way * 256);
+			or1k_init_reg_list[reg_num].feature = "group1";
+			or1k_init_reg_list[reg_num].group = "dmmu";
+
+			sprintf(name, "dtlbw%dtr%d", way, i);
+			reg_num = 232 + i + (way * 256);
+			or1k_init_reg_list[reg_num].name = strdup(name);
+			or1k_init_reg_list[reg_num].list_num = reg_num;
+			or1k_init_reg_list[reg_num].spr_num = GROUP1 + 640 + i + (way * 256);
+			or1k_init_reg_list[reg_num].feature = "group1";
+			or1k_init_reg_list[reg_num].group = "dmmu";
+
+			sprintf(name, "itlbw%dmr%d", way, i);
+			reg_num = 1139 + i + (way * 256);
+			or1k_init_reg_list[reg_num].name = strdup(name);
+			or1k_init_reg_list[reg_num].list_num = reg_num;
+			or1k_init_reg_list[reg_num].spr_num = GROUP2 + 512 + i + (way * 256);
+			or1k_init_reg_list[reg_num].feature = "group2";
+			or1k_init_reg_list[reg_num].group = "immu";
+
+			sprintf(name, "itlbw%dtr%d", way, i);
+			reg_num = 1267 + i + (way * 256);
+			or1k_init_reg_list[reg_num].name = strdup(name);
+			or1k_init_reg_list[reg_num].list_num = reg_num;
+			or1k_init_reg_list[reg_num].spr_num = GROUP2 + 640 + i + (way * 256);
+			or1k_init_reg_list[reg_num].feature = "group2";
+			or1k_init_reg_list[reg_num].group = "immu";
+		}
+	}
+
+	or1k_core_reg_list_arch_info = malloc(sizeof(or1k_init_reg_list));
+	memcpy(or1k_core_reg_list_arch_info, or1k_init_reg_list, sizeof(or1k_init_reg_list));
+	or1k->nb_regs = (int)(sizeof(or1k_init_reg_list) / sizeof(struct or1k_core_reg));
+
+	return ERROR_OK;
+}
 
 static int or1k_read_core_reg(struct target *target, int num);
 static int or1k_write_core_reg(struct target *target, int num);
@@ -345,7 +399,7 @@ static int or1k_read_core_reg(struct target *target, int num)
 	/* get pointers to arch-specific information */
 	struct or1k_common *or1k = target_to_or1k(target);
 
-	if ((num < 0) || (num >= NBR_DEFINED_REGISTERS))
+	if ((num < 0) || (num >= or1k->nb_regs))
 		return ERROR_COMMAND_SYNTAX_ERROR;
 
 	if ((num >= 0) && (num < OR1KNUMCOREREGS)) {
@@ -439,9 +493,9 @@ static struct reg_cache *or1k_build_reg_cache(struct target *target)
 	struct or1k_common *or1k = target_to_or1k(target);
 	struct reg_cache **cache_p = register_get_last_cache_p(&target->reg_cache);
 	struct reg_cache *cache = malloc(sizeof(struct reg_cache));
-	struct reg *reg_list = malloc(sizeof(struct reg) * (NBR_DEFINED_REGISTERS));
+	struct reg *reg_list = malloc(sizeof(struct reg) * or1k->nb_regs);
 	struct or1k_core_reg *arch_info = 
-		malloc(sizeof(struct or1k_core_reg) * NBR_DEFINED_REGISTERS);
+		malloc(sizeof(struct or1k_core_reg) * or1k->nb_regs);
 	int i;
 
 	/* Build the process context cache */
@@ -452,7 +506,7 @@ static struct reg_cache *or1k_build_reg_cache(struct target *target)
 	(*cache_p) = cache;
 	or1k->core_cache = cache;
 
-	for (i = 0; i < NBR_DEFINED_REGISTERS; i++)
+	for (i = 0; i < or1k->nb_regs; i++)
 	{
 		arch_info[i] = or1k_core_reg_list_arch_info[i];
 		arch_info[i].target = target;
@@ -1081,50 +1135,10 @@ static int or1k_init_target(struct command_context *cmd_ctx,
 		struct target *target)
 {
 	struct or1k_common *or1k = target_to_or1k(target);
-	int i, way, reg_num;
-	char name[32];
 
 	or1k->jtag.tap = target->tap;
 
-	memset(&or1k_core_reg_list_arch_info[104], 0, sizeof(struct or1k_core_reg) * 128 * 8);
-	memset(&or1k_core_reg_list_arch_info[1139], 0, sizeof(struct or1k_core_reg) * 128 * 8);
-
-	for (way = 0; way < 4; way++) {
-		for (i = 0; i < 128; i++) {
-
-			sprintf(name, "dtlbw%dmr%d", way, i);
-			reg_num = 104 + i + (way * 256);
-			or1k_core_reg_list_arch_info[reg_num].name = strdup(name);
-			or1k_core_reg_list_arch_info[reg_num].list_num = reg_num;
-			or1k_core_reg_list_arch_info[reg_num].spr_num = GROUP1 + 512 + i + (way * 256);
-			or1k_core_reg_list_arch_info[reg_num].feature = "group1";
-			or1k_core_reg_list_arch_info[reg_num].group = "dmmu";
-
-			sprintf(name, "dtlbw%dtr%d", way, i);
-			reg_num = 232 + i + (way * 256);
-			or1k_core_reg_list_arch_info[reg_num].name = strdup(name);
-			or1k_core_reg_list_arch_info[reg_num].list_num = reg_num;
-			or1k_core_reg_list_arch_info[reg_num].spr_num = GROUP1 + 640 + i + (way * 256);
-			or1k_core_reg_list_arch_info[reg_num].feature = "group1";
-			or1k_core_reg_list_arch_info[reg_num].group = "dmmu";
-
-			sprintf(name, "itlbw%dmr%d", way, i);
-			reg_num = 1139 + i + (way * 256);
-			or1k_core_reg_list_arch_info[reg_num].name = strdup(name);
-			or1k_core_reg_list_arch_info[reg_num].list_num = reg_num;
-			or1k_core_reg_list_arch_info[reg_num].spr_num = GROUP2 + 512 + i + (way * 256);
-			or1k_core_reg_list_arch_info[reg_num].feature = "group2";
-			or1k_core_reg_list_arch_info[reg_num].group = "immu";
-
-			sprintf(name, "itlbw%dtr%d", way, i);
-			reg_num = 1267 + i + (way * 256);
-			or1k_core_reg_list_arch_info[reg_num].name = strdup(name);
-			or1k_core_reg_list_arch_info[reg_num].list_num = reg_num;
-			or1k_core_reg_list_arch_info[reg_num].spr_num = GROUP2 + 640 + i + (way * 256);
-			or1k_core_reg_list_arch_info[reg_num].feature = "group2";
-			or1k_core_reg_list_arch_info[reg_num].group = "immu";
-		}
-	}
+	or1k_create_reg_list(target, or1k_init_reg_list);
 
 	or1k_build_reg_cache(target);
 	return ERROR_OK;
@@ -1205,10 +1219,10 @@ int or1k_get_gdb_reg_list(struct target *target, struct reg **reg_list[],
 		for (i = 0; i < OR1KNUMCOREREGS; i++)
 			(*reg_list)[i] = &or1k->core_cache->reg_list[i];
 	} else {
-		*reg_list_size = NBR_DEFINED_REGISTERS;
+		*reg_list_size = or1k->nb_regs;
 		*reg_list = malloc(sizeof(struct reg*) * (*reg_list_size));
 
-		for (i = 0; i < NBR_DEFINED_REGISTERS; i++)
+		for (i = 0; i < or1k->nb_regs; i++)
 			(*reg_list)[i] = &or1k->core_cache->reg_list[i];
 	}
 
