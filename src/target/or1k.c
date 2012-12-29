@@ -39,113 +39,113 @@
 
 struct or1k_core_reg *or1k_core_reg_list_arch_info;
 
-struct or1k_core_reg or1k_init_reg_list[] =
+struct or1k_core_reg_init or1k_init_reg_list[] =
 {
-	[0]   = {"r0"       , 0,  GROUP0 + 1024, NULL, NULL, "group0", NULL},
-	[1]   = {"r1"       , 1,  GROUP0 + 1025, NULL, NULL, "group0", NULL},
-	[2]   = {"r2"       , 2,  GROUP0 + 1026, NULL, NULL, "group0", NULL},
-	[3]   = {"r3"       , 3,  GROUP0 + 1027, NULL, NULL, "group0", NULL},
-	[4]   = {"r4"       , 4,  GROUP0 + 1028, NULL, NULL, "group0", NULL},
-	[5]   = {"r5"       , 5,  GROUP0 + 1029, NULL, NULL, "group0", NULL},
-	[6]   = {"r6"       , 6,  GROUP0 + 1030, NULL, NULL, "group0", NULL},
-	[7]   = {"r7"       , 7,  GROUP0 + 1031, NULL, NULL, "group0", NULL},
-	[8]   = {"r8"       , 8,  GROUP0 + 1032, NULL, NULL, "group0", NULL},
-	[9]   = {"r9"       , 9,  GROUP0 + 1033, NULL, NULL, "group0", NULL},
-	[10]  = {"r10"      , 10, GROUP0 + 1034, NULL, NULL, "group0", NULL},
-	[11]  = {"r11"      , 11, GROUP0 + 1035, NULL, NULL, "group0", NULL},
-	[12]  = {"r12"      , 12, GROUP0 + 1036, NULL, NULL, "group0", NULL},
-	[13]  = {"r13"      , 13, GROUP0 + 1037, NULL, NULL, "group0", NULL},
-	[14]  = {"r14"      , 14, GROUP0 + 1038, NULL, NULL, "group0", NULL},
-	[15]  = {"r15"      , 15, GROUP0 + 1039, NULL, NULL, "group0", NULL},
-	[16]  = {"r16"      , 16, GROUP0 + 1040, NULL, NULL, "group0", NULL},
-	[17]  = {"r17"      , 17, GROUP0 + 1041, NULL, NULL, "group0", NULL},
-	[18]  = {"r18"      , 18, GROUP0 + 1042, NULL, NULL, "group0", NULL},
-	[19]  = {"r19"      , 19, GROUP0 + 1043, NULL, NULL, "group0", NULL},
-	[20]  = {"r20"      , 20, GROUP0 + 1044, NULL, NULL, "group0", NULL},
-	[21]  = {"r21"      , 21, GROUP0 + 1045, NULL, NULL, "group0", NULL},
-	[22]  = {"r22"      , 22, GROUP0 + 1046, NULL, NULL, "group0", NULL},
-	[23]  = {"r23"      , 23, GROUP0 + 1047, NULL, NULL, "group0", NULL},
-	[24]  = {"r24"      , 24, GROUP0 + 1048, NULL, NULL, "group0", NULL},
-	[25]  = {"r25"      , 25, GROUP0 + 1049, NULL, NULL, "group0", NULL},
-	[26]  = {"r26"      , 26, GROUP0 + 1050, NULL, NULL, "group0", NULL},
-	[27]  = {"r27"      , 27, GROUP0 + 1051, NULL, NULL, "group0", NULL},
-	[28]  = {"r28"      , 28, GROUP0 + 1052, NULL, NULL, "group0", NULL},
-	[29]  = {"r29"      , 29, GROUP0 + 1053, NULL, NULL, "group0", NULL},
-	[30]  = {"r30"      , 30, GROUP0 + 1054, NULL, NULL, "group0", NULL},
-	[31]  = {"r31"      , 31, GROUP0 + 1055, NULL, NULL, "group0", NULL},
-	[32]  = {"ppc"      , 32, GROUP0 + 18,   NULL, NULL, "group0", NULL},
-	[33]  = {"npc"      , 33, GROUP0 + 16,   NULL, NULL, "group0", NULL},
-	[34]  = {"sr"       , 34, GROUP0 + 17,   NULL, NULL, "group0", NULL},
-	[35]  = {"vr"       , 35, GROUP0 + 0,    NULL, NULL, "group0", "system"},
-	[36]  = {"upr"      , 36, GROUP0 + 1,    NULL, NULL, "group0", "system"},
-	[37]  = {"cpucfgr"  , 37, GROUP0 + 2,    NULL, NULL, "group0", "system"},
-	[38]  = {"dmmucfgr" , 38, GROUP0 + 3,    NULL, NULL, "group0", "system"},
-	[39]  = {"immucfgr" , 39, GROUP0 + 4,    NULL, NULL, "group0", "system"},
-	[40]  = {"dccfgr"   , 40, GROUP0 + 5,    NULL, NULL, "group0", "system"},
-	[41]  = {"iccfgr"   , 41, GROUP0 + 6,    NULL, NULL, "group0", "system"},
-	[42]  = {"dcfgr"    , 42, GROUP0 + 7,    NULL, NULL, "group0", "system"},
-	[43]  = {"pccfgr"   , 43, GROUP0 + 8,    NULL, NULL, "group0", "system"},
-	[44]  = {"fpcsr"    , 44, GROUP0 + 20,   NULL, NULL, "group0", "system"},
-	[45]  = {"epcr0"    , 45, GROUP0 + 32,   NULL, NULL, "group0", "system"},
-	[46]  = {"epcr1"    , 46, GROUP0 + 33,   NULL, NULL, "group0", "system"},
-	[47]  = {"epcr2"    , 47, GROUP0 + 34,   NULL, NULL, "group0", "system"},
-	[48]  = {"epcr3"    , 48, GROUP0 + 35,   NULL, NULL, "group0", "system"},
-	[49]  = {"epcr4"    , 49, GROUP0 + 36,   NULL, NULL, "group0", "system"},
-	[50]  = {"epcr5"    , 50, GROUP0 + 37,   NULL, NULL, "group0", "system"},
-	[51]  = {"epcr6"    , 51, GROUP0 + 38,   NULL, NULL, "group0", "system"},
-	[52]  = {"epcr7"    , 52, GROUP0 + 39,   NULL, NULL, "group0", "system"},
-	[53]  = {"epcr8"    , 53, GROUP0 + 40,   NULL, NULL, "group0", "system"},
-	[54]  = {"epcr9"    , 54, GROUP0 + 41,   NULL, NULL, "group0", "system"},
-	[55]  = {"epcr10"   , 55, GROUP0 + 42,   NULL, NULL, "group0", "system"},
-	[56]  = {"epcr11"   , 56, GROUP0 + 43,   NULL, NULL, "group0", "system"},
-	[57]  = {"epcr12"   , 57, GROUP0 + 44,   NULL, NULL, "group0", "system"},
-	[58]  = {"epcr13"   , 58, GROUP0 + 45,   NULL, NULL, "group0", "system"},
-	[59]  = {"epcr14"   , 59, GROUP0 + 46,   NULL, NULL, "group0", "system"},
-	[60]  = {"epcr15"   , 60, GROUP0 + 47,   NULL, NULL, "group0", "system"},
-	[61]  = {"eear0"    , 61, GROUP0 + 48,   NULL, NULL, "group0", "system"},
-	[62]  = {"eear1"    , 62, GROUP0 + 49,   NULL, NULL, "group0", "system"},
-	[63]  = {"eear2"    , 63, GROUP0 + 50,   NULL, NULL, "group0", "system"},
-	[64]  = {"eear3"    , 64, GROUP0 + 51,   NULL, NULL, "group0", "system"},
-	[65]  = {"eear4"    , 65, GROUP0 + 52,   NULL, NULL, "group0", "system"},
-	[66]  = {"eear5"    , 66, GROUP0 + 53,   NULL, NULL, "group0", "system"},
-	[67]  = {"eear6"    , 67, GROUP0 + 54,   NULL, NULL, "group0", "system"},
-	[68]  = {"eear7"    , 68, GROUP0 + 55,   NULL, NULL, "group0", "system"},
-	[69]  = {"eear8"    , 69, GROUP0 + 56,   NULL, NULL, "group0", "system"},
-	[70]  = {"eear9"    , 70, GROUP0 + 57,   NULL, NULL, "group0", "system"},
-	[71]  = {"eear10"   , 71, GROUP0 + 58,   NULL, NULL, "group0", "system"},
-	[72]  = {"eear11"   , 72, GROUP0 + 59,   NULL, NULL, "group0", "system"},
-	[73]  = {"eear12"   , 73, GROUP0 + 60,   NULL, NULL, "group0", "system"},
-	[74]  = {"eear13"   , 74, GROUP0 + 61,   NULL, NULL, "group0", "system"},
-	[75]  = {"eear14"   , 75, GROUP0 + 62,   NULL, NULL, "group0", "system"},
-	[76]  = {"eear15"   , 76, GROUP0 + 63,   NULL, NULL, "group0", "system"},
-	[77]  = {"esr0"     , 77, GROUP0 + 64,   NULL, NULL, "group0", "system"},
-	[78]  = {"esr1"     , 78, GROUP0 + 65,   NULL, NULL, "group0", "system"},
-	[79]  = {"esr2"     , 79, GROUP0 + 66,   NULL, NULL, "group0", "system"},
-	[80]  = {"esr3"     , 80, GROUP0 + 67,   NULL, NULL, "group0", "system"},
-	[81]  = {"esr4"     , 81, GROUP0 + 68,   NULL, NULL, "group0", "system"},
-	[82]  = {"esr5"     , 82, GROUP0 + 69,   NULL, NULL, "group0", "system"},
-	[83]  = {"esr6"     , 83, GROUP0 + 70,   NULL, NULL, "group0", "system"},
-	[84]  = {"esr7"     , 84, GROUP0 + 71,   NULL, NULL, "group0", "system"},
-	[85]  = {"esr8"     , 85, GROUP0 + 72,   NULL, NULL, "group0", "system"},
-	[86]  = {"esr9"     , 86, GROUP0 + 73,   NULL, NULL, "group0", "system"},
-	[87]  = {"esr10"    , 87, GROUP0 + 74,   NULL, NULL, "group0", "system"},
-	[88]  = {"esr11"    , 88, GROUP0 + 75,   NULL, NULL, "group0", "system"},
-	[89]  = {"esr12"    , 89, GROUP0 + 76,   NULL, NULL, "group0", "system"},
-	[90]  = {"esr13"    , 90, GROUP0 + 77,   NULL, NULL, "group0", "system"},
-	[91]  = {"esr14"    , 91, GROUP0 + 78,   NULL, NULL, "group0", "system"},
-	[92]  = {"esr15"    , 92, GROUP0 + 79,   NULL, NULL, "group0", "system"},
+	{"r0"       , GROUP0 + 1024, "group0", NULL},
+	{"r1"       , GROUP0 + 1025, "group0", NULL},
+	{"r2"       , GROUP0 + 1026, "group0", NULL},
+	{"r3"       , GROUP0 + 1027, "group0", NULL},
+	{"r4"       , GROUP0 + 1028, "group0", NULL},
+	{"r5"       , GROUP0 + 1029, "group0", NULL},
+	{"r6"       , GROUP0 + 1030, "group0", NULL},
+	{"r7"       , GROUP0 + 1031, "group0", NULL},
+	{"r8"       , GROUP0 + 1032, "group0", NULL},
+	{"r9"       , GROUP0 + 1033, "group0", NULL},
+	{"r10"      , GROUP0 + 1034, "group0", NULL},
+	{"r11"      , GROUP0 + 1035, "group0", NULL},
+	{"r12"      , GROUP0 + 1036, "group0", NULL},
+	{"r13"      , GROUP0 + 1037, "group0", NULL},
+	{"r14"      , GROUP0 + 1038, "group0", NULL},
+	{"r15"      , GROUP0 + 1039, "group0", NULL},
+	{"r16"      , GROUP0 + 1040, "group0", NULL},
+	{"r17"      , GROUP0 + 1041, "group0", NULL},
+	{"r18"      , GROUP0 + 1042, "group0", NULL},
+	{"r19"      , GROUP0 + 1043, "group0", NULL},
+	{"r20"      , GROUP0 + 1044, "group0", NULL},
+	{"r21"      , GROUP0 + 1045, "group0", NULL},
+	{"r22"      , GROUP0 + 1046, "group0", NULL},
+	{"r23"      , GROUP0 + 1047, "group0", NULL},
+	{"r24"      , GROUP0 + 1048, "group0", NULL},
+	{"r25"      , GROUP0 + 1049, "group0", NULL},
+	{"r26"      , GROUP0 + 1050, "group0", NULL},
+	{"r27"      , GROUP0 + 1051, "group0", NULL},
+	{"r28"      , GROUP0 + 1052, "group0", NULL},
+	{"r29"      , GROUP0 + 1053, "group0", NULL},
+	{"r30"      , GROUP0 + 1054, "group0", NULL},
+	{"r31"      , GROUP0 + 1055, "group0", NULL},
+	{"ppc"      , GROUP0 + 18,   "group0", NULL},
+	{"npc"      , GROUP0 + 16,   "group0", NULL},
+	{"sr"       , GROUP0 + 17,   "group0", NULL},
+	{"vr"       , GROUP0 + 0,    "group0", "system"},
+	{"upr"      , GROUP0 + 1,    "group0", "system"},
+	{"cpucfgr"  , GROUP0 + 2,    "group0", "system"},
+	{"dmmucfgr" , GROUP0 + 3,    "group0", "system"},
+	{"immucfgr" , GROUP0 + 4,    "group0", "system"},
+	{"dccfgr"   , GROUP0 + 5,    "group0", "system"},
+	{"iccfgr"   , GROUP0 + 6,    "group0", "system"},
+	{"dcfgr"    , GROUP0 + 7,    "group0", "system"},
+	{"pccfgr"   , GROUP0 + 8,    "group0", "system"},
+	{"fpcsr"    , GROUP0 + 20,   "group0", "system"},
+	{"epcr0"    , GROUP0 + 32,   "group0", "system"},
+	{"epcr1"    , GROUP0 + 33,   "group0", "system"},
+	{"epcr2"    , GROUP0 + 34,   "group0", "system"},
+	{"epcr3"    , GROUP0 + 35,   "group0", "system"},
+	{"epcr4"    , GROUP0 + 36,   "group0", "system"},
+	{"epcr5"    , GROUP0 + 37,   "group0", "system"},
+	{"epcr6"    , GROUP0 + 38,   "group0", "system"},
+	{"epcr7"    , GROUP0 + 39,   "group0", "system"},
+	{"epcr8"    , GROUP0 + 40,   "group0", "system"},
+	{"epcr9"    , GROUP0 + 41,   "group0", "system"},
+	{"epcr10"   , GROUP0 + 42,   "group0", "system"},
+	{"epcr11"   , GROUP0 + 43,   "group0", "system"},
+	{"epcr12"   , GROUP0 + 44,   "group0", "system"},
+	{"epcr13"   , GROUP0 + 45,   "group0", "system"},
+	{"epcr14"   , GROUP0 + 46,   "group0", "system"},
+	{"epcr15"   , GROUP0 + 47,   "group0", "system"},
+	{"eear0"    , GROUP0 + 48,   "group0", "system"},
+	{"eear1"    , GROUP0 + 49,   "group0", "system"},
+	{"eear2"    , GROUP0 + 50,   "group0", "system"},
+	{"eear3"    , GROUP0 + 51,   "group0", "system"},
+	{"eear4"    , GROUP0 + 52,   "group0", "system"},
+	{"eear5"    , GROUP0 + 53,   "group0", "system"},
+	{"eear6"    , GROUP0 + 54,   "group0", "system"},
+	{"eear7"    , GROUP0 + 55,   "group0", "system"},
+	{"eear8"    , GROUP0 + 56,   "group0", "system"},
+	{"eear9"    , GROUP0 + 57,   "group0", "system"},
+	{"eear10"   , GROUP0 + 58,   "group0", "system"},
+	{"eear11"   , GROUP0 + 59,   "group0", "system"},
+	{"eear12"   , GROUP0 + 60,   "group0", "system"},
+	{"eear13"   , GROUP0 + 61,   "group0", "system"},
+	{"eear14"   , GROUP0 + 62,   "group0", "system"},
+	{"eear15"   , GROUP0 + 63,   "group0", "system"},
+	{"esr0"     , GROUP0 + 64,   "group0", "system"},
+	{"esr1"     , GROUP0 + 65,   "group0", "system"},
+	{"esr2"     , GROUP0 + 66,   "group0", "system"},
+	{"esr3"     , GROUP0 + 67,   "group0", "system"},
+	{"esr4"     , GROUP0 + 68,   "group0", "system"},
+	{"esr5"     , GROUP0 + 69,   "group0", "system"},
+	{"esr6"     , GROUP0 + 70,   "group0", "system"},
+	{"esr7"     , GROUP0 + 71,   "group0", "system"},
+	{"esr8"     , GROUP0 + 72,   "group0", "system"},
+	{"esr9"     , GROUP0 + 73,   "group0", "system"},
+	{"esr10"    , GROUP0 + 74,   "group0", "system"},
+	{"esr11"    , GROUP0 + 75,   "group0", "system"},
+	{"esr12"    , GROUP0 + 76,   "group0", "system"},
+	{"esr13"    , GROUP0 + 77,   "group0", "system"},
+	{"esr14"    , GROUP0 + 78,   "group0", "system"},
+	{"esr15"    , GROUP0 + 79,   "group0", "system"},
 
-	[93]   = {"dmmuucr" , 93,  GROUP1 + 0,   NULL, NULL, "group1", "dmmu"},
-	[94]   = {"dmmuupr" , 94,  GROUP1 + 1,   NULL, NULL, "group1", "dmmu"},
-	[95]   = {"dtlbeir" , 95,  GROUP1 + 2,   NULL, NULL, "group1", "dmmu"},
-	[96]   = {"datbmr0" , 96,  GROUP1 + 4,   NULL, NULL, "group1", "dmmu"},
-	[97]   = {"datbmr1" , 97,  GROUP1 + 5,   NULL, NULL, "group1", "dmmu"},
-	[98]   = {"datbmr2" , 98,  GROUP1 + 6,   NULL, NULL, "group1", "dmmu"},
-	[99]   = {"datbmr3" , 99,  GROUP1 + 7,   NULL, NULL, "group1", "dmmu"},
-	[100]  = {"datbtr0" , 100, GROUP1 + 8,   NULL, NULL, "group1", "dmmu"},
-	[101]  = {"datbtr1" , 101, GROUP1 + 9,   NULL, NULL, "group1", "dmmu"},
-	[102]  = {"datbtr2" , 102, GROUP1 + 10,  NULL, NULL, "group1", "dmmu"},
-	[103]  = {"datbtr3" , 103, GROUP1 + 11,  NULL, NULL, "group1", "dmmu"},
+	{"dmmuucr"  , GROUP1 + 0,    "group1", "dmmu"},
+	{"dmmuupr"  , GROUP1 + 1,    "group1", "dmmu"},
+	{"dtlbeir"  , GROUP1 + 2,    "group1", "dmmu"},
+	{"datbmr0"  , GROUP1 + 4,    "group1", "dmmu"},
+	{"datbmr1"  , GROUP1 + 5,    "group1", "dmmu"},
+	{"datbmr2"  , GROUP1 + 6,    "group1", "dmmu"},
+	{"datbmr3"  , GROUP1 + 7,    "group1", "dmmu"},
+	{"datbtr0"  , GROUP1 + 8,    "group1", "dmmu"},
+	{"datbtr1"  , GROUP1 + 9,    "group1", "dmmu"},
+	{"datbtr2"  , GROUP1 + 10,   "group1", "dmmu"},
+	{"datbtr3"  , GROUP1 + 11,   "group1", "dmmu"},
 /*
 	[104..231]   dtlbw0mr0 - 127, GROUP1 512 - 639
 	[232..359]   dtlbw0tr0 - 127, GROUP1 640 - 767
@@ -156,17 +156,17 @@ struct or1k_core_reg or1k_init_reg_list[] =
 	[872..999]   dtlbw3mr0 - 127, GROUP1 1280 - 1407
 	[1000..1127] dtlbw3tr0 - 127, GROUP1 1408 - 1535
 */
-	[1128] = {"immucr"  , 1128, GROUP2 + 0,  NULL, NULL, "group2", "immu"},
-	[1129] = {"immupr"  , 1129, GROUP2 + 1,  NULL, NULL, "group2", "immu"},
-	[1130] = {"itlbeir" , 1130, GROUP2 + 2,  NULL, NULL, "group2", "immu"},
-	[1131] = {"iatbmr0" , 1131, GROUP2 + 4,  NULL, NULL, "group2", "immu"},
-	[1132] = {"iatbmr1" , 1132, GROUP2 + 5,  NULL, NULL, "group2", "immu"},
-	[1133] = {"iatbmr2" , 1133, GROUP2 + 6,  NULL, NULL, "group2", "immu"},
-	[1134] = {"iatbmr3" , 1134, GROUP2 + 7,  NULL, NULL, "group2", "immu"},
-	[1135] = {"iatbtr0" , 1135, GROUP2 + 8,  NULL, NULL, "group2", "immu"},
-	[1136] = {"iatbtr1" , 1136, GROUP2 + 9,  NULL, NULL, "group2", "immu"},
-	[1137] = {"iatbtr2" , 1137, GROUP2 + 10, NULL, NULL, "group2", "immu"},
-	[1138] = {"iatbtr3" , 1138, GROUP2 + 11, NULL, NULL, "group2", "immu"},
+	{"immucr"   , GROUP2 + 0,    "group2", "immu"},
+	{"immupr"   , GROUP2 + 1,    "group2", "immu"},
+	{"itlbeir"  , GROUP2 + 2,    "group2", "immu"},
+	{"iatbmr0"  , GROUP2 + 4,    "group2", "immu"},
+	{"iatbmr1"  , GROUP2 + 5,    "group2", "immu"},
+	{"iatbmr2"  , GROUP2 + 6,    "group2", "immu"},
+	{"iatbmr3"  , GROUP2 + 7,    "group2", "immu"},
+	{"iatbtr0"  , GROUP2 + 8,    "group2", "immu"},
+	{"iatbtr1"  , GROUP2 + 9,    "group2", "immu"},
+	{"iatbtr2"  , GROUP2 + 10,   "group2", "immu"},
+	{"iatbtr3"  , GROUP2 + 11,   "group2", "immu"},
 /*
 	[1139..1266] itlbw0mr0 - 127, GROUP2 512 - 639
 	[1267..1394] itlbw0tr0 - 127, GROUP2 640 - 767
@@ -177,119 +177,148 @@ struct or1k_core_reg or1k_init_reg_list[] =
 	[1907..2034] itlbw3mr0 - 127, GROUP2 1280 - 1407
 	[2035..2162] itlbw3tr0 - 127, GROUP2 1408 - 1535
 */
-	[2163] = {"dccr"    , 2163, GROUP3 + 0,  NULL, NULL, "group3", "dcache"},
-	[2164] = {"dcbpr"   , 2164, GROUP3 + 1,  NULL, NULL, "group3", "dcache"},
-	[2165] = {"dcbfr"   , 2165, GROUP3 + 2,  NULL, NULL, "group3", "dcache"},
-	[2166] = {"dcbir"   , 2166, GROUP3 + 3,  NULL, NULL, "group3", "dcache"},
-	[2167] = {"dcbwr"   , 2167, GROUP3 + 4,  NULL, NULL, "group3", "dcache"},
-	[2168] = {"dcblr"   , 2168, GROUP3 + 5,  NULL, NULL, "group3", "dcache"},
+	{"dccr"     , GROUP3 + 0,    "group3", "dcache"},
+	{"dcbpr"    , GROUP3 + 1,    "group3", "dcache"},
+	{"dcbfr"    , GROUP3 + 2,    "group3", "dcache"},
+	{"dcbir"    , GROUP3 + 3,    "group3", "dcache"},
+	{"dcbwr"    , GROUP3 + 4,    "group3", "dcache"},
+	{"dcblr"    , GROUP3 + 5,    "group3", "dcache"},
 
-	[2169] = {"iccr"    , 2169, GROUP4 + 0,  NULL, NULL, "group4", "icache"},
-	[2170] = {"icbpr"   , 2170, GROUP4 + 1,  NULL, NULL, "group4", "icache"},
-	[2171] = {"icbir"   , 2171, GROUP4 + 2,  NULL, NULL, "group4", "icache"},
-	[2172] = {"icblr"   , 2172, GROUP4 + 3,  NULL, NULL, "group4", "icache"},
+	{"iccr"     , GROUP4 + 0,    "group4", "icache"},
+	{"icbpr"    , GROUP4 + 1,    "group4", "icache"},
+	{"icbir"    , GROUP4 + 2,    "group4", "icache"},
+	{"icblr"    , GROUP4 + 3,    "group4", "icache"},
 
-	[2173] = {"maclo"   , 2173, GROUP5 + 0,  NULL, NULL, "group5", "mac"},
-	[2174] = {"machi"   , 2174, GROUP5 + 1,  NULL, NULL, "group5", "mac"},
+	{"maclo"    , GROUP5 + 0,    "group5", "mac"},
+	{"machi"    , GROUP5 + 1,    "group5", "mac"},
 
-	[2175] = {"dvr0"    , 2175, GROUP6 + 0,  NULL, NULL, "group6", "debug"},
-	[2176] = {"dvr1"    , 2176, GROUP6 + 1,  NULL, NULL, "group6", "debug"},
-	[2177] = {"dvr2"    , 2177, GROUP6 + 2,  NULL, NULL, "group6", "debug"},
-	[2178] = {"dvr3"    , 2178, GROUP6 + 3,  NULL, NULL, "group6", "debug"},
-	[2179] = {"dvr4"    , 2179, GROUP6 + 4,  NULL, NULL, "group6", "debug"},
-	[2180] = {"dvr5"    , 2180, GROUP6 + 5,  NULL, NULL, "group6", "debug"},
-	[2181] = {"dvr6"    , 2181, GROUP6 + 6,  NULL, NULL, "group6", "debug"},
-	[2182] = {"dvr7"    , 2182, GROUP6 + 7,  NULL, NULL, "group6", "debug"},
-	[2183] = {"dcr0"    , 2183, GROUP6 + 8,  NULL, NULL, "group6", "debug"},
-	[2184] = {"dcr1"    , 2184, GROUP6 + 9,  NULL, NULL, "group6", "debug"},
-	[2185] = {"dcr2"    , 2185, GROUP6 + 10, NULL, NULL, "group6", "debug"},
-	[2186] = {"dcr3"    , 2186, GROUP6 + 11, NULL, NULL, "group6", "debug"},
-	[2187] = {"dcr4"    , 2187, GROUP6 + 12, NULL, NULL, "group6", "debug"},
-	[2188] = {"dcr5"    , 2188, GROUP6 + 13, NULL, NULL, "group6", "debug"},
-	[2189] = {"dcr6"    , 2189, GROUP6 + 14, NULL, NULL, "group6", "debug"},
-	[2190] = {"dcr7"    , 2190, GROUP6 + 15, NULL, NULL, "group6", "debug"},
-	[2191] = {"dmr1"    , 2191, GROUP6 + 16, NULL, NULL, "group6", "debug"},
-	[2192] = {"dmr2"    , 2192, GROUP6 + 17, NULL, NULL, "group6", "debug"},
-	[2193] = {"dcwr0"   , 2193, GROUP6 + 18, NULL, NULL, "group6", "debug"},
-	[2194] = {"dcwr1"   , 2194, GROUP6 + 19, NULL, NULL, "group6", "debug"},
-	[2195] = {"dsr"     , 2195, GROUP6 + 20, NULL, NULL, "group6", "debug"},
-	[2196] = {"drr"     , 2196, GROUP6 + 21, NULL, NULL, "group6", "debug"},
+	{"dvr0"     , GROUP6 + 0,    "group6", "debug"},
+	{"dvr1"     , GROUP6 + 1,    "group6", "debug"},
+	{"dvr2"     , GROUP6 + 2,    "group6", "debug"},
+	{"dvr3"     , GROUP6 + 3,    "group6", "debug"},
+	{"dvr4"     , GROUP6 + 4,    "group6", "debug"},
+	{"dvr5"     , GROUP6 + 5,    "group6", "debug"},
+	{"dvr6"     , GROUP6 + 6,    "group6", "debug"},
+	{"dvr7"     , GROUP6 + 7,    "group6", "debug"},
+	{"dcr0"     , GROUP6 + 8,    "group6", "debug"},
+	{"dcr1"     , GROUP6 + 9,    "group6", "debug"},
+	{"dcr2"     , GROUP6 + 10,   "group6", "debug"},
+	{"dcr3"     , GROUP6 + 11,   "group6", "debug"},
+	{"dcr4"     , GROUP6 + 12,   "group6", "debug"},
+	{"dcr5"     , GROUP6 + 13,   "group6", "debug"},
+	{"dcr6"     , GROUP6 + 14,   "group6", "debug"},
+	{"dcr7"     , GROUP6 + 15,   "group6", "debug"},
+	{"dmr1"     , GROUP6 + 16,   "group6", "debug"},
+	{"dmr2"     , GROUP6 + 17,   "group6", "debug"},
+	{"dcwr0"    , GROUP6 + 18,   "group6", "debug"},
+	{"dcwr1"    , GROUP6 + 19,   "group6", "debug"},
+	{"dsr"      , GROUP6 + 20,   "group6", "debug"},
+	{"drr"      , GROUP6 + 21,   "group6", "debug"},
 
-	[2197] = {"pccr0"   , 2197, GROUP7 + 0,  NULL, NULL, "group7", "perf"},
-	[2198] = {"pccr1"   , 2198, GROUP7 + 1,  NULL, NULL, "group7", "perf"},
-	[2199] = {"pccr2"   , 2199, GROUP7 + 2,  NULL, NULL, "group7", "perf"},
-	[2200] = {"pccr3"   , 2200, GROUP7 + 3,  NULL, NULL, "group7", "perf"},
-	[2201] = {"pccr4"   , 2201, GROUP7 + 4,  NULL, NULL, "group7", "perf"},
-	[2202] = {"pccr5"   , 2202, GROUP7 + 5,  NULL, NULL, "group7", "perf"},
-	[2203] = {"pccr6"   , 2203, GROUP7 + 6,  NULL, NULL, "group7", "perf"},
-	[2204] = {"pccr7"   , 2204, GROUP7 + 7,  NULL, NULL, "group7", "perf"},
-	[2205] = {"pcmr0"   , 2205, GROUP7 + 8,  NULL, NULL, "group7", "perf"},
-	[2206] = {"pcmr1"   , 2206, GROUP7 + 9,  NULL, NULL, "group7", "perf"},
-	[2207] = {"pcmr2"   , 2207, GROUP7 + 10, NULL, NULL, "group7", "perf"},
-	[2208] = {"pcmr3"   , 2208, GROUP7 + 11, NULL, NULL, "group7", "perf"},
-	[2209] = {"pcmr4"   , 2209, GROUP7 + 12, NULL, NULL, "group7", "perf"},
-	[2210] = {"pcmr5"   , 2210, GROUP7 + 13, NULL, NULL, "group7", "perf"},
-	[2211] = {"pcmr6"   , 2211, GROUP7 + 14, NULL, NULL, "group7", "perf"},
-	[2212] = {"pcmr7"   , 2212, GROUP7 + 15, NULL, NULL, "group7", "perf"},
+	{"pccr0"    , GROUP7 + 0,    "group7", "perf"},
+	{"pccr1"    , GROUP7 + 1,    "group7", "perf"},
+	{"pccr2"    , GROUP7 + 2,    "group7", "perf"},
+	{"pccr3"    , GROUP7 + 3,    "group7", "perf"},
+	{"pccr4"    , GROUP7 + 4,    "group7", "perf"},
+	{"pccr5"    , GROUP7 + 5,    "group7", "perf"},
+	{"pccr6"    , GROUP7 + 6,    "group7", "perf"},
+	{"pccr7"    , GROUP7 + 7,    "group7", "perf"},
+	{"pcmr0"    , GROUP7 + 8,    "group7", "perf"},
+	{"pcmr1"    , GROUP7 + 9,    "group7", "perf"},
+	{"pcmr2"    , GROUP7 + 10,   "group7", "perf"},
+	{"pcmr3"    , GROUP7 + 11,   "group7", "perf"},
+	{"pcmr4"    , GROUP7 + 12,   "group7", "perf"},
+	{"pcmr5"    , GROUP7 + 13,   "group7", "perf"},
+	{"pcmr6"    , GROUP7 + 14,   "group7", "perf"},
+	{"pcmr7"    , GROUP7 + 15,   "group7", "perf"},
 
-	[2213] = {"pmr"     , 2213, GROUP8 + 0,  NULL, NULL, "group8", "power"},
+	{"pmr"      , GROUP8 + 0,    "group8", "power"},
 
-	[2214] = {"picmr"   , 2214, GROUP9 + 0,  NULL, NULL, "group9", "pic"},
-	[2215] = {"picsr"   , 2215, GROUP9 + 2,  NULL, NULL, "group9", "pic"},
+	{"picmr"    , GROUP9 + 0,    "group9", "pic"},
+	{"picsr"    , GROUP9 + 2,    "group9", "pic"},
 
-	[2216] = {"ttmr"    , 2216, GROUP10 + 0, NULL, NULL, "group10", "timer"},
-	[2217] = {"ttcr"    , 2217, GROUP10 + 1, NULL, NULL, "group10", "timer"},
+	{"ttmr"     , GROUP10 + 0,   "group10", "timer"},
+	{"ttcr"     , GROUP10 + 1,   "group10", "timer"},
 };
 
-static int or1k_create_reg_list(struct target *target, struct or1k_core_reg *or1k_reg_list)
+static int or1k_add_reg(struct target *target, struct or1k_core_reg *new_reg)
 {
 	struct or1k_common *or1k = target_to_or1k(target);
-	int i, way, reg_num;
+	int reg_list_size = or1k->nb_regs * sizeof(struct or1k_core_reg);
+
+	or1k_core_reg_list_arch_info = realloc(or1k_core_reg_list_arch_info,
+				reg_list_size + sizeof(struct or1k_core_reg));
+
+	memcpy(&or1k_core_reg_list_arch_info[or1k->nb_regs], new_reg,
+		sizeof(struct or1k_core_reg));
+
+	or1k_core_reg_list_arch_info[or1k->nb_regs].list_num = or1k->nb_regs;
+
+	or1k->nb_regs++;
+
+	return ERROR_OK;
+}
+
+static int or1k_create_reg_list(struct target *target)
+{
+	struct or1k_common *or1k = target_to_or1k(target);
+	struct or1k_core_reg new_reg;
+	int i, way;
 	char name[32];
 
-	memset(&or1k_init_reg_list[104], 0, sizeof(struct or1k_core_reg) * 128 * 8);
-	memset(&or1k_init_reg_list[1139], 0, sizeof(struct or1k_core_reg) * 128 * 8);
+	or1k_core_reg_list_arch_info = malloc(ARRAY_SIZE(or1k_init_reg_list) *
+				       sizeof(struct or1k_core_reg));
+
+	for (i = 0; i < (int)ARRAY_SIZE(or1k_init_reg_list); i++) {
+		or1k_core_reg_list_arch_info[i].name = or1k_init_reg_list[i].name;
+		or1k_core_reg_list_arch_info[i].spr_num = or1k_init_reg_list[i].spr_num;
+		or1k_core_reg_list_arch_info[i].group = or1k_init_reg_list[i].group;
+		or1k_core_reg_list_arch_info[i].feature = or1k_init_reg_list[i].feature;
+		or1k_core_reg_list_arch_info[i].list_num = i;
+		or1k_core_reg_list_arch_info[i].target = NULL;
+		or1k_core_reg_list_arch_info[i].or1k_common = NULL;
+	}
+
+	or1k->nb_regs = ARRAY_SIZE(or1k_init_reg_list);
 
 	for (way = 0; way < 4; way++) {
 		for (i = 0; i < 128; i++) {
 
+			new_reg.target = NULL;
+			new_reg.or1k_common = NULL;
+
 			sprintf(name, "dtlbw%dmr%d", way, i);
-			reg_num = 104 + i + (way * 256);
-			or1k_init_reg_list[reg_num].name = strdup(name);
-			or1k_init_reg_list[reg_num].list_num = reg_num;
-			or1k_init_reg_list[reg_num].spr_num = GROUP1 + 512 + i + (way * 256);
-			or1k_init_reg_list[reg_num].feature = "group1";
-			or1k_init_reg_list[reg_num].group = "dmmu";
+			new_reg.name = strdup(name);
+			new_reg.spr_num = GROUP1 + 512 + i + (way * 256);
+			new_reg.feature = "group1";
+			new_reg.group = "dmmu";
+			or1k_add_reg(target, &new_reg);
 
 			sprintf(name, "dtlbw%dtr%d", way, i);
-			reg_num = 232 + i + (way * 256);
-			or1k_init_reg_list[reg_num].name = strdup(name);
-			or1k_init_reg_list[reg_num].list_num = reg_num;
-			or1k_init_reg_list[reg_num].spr_num = GROUP1 + 640 + i + (way * 256);
-			or1k_init_reg_list[reg_num].feature = "group1";
-			or1k_init_reg_list[reg_num].group = "dmmu";
+			new_reg.name = strdup(name);
+			new_reg.spr_num = GROUP1 + 640 + i + (way * 256);
+			new_reg.feature = "group1";
+			new_reg.group = "dmmu";
+			or1k_add_reg(target, &new_reg);
+
 
 			sprintf(name, "itlbw%dmr%d", way, i);
-			reg_num = 1139 + i + (way * 256);
-			or1k_init_reg_list[reg_num].name = strdup(name);
-			or1k_init_reg_list[reg_num].list_num = reg_num;
-			or1k_init_reg_list[reg_num].spr_num = GROUP2 + 512 + i + (way * 256);
-			or1k_init_reg_list[reg_num].feature = "group2";
-			or1k_init_reg_list[reg_num].group = "immu";
+			new_reg.name = strdup(name);
+			new_reg.spr_num = GROUP2 + 512 + i + (way * 256);
+			new_reg.feature = "group2";
+			new_reg.group = "immu";
+			or1k_add_reg(target, &new_reg);
+
 
 			sprintf(name, "itlbw%dtr%d", way, i);
-			reg_num = 1267 + i + (way * 256);
-			or1k_init_reg_list[reg_num].name = strdup(name);
-			or1k_init_reg_list[reg_num].list_num = reg_num;
-			or1k_init_reg_list[reg_num].spr_num = GROUP2 + 640 + i + (way * 256);
-			or1k_init_reg_list[reg_num].feature = "group2";
-			or1k_init_reg_list[reg_num].group = "immu";
+			new_reg.name = strdup(name);
+			new_reg.spr_num = GROUP2 + 640 + i + (way * 256);
+			new_reg.feature = "group2";
+			new_reg.group = "immu";
+			or1k_add_reg(target, &new_reg);
+
 		}
 	}
-
-	or1k_core_reg_list_arch_info = malloc(sizeof(or1k_init_reg_list));
-	memcpy(or1k_core_reg_list_arch_info, or1k_init_reg_list, sizeof(or1k_init_reg_list));
-	or1k->nb_regs = (int)(sizeof(or1k_init_reg_list) / sizeof(struct or1k_core_reg));
 
 	return ERROR_OK;
 }
@@ -1138,9 +1167,10 @@ static int or1k_init_target(struct command_context *cmd_ctx,
 
 	or1k->jtag.tap = target->tap;
 
-	or1k_create_reg_list(target, or1k_init_reg_list);
+	or1k_create_reg_list(target);
 
 	or1k_build_reg_cache(target);
+
 	return ERROR_OK;
 }
 

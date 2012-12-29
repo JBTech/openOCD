@@ -104,6 +104,14 @@ struct or1k_core_reg
 
 };
 
+struct or1k_core_reg_init
+{
+	const char *name;
+	uint32_t spr_num; /* Number in architecture's SPR space */
+	const char *feature; /* feature name in XML tdesc file */
+	const char *group;   /* register group in XML tdesc file */
+};
+
 /* Make this available to or1k_jtag.h */
 extern struct or1k_core_reg *or1k_core_reg_list_arch_info;
 
