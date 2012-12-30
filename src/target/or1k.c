@@ -1171,12 +1171,6 @@ static int or1k_checksum_memory(struct target *target, uint32_t address,
 
 }
 
-/* defined in server/gdb_server.h" */
-extern struct connection *current_rsp_connection;
-extern int gdb_rsp_resp_error;
-#define ERROR_OK_NO_GDB_REPLY (-42)
-#define OR1K_SPR_ACCESS_ALWAYS_AGAINST_HW 0
-
 COMMAND_HANDLER(or1k_readspr_command_handler)
 {
 	struct target *target = get_current_target(CMD_CTX);
@@ -1227,33 +1221,6 @@ COMMAND_HANDLER(or1k_readspr_command_handler)
 		if (retval != ERROR_OK)
 			return retval;
 
-	}
-
-
-	if (current_rsp_connection != NULL) {
-		char gdb_reply[9];
-		sprintf(gdb_reply, "%8x", (unsigned int) regval);
-		gdb_reply[8] = 0x0;
-
-		char *hex_buffer;
-		int bin_size;
-
-		bin_size = strlen(gdb_reply);
-
-		hex_buffer = malloc(bin_size*2 + 1);
-		if (hex_buffer == NULL)
-			return ERROR_GDB_BUFFER_TOO_SMALL;
-
-		for (i = 0; i < bin_size; i++)
-			snprintf(hex_buffer + i*2, 3, "%2.2x", gdb_reply[i]);
-		hex_buffer[bin_size*2] = 0;
-
-		gdb_put_packet(current_rsp_connection, hex_buffer,
-			       bin_size*2);
-
-		free(hex_buffer);
-
-		gdb_rsp_resp_error = ERROR_OK_NO_GDB_REPLY;
 	}
 
 	/* Reg part of local core cache, but not valid, so update it */
@@ -1388,6 +1355,10 @@ static const struct command_registration or1k_spr_command_handlers[] = {
 		.usage = "sprnum value",
 		.help = "write value to OR1k special purpose register sprnum",
 	},
+	COMMAND_REGISTRATION_DONE
+};
+
+static const struct command_registration or1k_reg_command_handlers[] = {
 	{
 		"addreg",
 		.handler = or1k_addreg_command_handler,
@@ -1401,6 +1372,9 @@ static const struct command_registration or1k_spr_command_handlers[] = {
 const struct command_registration or1k_command_handlers[] = {
 	{
 		.chain = or1k_spr_command_handlers,
+	},
+	{
+		.chain = or1k_reg_command_handlers,
 	},
 	COMMAND_REGISTRATION_DONE
 };

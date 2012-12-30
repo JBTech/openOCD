@@ -88,10 +88,6 @@ struct gdb_connection {
 #define _DEBUG_GDB_IO_
 #endif
 
-/* RSP hack for or1k read/writespr */
-struct connection *current_rsp_connection = NULL;
-int gdb_rsp_resp_error = ERROR_OK;
-
 static struct gdb_connection *current_gdb_connection;
 
 static int gdb_breakpoint_override;
@@ -1803,18 +1799,13 @@ static int gdb_query_packet(struct connection *connection,
 			/* some commands need to know the GDB connection, make note of current
 			 * GDB connection. */
 			current_gdb_connection = gdb_connection;
-			current_rsp_connection = connection; /* Julius */
-			gdb_rsp_resp_error = ERROR_OK; /* Julius */
 			command_run_line(cmd_ctx, cmd);
 			current_gdb_connection = NULL;
-			current_rsp_connection = NULL;
 			target_call_timer_callbacks_now();
 			log_remove_callback(gdb_log_callback, connection);
 			free(cmd);
 		}
-		if (gdb_rsp_resp_error == ERROR_OK)
-			gdb_put_packet(connection, "OK", 2);
-
+		gdb_put_packet(connection, "OK", 2);
 		return ERROR_OK;
 	} else if (strncmp(packet, "qCRC:", 5) == 0) {
 		if (packet_size > 5) {
