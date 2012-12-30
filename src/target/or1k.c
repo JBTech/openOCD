@@ -674,7 +674,7 @@ static int or1k_poll(struct target *target)
 
 			target->state = TARGET_HALTED;
 
-			retval = or1k_debug_entry(target)
+			retval = or1k_debug_entry(target);
 			if (retval != ERROR_OK)
 				return retval;
 
@@ -683,7 +683,7 @@ static int or1k_poll(struct target *target)
 		} else if (target->state == TARGET_DEBUG_RUNNING) {
 			target->state = TARGET_HALTED;
 
-			retval = or1k_debug_entry(target)
+			retval = or1k_debug_entry(target);
 			if (retval != ERROR_OK)
 				return retval;
 
@@ -699,7 +699,7 @@ static int or1k_poll(struct target *target)
 
 			or1k_halt(target);
 
-			retval = or1k_debug_entry(target)
+			retval = or1k_debug_entry(target);
 			if (retval != ERROR_OK)
 				return retval;
 
