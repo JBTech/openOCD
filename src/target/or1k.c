@@ -1171,148 +1171,6 @@ static int or1k_checksum_memory(struct target *target, uint32_t address,
 
 }
 
-COMMAND_HANDLER(or1k_readspr_command_handler)
-{
-	struct target *target = get_current_target(CMD_CTX);
-	struct or1k_common *or1k = target_to_or1k(target);
-	uint32_t regnum, regval;
-	int retval, i;
-	int reg_cache_index = -1;
-
-	if (CMD_ARGC != 1)
-		return ERROR_COMMAND_SYNTAX_ERROR;
-
-	if (1 != sscanf(CMD_ARGV[0], "%8x", &regnum))
-		return ERROR_COMMAND_SYNTAX_ERROR;
-
-	/* See if this register is in our cache and valid */
-
-	struct or1k_core_reg *arch_info;
-	for (i = 0; i < OR1KNUMCOREREGS; i++) {
-		arch_info = (struct or1k_core_reg *)
-			or1k->core_cache->reg_list[i].arch_info;
-		if (arch_info->spr_num == regnum) {
-			/* Reg is part of our cache. */
-			reg_cache_index = i;
-#if OR1K_SPR_ACCESS_ALWAYS_AGAINST_HW == 0
-			/* Is the local copy currently valid ? */
-			if (or1k->core_cache->reg_list[i].valid == 1) {
-				regval = buf_get_u32(or1k->core_cache->reg_list[i].value,
-						     0, 32);
-
-				LOG_DEBUG("reading cached value");
-			}
-#else
-			/* Now get the register value via JTAG */
-			retval = or1k_jtag_read_cpu(&or1k->jtag, regnum, 1, &regval);
-			if (retval != ERROR_OK)
-				return retval;
-#endif
-			break;
-		}
-	}
-
-	/* Reg was not found in cache, or it was and the value wasn't valid. */
-	if (reg_cache_index == -1 || (reg_cache_index != -1 &&
-	    !(or1k->core_cache->reg_list[reg_cache_index].valid == 1))) {
-		/* Now get the register value via JTAG */
-		retval = or1k_jtag_read_cpu(&or1k->jtag, regnum, 1, &regval);
-
-		if (retval != ERROR_OK)
-			return retval;
-
-	}
-
-	/* Reg part of local core cache, but not valid, so update it */
-	if (reg_cache_index != -1 &&
-	    !(or1k->core_cache->reg_list[reg_cache_index].valid == 1)) {
-		/* Set the value in the core reg array */
-		or1k->core_regs[reg_cache_index] = regval;
-		/* Always update the register struct's value from the core
-		   array */
-		or1k_read_core_reg(target, reg_cache_index);
-	}
-
-	return ERROR_OK;
-}
-
-COMMAND_HANDLER(or1k_writespr_command_handler)
-{
-	struct target *target = get_current_target(CMD_CTX);
-	struct or1k_common *or1k = target_to_or1k(target);
-	uint32_t regnum, regval;
-	int retval;
-	int i;
-
-	if (CMD_ARGC != 2)
-		return ERROR_COMMAND_SYNTAX_ERROR;
-
-	if (1 != sscanf(CMD_ARGV[0], "%8x", &regnum))
-		return ERROR_COMMAND_SYNTAX_ERROR;
-
-	if (1 != sscanf(CMD_ARGV[1], "%8x", &regval))
-		return ERROR_COMMAND_SYNTAX_ERROR;
-
-	LOG_DEBUG("adr 0x%08x val 0x%08x", regnum, regval);
-
-	/* Determine if this SPR is part of our cache */
-	struct or1k_core_reg *arch_info;
-	for (i = 0; i < OR1KNUMCOREREGS; i++) {
-		arch_info = (struct or1k_core_reg *)
-			or1k->core_cache->reg_list[i].arch_info;
-		if (arch_info->spr_num == regnum) {
-			/* Reg is part of our cache. */
-			or1k->core_cache->reg_list[i].valid = 1;
-			or1k->core_cache->reg_list[i].dirty = 1;
-			buf_set_u32(or1k->core_cache->reg_list[i].value, 0, 32,
-				    regval);
-
-			LOG_DEBUG("caching written value");
-#if OR1K_SPR_ACCESS_ALWAYS_AGAINST_HW == 0
-			return ERROR_OK;
-#else
-			/* Break so we go on to actually do the write */
-			break;
-#endif
-		}
-	}
-
-
-#if 0
-	uint32_t verify_regval;
-
-	while (1) {
-		/* Now set the register via JTAG */
-		retval = or1k_jtag_write_cpu(&or1k->jtag, regnum, 1, &regval);
-
-		if (retval != ERROR_OK)
-			return retval;
-
-		/* Now read back the register via JTAG */
-		retval = or1k_jtag_read_cpu(&or1k->jtag, regnum, 1, &verify_regval);
-
-		if (retval != ERROR_OK)
-			return retval;
-
-		LOG_DEBUG("written: %08x read: %08x", regval_be, verify_regval);
-
-		if (regval == verify_regval)
-			break;
-	}
-
-#else
-
-	/* Now set the register via JTAG */
-	retval = or1k_jtag_write_cpu(&or1k->jtag, regnum, 1, &regval);
-
-	if (retval != ERROR_OK)
-		return retval;
-#endif
-
-	return ERROR_OK;
-}
-
-
 COMMAND_HANDLER(or1k_addreg_command_handler)
 {
 	struct target *target = get_current_target(CMD_CTX);
@@ -1340,24 +1198,6 @@ COMMAND_HANDLER(or1k_addreg_command_handler)
 	return ERROR_OK;
 }
 
-static const struct command_registration or1k_spr_command_handlers[] = {
-	{
-		"readspr",
-		.handler = or1k_readspr_command_handler,
-		.mode = COMMAND_ANY,
-		.usage = "sprnum",
-		.help = "read OR1k special purpose register sprnum",
-	},
-	{
-		"writespr",
-		.handler = or1k_writespr_command_handler,
-		.mode = COMMAND_ANY,
-		.usage = "sprnum value",
-		.help = "write value to OR1k special purpose register sprnum",
-	},
-	COMMAND_REGISTRATION_DONE
-};
-
 static const struct command_registration or1k_reg_command_handlers[] = {
 	{
 		"addreg",
@@ -1370,9 +1210,6 @@ static const struct command_registration or1k_reg_command_handlers[] = {
 };
 
 const struct command_registration or1k_command_handlers[] = {
-	{
-		.chain = or1k_spr_command_handlers,
-	},
 	{
 		.chain = or1k_reg_command_handlers,
 	},
