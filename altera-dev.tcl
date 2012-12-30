@@ -10,6 +10,8 @@ proc fpga_test_init {} {
 
 gdb_port 50001
 
+addreg rtest 0x1234 group0 system
+
 init
 #echo "Halting processor"
 halt

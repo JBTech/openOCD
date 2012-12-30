@@ -1464,7 +1464,32 @@ COMMAND_HANDLER(or1k_writespr_command_handler)
 }
 
 
+COMMAND_HANDLER(or1k_addreg_command_handler)
+{
+	struct target *target = get_current_target(CMD_CTX);
+	struct or1k_core_reg new_reg;
+	uint32_t addr;
 
+	if (CMD_ARGC != 4)
+		return ERROR_COMMAND_SYNTAX_ERROR;
+
+	new_reg.target = NULL;
+	new_reg.or1k_common = NULL;
+
+	COMMAND_PARSE_NUMBER(u32, CMD_ARGV[1], addr);
+
+	new_reg.name = strdup(CMD_ARGV[0]);
+	new_reg.spr_num = addr;
+	new_reg.feature = strdup(CMD_ARGV[2]);
+	new_reg.group = strdup(CMD_ARGV[3]);
+
+	or1k_add_reg(target, &new_reg);
+
+	LOG_DEBUG("Add reg \"%s\" @ 0x%08X, group \"%s\", feature \"%s\"",
+		  new_reg.name, addr, new_reg.group, new_reg.feature);
+
+	return ERROR_OK;
+}
 
 static const struct command_registration or1k_spr_command_handlers[] = {
 	{
@@ -1480,6 +1505,13 @@ static const struct command_registration or1k_spr_command_handlers[] = {
 		.mode = COMMAND_ANY,
 		.usage = "sprnum value",
 		.help = "write value to OR1k special purpose register sprnum",
+	},
+	{
+		"addreg",
+		.handler = or1k_addreg_command_handler,
+		.mode = COMMAND_ANY,
+		.usage = "addreg name addr feature group",
+		.help = "add a register to the register list",
 	},
 	COMMAND_REGISTRATION_DONE
 };
