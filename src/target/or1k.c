@@ -1167,8 +1167,6 @@ static int or1k_init_target(struct command_context *cmd_ctx,
 
 	or1k->jtag.tap = target->tap;
 
-	or1k_create_reg_list(target);
-
 	or1k_build_reg_cache(target);
 
 	return ERROR_OK;
@@ -1179,6 +1177,8 @@ static int or1k_target_create(struct target *target, Jim_Interp *interp)
 	struct or1k_common *or1k = calloc(1, sizeof(struct or1k_common));
 
 	target->arch_info = or1k;
+
+	or1k_create_reg_list(target);
 
 	return ERROR_OK;
 }
