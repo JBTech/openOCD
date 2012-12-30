@@ -2,6 +2,13 @@
  *   Copyright (C) 2011 by Julius Baxter                                   *
  *   julius@opencores.org                                                  *
  *                                                                         *
+ *   Copyright (C) 2012 by Franck Jullien                                  *
+ *   elec4fun@gmail.com                                                    *
+ *                                                                         *
+ *   Copyright (C) 2012 by Marek Czerski                                   *
+ *   ma.czerski@gmail.com                                                  *
+ *                                                                         *
+ *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
  *   the Free Software Foundation; either version 2 of the License, or     *
@@ -313,42 +320,62 @@ static int or1k_create_reg_list(struct target *target)
 
 static int or1k_jtag_read_regs(struct or1k_jtag *jtag_info, uint32_t *regs)
 {
-	or1k_jtag_read_cpu(jtag_info,
+	int retval;
+
+	retval = or1k_jtag_read_cpu(jtag_info,
 			or1k_core_reg_list_arch_info[OR1K_REG_R0].spr_num, OR1K_REG_R31+1,
 			regs+OR1K_REG_R0);
+	if (retval != ERROR_OK)
+		return retval;
 
-	or1k_jtag_read_cpu(jtag_info,
+	retval = or1k_jtag_read_cpu(jtag_info,
 			or1k_core_reg_list_arch_info[OR1K_REG_PPC].spr_num, 1,
 			regs+OR1K_REG_PPC);
+	if (retval != ERROR_OK)
+		return retval;
 
-	or1k_jtag_read_cpu(jtag_info,
+	retval = or1k_jtag_read_cpu(jtag_info,
 			or1k_core_reg_list_arch_info[OR1K_REG_NPC].spr_num, 1,
 			regs+OR1K_REG_NPC);
+	if (retval != ERROR_OK)
+		return retval;
 
-	or1k_jtag_read_cpu(jtag_info,
+	retval = or1k_jtag_read_cpu(jtag_info,
 			or1k_core_reg_list_arch_info[OR1K_REG_SR].spr_num, 1,
 			regs+OR1K_REG_SR);
+	if (retval != ERROR_OK)
+		return retval;
 
 	return ERROR_OK;
 }
 
 static int or1k_jtag_write_regs(struct or1k_jtag *jtag_info, uint32_t *regs)
 {
-	or1k_jtag_write_cpu(jtag_info,
+	int retval;
+
+	retval = or1k_jtag_write_cpu(jtag_info,
 			or1k_core_reg_list_arch_info[OR1K_REG_R0].spr_num, OR1K_REG_R31+1,
 			&regs[OR1K_REG_R0]);
+	if (retval != ERROR_OK)
+		return retval;
 
-	or1k_jtag_write_cpu(jtag_info,
+	retval = or1k_jtag_write_cpu(jtag_info,
 			or1k_core_reg_list_arch_info[OR1K_REG_PPC].spr_num, 1,
 			&regs[OR1K_REG_PPC]);
+	if (retval != ERROR_OK)
+		return retval;
 
-	or1k_jtag_write_cpu(jtag_info,
+	retval = or1k_jtag_write_cpu(jtag_info,
 			or1k_core_reg_list_arch_info[OR1K_REG_NPC].spr_num, 1,
 			&regs[OR1K_REG_NPC]);
+	if (retval != ERROR_OK)
+		return retval;
 
-	or1k_jtag_write_cpu(jtag_info,
+	retval = or1k_jtag_write_cpu(jtag_info,
 			or1k_core_reg_list_arch_info[OR1K_REG_SR].spr_num, 1,
 			&regs[OR1K_REG_SR]);
+	if (retval != ERROR_OK)
+		return retval;
 
 	return ERROR_OK;
 }
@@ -575,6 +602,7 @@ static int or1k_debug_entry(struct target *target)
 static int or1k_halt(struct target *target)
 {
 	struct or1k_common *or1k = target_to_or1k(target);
+	int retval;
 
 	LOG_DEBUG("target->state: %s",
 		  target_state_name(target));
@@ -599,7 +627,9 @@ static int or1k_halt(struct target *target)
 	}
 
 	/* Mohor debug unit-specific. */
-	or1k_jtag_write_cpu_cr(&or1k->jtag, 1, 0);
+	retval = or1k_jtag_write_cpu_cr(&or1k->jtag, 1, 0);
+	if (retval != ERROR_OK)
+		return retval;
 
 	target->debug_reason = DBG_REASON_DBGRQ;
 
@@ -693,7 +723,9 @@ static int or1k_poll(struct target *target)
 
 			target->state = TARGET_RUNNING;
 
-			or1k_halt(target);
+			retval = or1k_halt(target);
+			if (retval != ERROR_OK)
+				return retval;
 
 			retval = or1k_debug_entry(target);
 			if (retval != ERROR_OK)
@@ -774,13 +806,16 @@ static int or1k_resume_or_step(struct target *target, int current,
 
 	/* Set traps to be handled by the debug unit in the Debug Stop
 	   Register (DSR) */
+
 	/* TODO - check if we have any software breakpoints in place before
 	   setting this value - the kernel, for instance, relies on l.trap
 	   instructions not stalling the processor! */
 	debug_reg_list[OR1K_DEBUG_REG_DSR] |= OR1K_DSR_TE;
 
 	/* write debug registers (starting from DMR1 register) */
-	or1k_jtag_write_cpu(&or1k->jtag, OR1K_DMR1_CPU_REG_ADD, OR1K_DEBUG_REG_NUM, debug_reg_list);
+	retval = or1k_jtag_write_cpu(&or1k->jtag, OR1K_DMR1_CPU_REG_ADD, OR1K_DEBUG_REG_NUM, debug_reg_list);
+	if (retval != ERROR_OK)
+		return retval;
 
 	resume_pc = buf_get_u32(or1k->core_cache->reg_list[OR1K_REG_NPC].value,
 				0, 32);
@@ -849,11 +884,12 @@ static int or1k_step(struct target *target, int current,
 static int or1k_add_breakpoint(struct target *target,
 			       struct breakpoint *breakpoint)
 {
+	struct or1k_common *or1k = target_to_or1k(target);
+	int retval;
+
 	LOG_DEBUG("Adding breakpoint: addr %08x, len %d, type %d, set: %d, id: %d",
 		  breakpoint->address, breakpoint->length, breakpoint->type,
 		  breakpoint->set, breakpoint->unique_id);
-
-	struct or1k_common *or1k = target_to_or1k(target);
 
 	/* Only support SW breakpoints for now. */
 	if (breakpoint->type == BKPT_HARD)
@@ -875,8 +911,10 @@ static int or1k_add_breakpoint(struct target *target,
 				 (uint32_t *)&or1k_trap_insn);
 
 	/* invalidate instruction cache */
-	or1k_jtag_write_cpu(&or1k->jtag,
+	retval = or1k_jtag_write_cpu(&or1k->jtag,
 			OR1K_ICBIR_CPU_REG_ADD, 1, &breakpoint->address);
+	if (retval != ERROR_OK)
+		return retval;
 
 	return ERROR_OK;
 }
@@ -884,11 +922,12 @@ static int or1k_add_breakpoint(struct target *target,
 static int or1k_remove_breakpoint(struct target *target,
 				  struct breakpoint *breakpoint)
 {
+	struct or1k_common *or1k = target_to_or1k(target);
+	int retval;
+
 	LOG_DEBUG("Removing breakpoint: addr %08x, len %d, type %d, set: %d, id: %d",
 		  breakpoint->address, breakpoint->length, breakpoint->type,
 		  breakpoint->set, breakpoint->unique_id);
-
-	struct or1k_common *or1k = target_to_or1k(target);
 
 	/* Only support SW breakpoints for now. */
 	if (breakpoint->type == BKPT_HARD)
@@ -901,8 +940,10 @@ static int or1k_remove_breakpoint(struct target *target,
 				 (uint32_t *)breakpoint->orig_instr);
 
 	/* invalidate instruction cache */
-	or1k_jtag_write_cpu(&or1k->jtag,
+	retval = or1k_jtag_write_cpu(&or1k->jtag,
 			OR1K_ICBIR_CPU_REG_ADD, 1, &breakpoint->address);
+	if (retval != ERROR_OK)
+		return retval;
 
 	return ERROR_OK;
 }
@@ -925,14 +966,13 @@ static int or1k_bulk_read_memory(struct target *target, uint32_t address,
 		uint32_t count, const uint8_t *buffer)
 {
 	struct or1k_common *or1k = target_to_or1k(target);
+	const unsigned int blocks_per_round = 1024; /* some resonable value */
+	unsigned int blocks_this_round;
 
 	/* Break it up into 4 byte blocks */
 	uint32_t block_count_left = count;
 	uint32_t block_count_address = address;
 	uint8_t *block_count_buffer = (uint8_t *) buffer;
-
-	const unsigned int blocks_per_round = 1024; /* some resonable value */
-	unsigned int blocks_this_round;
 
 	/* Count is in 4-byte words */
 	LOG_DEBUG("address 0x%x count %d", address, count);
@@ -958,14 +998,13 @@ static int or1k_bulk_write_memory(struct target *target, uint32_t address,
 		uint32_t count, const uint8_t *buffer)
 {
 	struct or1k_common *or1k = target_to_or1k(target);
+	const unsigned int blocks_per_round = 1024; /* some reasonable value */
+	unsigned int blocks_this_round;
 
 	/* Break it up into 4 byte blocks */
 	uint32_t block_count_left = count;
 	uint32_t block_count_address = address;
 	uint8_t *block_count_buffer = (uint8_t *) buffer;
-
-	const unsigned int blocks_per_round = 1024; /* some reasonable value */
-	unsigned int blocks_this_round;
 
 	/* Count is in 4-byte words */
 	LOG_DEBUG("address 0x%x count %d", address, count);
