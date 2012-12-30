@@ -37,6 +37,9 @@
 
 #include "fileio.h"
 
+static int or1k_read_core_reg(struct target *target, int num);
+static int or1k_write_core_reg(struct target *target, int num);
+
 struct or1k_core_reg *or1k_core_reg_list_arch_info;
 
 struct or1k_core_reg_init or1k_init_reg_list[] = {
@@ -244,13 +247,17 @@ static int or1k_create_reg_list(struct target *target)
 {
 	struct or1k_common *or1k = target_to_or1k(target);
 	struct or1k_core_reg new_reg;
-	int i, way;
+	int way;
 	char name[32];
+	uint32_t i;
 
 	or1k_core_reg_list_arch_info = malloc(ARRAY_SIZE(or1k_init_reg_list) *
 				       sizeof(struct or1k_core_reg));
 
-	for (i = 0; i < (int)ARRAY_SIZE(or1k_init_reg_list); i++) {
+	if (or1k_core_reg_list_arch_info == NULL)
+		return ERROR_FAIL;
+
+	for (i = 0; i < ARRAY_SIZE(or1k_init_reg_list); i++) {
 		or1k_core_reg_list_arch_info[i].name = or1k_init_reg_list[i].name;
 		or1k_core_reg_list_arch_info[i].spr_num = or1k_init_reg_list[i].spr_num;
 		or1k_core_reg_list_arch_info[i].group = or1k_init_reg_list[i].group;
@@ -262,11 +269,11 @@ static int or1k_create_reg_list(struct target *target)
 
 	or1k->nb_regs = ARRAY_SIZE(or1k_init_reg_list);
 
+	new_reg.target = NULL;
+	new_reg.or1k_common = NULL;
+
 	for (way = 0; way < 4; way++) {
 		for (i = 0; i < 128; i++) {
-
-			new_reg.target = NULL;
-			new_reg.or1k_common = NULL;
 
 			sprintf(name, "dtlbw%dmr%d", way, i);
 			new_reg.name = strdup(name);
@@ -303,9 +310,6 @@ static int or1k_create_reg_list(struct target *target)
 
 	return ERROR_OK;
 }
-
-static int or1k_read_core_reg(struct target *target, int num);
-static int or1k_write_core_reg(struct target *target, int num);
 
 static int or1k_jtag_read_regs(struct or1k_jtag *jtag_info, uint32_t *regs)
 {
@@ -351,8 +355,6 @@ static int or1k_jtag_write_regs(struct or1k_jtag *jtag_info, uint32_t *regs)
 
 int or1k_save_context(struct target *target)
 {
-
-	LOG_DEBUG(" - ");
 	int retval, i, regs_read = 0;
 	struct or1k_common *or1k = target_to_or1k(target);
 
@@ -369,7 +371,9 @@ int or1k_save_context(struct target *target)
 		if (!or1k->core_cache->reg_list[i].valid) {
 			/* We've just updated the core_reg[i], now update
 			   the core cache */
-			or1k_read_core_reg(target, i);
+			retval = or1k_read_core_reg(target, i);
+			if (retval != ERROR_OK)
+				return retval;
 		}
 	}
 
@@ -378,20 +382,21 @@ int or1k_save_context(struct target *target)
 
 int or1k_restore_context(struct target *target)
 {
-	int i;
-
-	LOG_DEBUG(" - ");
-
-	/* get pointers to arch-specific information */
+	int i, retval;
 	struct or1k_common *or1k = target_to_or1k(target);
 
 	for (i = 0; i < OR1KNUMCOREREGS; i++) {
-		if (or1k->core_cache->reg_list[i].dirty)
-			or1k_write_core_reg(target, i);
+		if (or1k->core_cache->reg_list[i].dirty) {
+			retval = or1k_write_core_reg(target, i);
+			if (retval != ERROR_OK)
+				return retval;
+		}
 	}
 
 	/* write core regs */
-	or1k_jtag_write_regs(&or1k->jtag, or1k->core_regs);
+	retval = or1k_jtag_write_regs(&or1k->jtag, or1k->core_regs);
+	if (retval != ERROR_OK)
+		return retval;
 
 	return ERROR_OK;
 }
@@ -400,8 +405,6 @@ static int or1k_read_core_reg(struct target *target, int num)
 {
 	uint32_t reg_value;
 	int retval;
-
-	/* get pointers to arch-specific information */
 	struct or1k_common *or1k = target_to_or1k(target);
 
 	if ((num < 0) || (num >= or1k->nb_regs))
@@ -428,8 +431,6 @@ static int or1k_read_core_reg(struct target *target, int num)
 static int or1k_write_core_reg(struct target *target, int num)
 {
 	uint32_t reg_value;
-
-	/* get pointers to arch-specific information */
 	struct or1k_common *or1k = target_to_or1k(target);
 
 	if ((num < 0) || (num >= OR1KNUMCOREREGS))
@@ -446,16 +447,13 @@ static int or1k_write_core_reg(struct target *target, int num)
 
 static int or1k_get_core_reg(struct reg *reg)
 {
-	int retval;
 	struct or1k_core_reg *or1k_reg = reg->arch_info;
 	struct target *target = or1k_reg->target;
 
 	if (target->state != TARGET_HALTED)
 		return ERROR_TARGET_NOT_HALTED;
 
-	retval = or1k_read_core_reg(target, or1k_reg->list_num);
-
-	return retval;
+	return or1k_read_core_reg(target, or1k_reg->list_num);
 }
 
 static int or1k_set_core_reg(struct reg *reg, uint8_t *buf)
@@ -547,14 +545,19 @@ static int or1k_generate_tdesc(struct target *target, const char *filename)
 	/* If we found some features associated with registers, create sections */
 	if (features != NULL) {
 		while (features[current_feature]) {
-			generate_feature_section(target, &fileio, "or32", features[current_feature]);
+			retval = generate_feature_section(target, &fileio, "or32", features[current_feature]);
+			if (retval != ERROR_OK)
+				return retval;
 			current_feature++;
 		}
 	}
 
 	/* For registers without features, put them in "nogroup" feature */
-	if (count_reg_without_group(target) > 0)
-		generate_feature_section(target, &fileio, "or32", NULL);
+	if (count_reg_without_group(target) > 0) {
+		retval = generate_feature_section(target, &fileio, "or32", NULL);
+		if (retval != ERROR_OK)
+			return retval;
+	}
 
 	free(features);
 	close_tdesc_file(&fileio);
@@ -564,13 +567,8 @@ static int or1k_generate_tdesc(struct target *target, const char *filename)
 
 static int or1k_debug_entry(struct target *target)
 {
-
 	/* Perhaps do more debugging entry (processor stalled) set up here */
-
-	LOG_DEBUG(" - ");
-
 	or1k_save_context(target);
-
 	return ERROR_OK;
 }
 
@@ -664,8 +662,6 @@ static int or1k_poll(struct target *target)
 	if (retval != ERROR_OK)
 		return retval;
 
-	/*LOG_DEBUG("running: %d",running);*/
-
 	/* check for processor halted */
 	if (!running) {
 		/* It's actually stalled, so update our software's state */
@@ -740,8 +736,8 @@ static int or1k_resume_or_step(struct target *target, int current,
 	struct breakpoint *breakpoint = NULL;
 	uint32_t resume_pc;
 	int retval;
+	uint32_t debug_reg_list[OR1K_DEBUG_REG_NUM];
 
-	LOG_DEBUG(" - ");
 	LOG_DEBUG(" addr: 0x%x, stepping: %d, handle breakpoints %d\n",
 		  address, step, handle_breakpoints);
 
@@ -761,11 +757,12 @@ static int or1k_resume_or_step(struct target *target, int current,
 	if (!step)
 		or1k_restore_context(target);
 
-	uint32_t debug_reg_list[OR1K_DEBUG_REG_NUM];
 	/* read debug registers (starting from DMR1 register) */
 	or1k_jtag_read_cpu(&or1k->jtag, OR1K_DMR1_CPU_REG_ADD, OR1K_DEBUG_REG_NUM, debug_reg_list);
+
 	/* Clear Debug Reason Register (DRR) */
 	debug_reg_list[OR1K_DEBUG_REG_DRR] = 0;
+
 	/* Clear watchpoint break generation in Debug Mode Register 2 (DMR2) */
 	debug_reg_list[OR1K_DEBUG_REG_DMR2] &= ~OR1K_DMR2_WGB;
 	if (step)
@@ -781,6 +778,7 @@ static int or1k_resume_or_step(struct target *target, int current,
 	   setting this value - the kernel, for instance, relies on l.trap
 	   instructions not stalling the processor! */
 	debug_reg_list[OR1K_DEBUG_REG_DSR] |= OR1K_DSR_TE;
+
 	/* write debug registers (starting from DMR1 register) */
 	or1k_jtag_write_cpu(&or1k->jtag, OR1K_DMR1_CPU_REG_ADD, OR1K_DEBUG_REG_NUM, debug_reg_list);
 
@@ -1143,8 +1141,6 @@ int or1k_get_gdb_reg_list(struct target *target, struct reg **reg_list[],
 {
 	struct or1k_common *or1k = target_to_or1k(target);
 	int i;
-
-	LOG_DEBUG(" - ");
 
 	if (list_type == G_REGISTERS_LIST) {
 		/* We will have this called whenever GDB connects. */
