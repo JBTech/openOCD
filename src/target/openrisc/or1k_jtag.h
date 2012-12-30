@@ -20,6 +20,7 @@
 #ifndef OR1K_JTAG
 #define OR1K_JTAG
 
+#define OR1K_JTAG_MOHOR_DBG_CRC_POLY      0x04c11db7
 
 /* tap instructions - Mohor JTAG TAP */
 #define OR1K_TAP_INST_IDCODE 0x2
