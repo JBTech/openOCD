@@ -7,9 +7,9 @@ OOCD_TRACE_FILES =
 endif
 
 if ADV_DEBUG_SYS
-OR1K_JTAG_FILES = or1k_jtag_adv.c
+OR1K_JTAG_FILES = openrisc/or1k_jtag_adv.c
 else
-OR1K_JTAG_FILES = or1k_jtag.c
+OR1K_JTAG_FILES = openrisc/or1k_jtag.c
 endif
 
 BIN2C		= $(top_builddir)/src/helper/bin2char$(EXEEXT_FOR_BUILD)
@@ -116,7 +116,7 @@ MIPS32_SRC = \
 	mips_ejtag.c
 
 OR1K_SRC = \
-	or1k.c \
+	openrisc/or1k.c \
 	$(OR1K_JTAG_FILES)
 
 noinst_HEADERS = \
@@ -174,8 +174,8 @@ noinst_HEADERS = \
 	avr32_jtag.h \
 	avr32_mem.h \
 	avr32_regs.h \
-	or1k.h \
-	or1k_jtag.h
+	openrisc/or1k.h \
+	openrisc/or1k_jtag.h
 
 ocddatadir = $(pkglibdir)
 nobase_dist_ocddata_DATA =
