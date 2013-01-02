@@ -685,13 +685,12 @@ retry_read_full:
 
 	/* We expect the status bit to be in the first byte */
 	if (shift < 0) {
-		LOG_DEBUG("Burst read timed out\n");
+		free(in_buffer);
 		if (retry_full_busy++ < MAX_READ_BUSY_RETRY) {
-			free(in_buffer);
+			LOG_DEBUG("Burst read timed out");
 			goto retry_read_full;
 		} else {
-			free(in_buffer);
-			free(field);
+			LOG_ERROR("Burst read failed");
 			return ERROR_FAIL;
 		}
 	}
