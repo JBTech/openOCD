@@ -941,6 +941,7 @@ static int or1k_bulk_read_memory(struct target *target, uint32_t address,
 	struct or1k_common *or1k = target_to_or1k(target);
 	const unsigned int blocks_per_round = 1024; /* some resonable value */
 	unsigned int blocks_this_round;
+	int retval;
 
 	/* Break it up into 4 byte blocks */
 	uint32_t block_count_left = count;
@@ -954,10 +955,12 @@ static int or1k_bulk_read_memory(struct target *target, uint32_t address,
 		blocks_this_round = (block_count_left > blocks_per_round) ?
 			blocks_per_round : block_count_left;
 
-		or1k_jtag_read_memory32(&or1k->jtag,
+		retval = or1k_jtag_read_memory32(&or1k->jtag,
 					 block_count_address ,
 					 blocks_this_round,
 					 (uint32_t *)block_count_buffer);
+		if (retval != ERROR_OK)
+			return retval;
 
 		block_count_left -= blocks_this_round;
 		block_count_address += 4*blocks_per_round;

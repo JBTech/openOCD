@@ -992,13 +992,17 @@ int or1k_jtag_write_cpu_cr(struct or1k_jtag *jtag_info,
 int or1k_jtag_read_memory32(struct or1k_jtag *jtag_info,
 			    uint32_t addr, int count, uint32_t *buffer)
 {
-	int i;
+	int i, retval;
+
+	LOG_DEBUG("Reading WB32 at 0x%08X", addr);
 
 	if (!or1k_jtag_inited)
 		or1k_jtag_init(jtag_info);
 
 	adbg_select_module(jtag_info, DC_WISHBONE);
-	adbg_wb_burst_read(jtag_info, 4, count, addr, buffer);
+	retval = adbg_wb_burst_read(jtag_info, 4, count, addr, buffer);
+	if (retval != ERROR_OK)
+		return retval;
 
 	for (i = 0 ; i < count; i++)
 		h_u32_to_be((uint8_t *) &buffer[i], buffer[i]);
@@ -1010,13 +1014,17 @@ int or1k_jtag_read_memory32(struct or1k_jtag *jtag_info,
 int or1k_jtag_read_memory16(struct or1k_jtag *jtag_info,
 			    uint32_t addr, int count, uint16_t *buffer)
 {
+	int retval;
+
 	LOG_DEBUG("Reading WB16 at 0x%08X", addr);
 
 	if (!or1k_jtag_inited)
 		or1k_jtag_init(jtag_info);
 
 	adbg_select_module(jtag_info, DC_WISHBONE);
-	adbg_wb_burst_read(jtag_info, 2, count, addr, buffer);
+	retval = adbg_wb_burst_read(jtag_info, 2, count, addr, buffer);
+	if (retval != ERROR_OK)
+		return retval;
 
 	return ERROR_OK;
 }
@@ -1024,13 +1032,17 @@ int or1k_jtag_read_memory16(struct or1k_jtag *jtag_info,
 int or1k_jtag_read_memory8(struct or1k_jtag *jtag_info,
 			   uint32_t addr, int count, uint8_t *buffer)
 {
+	int retval;
+
 	LOG_DEBUG("Reading WB8 at 0x%08X", addr);
 
 	if (!or1k_jtag_inited)
 		or1k_jtag_init(jtag_info);
 
 	adbg_select_module(jtag_info, DC_WISHBONE);
-	adbg_wb_burst_read(jtag_info, 1, count, addr, buffer);
+	retval = adbg_wb_burst_read(jtag_info, 1, count, addr, buffer);
+	if (retval != ERROR_OK)
+		return retval;
 
 	return ERROR_OK;
 }
