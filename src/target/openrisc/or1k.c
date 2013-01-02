@@ -860,7 +860,7 @@ static int or1k_add_breakpoint(struct target *target,
 	struct or1k_common *or1k = target_to_or1k(target);
 	int retval;
 
-	LOG_DEBUG("Adding breakpoint: addr %08x, len %d, type %d, set: %d, id: %d",
+	LOG_DEBUG("Adding breakpoint: addr 0x%08x, len %d, type %d, set: %d, id: %d",
 		  breakpoint->address, breakpoint->length, breakpoint->type,
 		  breakpoint->set, breakpoint->unique_id);
 
@@ -1207,7 +1207,7 @@ COMMAND_HANDLER(or1k_addreg_command_handler)
 
 	or1k_add_reg(target, &new_reg);
 
-	LOG_DEBUG("Add reg \"%s\" @ 0x%08X, group \"%s\", feature \"%s\"",
+	LOG_DEBUG("Add reg \"%s\" @ 0x%08x, group \"%s\", feature \"%s\"",
 		  new_reg.name, addr, new_reg.group, new_reg.feature);
 
 	return ERROR_OK;

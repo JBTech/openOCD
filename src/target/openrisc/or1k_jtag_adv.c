@@ -340,7 +340,7 @@ int adbg_select_ctrl_reg(struct or1k_jtag *jtag_info, unsigned long regidx)
 	if (tap == NULL)
 		return ERROR_FAIL;
 
-	LOG_DEBUG("Select control register: %ld", regidx);
+	/*LOG_DEBUG("Select control register: %ld", regidx);*/
 
 	/* If this reg is already selected, don't do a JTAG transaction */
 	if (current_reg_idx[or1k_jtag_module_selected] == regidx)
@@ -482,7 +482,7 @@ int adbg_ctrl_read(struct or1k_jtag *jtag_info, unsigned long regidx, uint32_t *
 	if (tap == NULL)
 		return ERROR_FAIL;
 
-	LOG_DEBUG("Read control register %ld", regidx);
+	/*LOG_DEBUG("Read control register %ld", regidx);*/
 
 	if (adbg_select_ctrl_reg(jtag_info, regidx) != ERROR_OK)
 		return ERROR_FAIL;
