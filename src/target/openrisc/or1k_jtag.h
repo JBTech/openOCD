@@ -29,6 +29,8 @@
 struct or1k_jtag
 {
 	struct jtag_tap *tap;
+	int or1k_jtag_inited;
+	int or1k_jtag_module_selected;
 };
 
 int or1k_jtag_init(struct or1k_jtag *jtag_info);

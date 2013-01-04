@@ -114,9 +114,6 @@
 #define STATUS_BYTES			1
 #define CRC_LEN				4
 
-static int or1k_jtag_inited = 0;
-static int or1k_jtag_module_selected = -1;
-
 /* Currently selected internal register in each module
  * cuts down on unnecessary transfers
  */
@@ -169,10 +166,10 @@ int or1k_jtag_init(struct or1k_jtag *jtag_info)
 		return retval;
 
 	/* TAP should now be configured to communicate with debug interface */
-	or1k_jtag_inited = 1;
+	jtag_info->or1k_jtag_inited = 1;
 
 	/* TAP reset - not sure what state debug module chain is in now */
-	or1k_jtag_module_selected = -1;
+	jtag_info->or1k_jtag_module_selected = -1;
 
 	memset(current_reg_idx, 0, DBG_MAX_MODULES * sizeof(unsigned long));
 
@@ -191,7 +188,7 @@ int adbg_select_module(struct or1k_jtag *jtag_info, int chain)
 	if (tap == NULL)
 		return ERROR_FAIL;
 
-	if (or1k_jtag_module_selected == chain)
+	if (jtag_info->or1k_jtag_module_selected == chain)
 		return ERROR_OK;
 
 	/* MSB of the data out must be set to 1, indicating a module select command */
@@ -206,7 +203,7 @@ int adbg_select_module(struct or1k_jtag *jtag_info, int chain)
 
 	jtag_execute_queue();
 
-	or1k_jtag_module_selected = chain;
+	jtag_info->or1k_jtag_module_selected = chain;
 
 	return ERROR_OK;
 }
@@ -231,10 +228,10 @@ int adbg_select_ctrl_reg(struct or1k_jtag *jtag_info, unsigned long regidx)
 	/*LOG_DEBUG("Select control register: %ld", regidx);*/
 
 	/* If this reg is already selected, don't do a JTAG transaction */
-	if (current_reg_idx[or1k_jtag_module_selected] == regidx)
+	if (current_reg_idx[jtag_info->or1k_jtag_module_selected] == regidx)
 		return ERROR_OK;
 
-	switch (or1k_jtag_module_selected) {
+	switch (jtag_info->or1k_jtag_module_selected) {
 	case DC_WISHBONE:
 		index_len = DBG_WB_REG_SEL_LEN;
 		opcode = DBG_WB_CMD_IREG_SEL;
@@ -265,7 +262,7 @@ int adbg_select_ctrl_reg(struct or1k_jtag *jtag_info, unsigned long regidx)
 
 	jtag_execute_queue();
 
-	current_reg_idx[or1k_jtag_module_selected] = regidx;
+	current_reg_idx[jtag_info->or1k_jtag_module_selected] = regidx;
 
 	return ERROR_OK;
 }
@@ -300,7 +297,7 @@ int adbg_ctrl_write(struct or1k_jtag *jtag_info, unsigned long regidx, uint32_t 
 	if (adbg_select_ctrl_reg(jtag_info, regidx) != ERROR_OK)
 		return ERROR_FAIL;
 
-	switch (or1k_jtag_module_selected) {
+	switch (jtag_info->or1k_jtag_module_selected) {
 	case DC_WISHBONE:
 		index_len = DBG_WB_REG_SEL_LEN;
 		opcode = DBG_WB_CMD_IREG_WR;
@@ -314,7 +311,7 @@ int adbg_ctrl_write(struct or1k_jtag *jtag_info, unsigned long regidx, uint32_t 
 		opcode = DBG_CPU1_CMD_IREG_WR;
 		break;
 	default:
-		LOG_DEBUG("ERROR! Illegal debug chain selected (%i) while doing control write!", or1k_jtag_module_selected);
+		LOG_DEBUG("ERROR! Illegal debug chain selected (%i) while doing control write!", jtag_info->or1k_jtag_module_selected);
 		return ERROR_FAIL;
 	}
 
@@ -376,7 +373,7 @@ int adbg_ctrl_read(struct or1k_jtag *jtag_info, unsigned long regidx, uint32_t *
 		return ERROR_FAIL;
 
 	/* There is no 'read' command, We write a NOP to read */
-	switch (or1k_jtag_module_selected) {
+	switch (jtag_info->or1k_jtag_module_selected) {
 	case DC_WISHBONE:
 		opcode = DBG_WB_CMD_NOP;
 		opcode_len = DBG_WB_OPCODE_LEN;
@@ -497,7 +494,7 @@ int adbg_wb_burst_read(struct or1k_jtag *jtag_info, int word_size_bytes,
 	}
 
 	/* Select the appropriate opcode */
-	switch (or1k_jtag_module_selected) {
+	switch (jtag_info->or1k_jtag_module_selected) {
 	case DC_WISHBONE:
 		if (word_size_bytes == 1)
 			opcode = DBG_WB_CMD_BREAD8;
@@ -604,7 +601,7 @@ retry_read_full:
 
 
 	/* Now, read the error register, and retry/recompute as necessary */
-	if (or1k_jtag_module_selected == DC_WISHBONE) {
+	if (jtag_info->or1k_jtag_module_selected == DC_WISHBONE) {
 #ifndef MORE_SPEED_NO_CONTROL
 		adbg_ctrl_read(jtag_info, DBG_WB_REG_ERROR, err_data, 1); /* First, just get 1 bit...read address only if necessary */
 #endif
@@ -669,7 +666,7 @@ int adbg_wb_burst_write(struct or1k_jtag *jtag_info, const void *data, int word_
 	word_size_bits = word_size_bytes << 3;
 
 	/* Select the appropriate opcode */
-	switch (or1k_jtag_module_selected) {
+	switch (jtag_info->or1k_jtag_module_selected) {
 	case DC_WISHBONE:
 		if (word_size_bytes == 1)
 			opcode = DBG_WB_CMD_BWRITE8;
@@ -783,7 +780,7 @@ retry_full_write:
 		LOG_DEBUG("CRC OK!\n");
 
 	/* Now, read the error register, and retry/recompute as necessary */
-	if (or1k_jtag_module_selected == DC_WISHBONE) {
+	if (jtag_info->or1k_jtag_module_selected == DC_WISHBONE) {
 #ifndef MORE_SPEED_NO_CONTROL
 		adbg_ctrl_read(jtag_info, DBG_WB_REG_ERROR, err_data, 1); /* First, just get 1 bit...read address only if necessary */
 #endif
@@ -817,7 +814,7 @@ retry_full_write:
 int or1k_jtag_read_cpu(struct or1k_jtag *jtag_info,
 		uint32_t addr, int count, uint32_t *value)
 {
-	if (!or1k_jtag_inited)
+	if (!jtag_info->or1k_jtag_inited)
 		or1k_jtag_init(jtag_info);
 
 	adbg_select_module(jtag_info, DC_CPU0);
@@ -829,7 +826,7 @@ int or1k_jtag_read_cpu(struct or1k_jtag *jtag_info,
 int or1k_jtag_write_cpu(struct or1k_jtag *jtag_info,
 		uint32_t addr, int count, const uint32_t *value)
 {
-	if (!or1k_jtag_inited)
+	if (!jtag_info->or1k_jtag_inited)
 		or1k_jtag_init(jtag_info);
 
 	adbg_select_module(jtag_info, DC_CPU0);
@@ -844,7 +841,7 @@ int or1k_jtag_read_cpu_cr(struct or1k_jtag *jtag_info,
 {
 	uint32_t data;
 
-	if (!or1k_jtag_inited)
+	if (!jtag_info->or1k_jtag_inited)
 		or1k_jtag_init(jtag_info);
 
 	adbg_select_module(jtag_info, DC_CPU0);
@@ -868,7 +865,7 @@ int or1k_jtag_write_cpu_cr(struct or1k_jtag *jtag_info,
 	dataword |= stall;
 	dataword |= reset << 1;
 
-	if (!or1k_jtag_inited)
+	if (!jtag_info->or1k_jtag_inited)
 		or1k_jtag_init(jtag_info);
 
 	adbg_select_module(jtag_info, DC_CPU0);
@@ -884,7 +881,7 @@ int or1k_jtag_read_memory32(struct or1k_jtag *jtag_info,
 
 	LOG_DEBUG("Reading WB32 at 0x%08X", addr);
 
-	if (!or1k_jtag_inited)
+	if (!jtag_info->or1k_jtag_inited)
 		or1k_jtag_init(jtag_info);
 
 	adbg_select_module(jtag_info, DC_WISHBONE);
@@ -906,7 +903,7 @@ int or1k_jtag_read_memory16(struct or1k_jtag *jtag_info,
 
 	LOG_DEBUG("Reading WB16 at 0x%08X", addr);
 
-	if (!or1k_jtag_inited)
+	if (!jtag_info->or1k_jtag_inited)
 		or1k_jtag_init(jtag_info);
 
 	adbg_select_module(jtag_info, DC_WISHBONE);
@@ -924,7 +921,7 @@ int or1k_jtag_read_memory8(struct or1k_jtag *jtag_info,
 
 	LOG_DEBUG("Reading WB8 at 0x%08X", addr);
 
-	if (!or1k_jtag_inited)
+	if (!jtag_info->or1k_jtag_inited)
 		or1k_jtag_init(jtag_info);
 
 	adbg_select_module(jtag_info, DC_WISHBONE);
@@ -945,7 +942,7 @@ int or1k_jtag_write_memory32(struct or1k_jtag *jtag_info,
 	for (i = 0 ; i < count; i++)
 		h_u32_to_be((uint8_t *) &buffer[i], buffer[i]);
 
-	if (!or1k_jtag_inited)
+	if (!jtag_info->or1k_jtag_inited)
 		or1k_jtag_init(jtag_info);
 
 	adbg_select_module(jtag_info, DC_WISHBONE);
@@ -960,7 +957,7 @@ int or1k_jtag_write_memory16(struct or1k_jtag *jtag_info,
 {
 	LOG_DEBUG("Writing WB16 at 0x%08X", addr);
 
-	if (!or1k_jtag_inited)
+	if (!jtag_info->or1k_jtag_inited)
 		or1k_jtag_init(jtag_info);
 
 	adbg_select_module(jtag_info, DC_WISHBONE);
@@ -974,7 +971,7 @@ int or1k_jtag_write_memory8(struct or1k_jtag *jtag_info,
 {
 	LOG_DEBUG("Writing WB8 at 0x%08X", addr);
 
-	if (!or1k_jtag_inited)
+	if (!jtag_info->or1k_jtag_inited)
 		or1k_jtag_init(jtag_info);
 
 	adbg_select_module(jtag_info, DC_WISHBONE);

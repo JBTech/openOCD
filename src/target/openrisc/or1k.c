@@ -1103,6 +1103,8 @@ static int or1k_init_target(struct command_context *cmd_ctx,
 	struct or1k_common *or1k = target_to_or1k(target);
 
 	or1k->jtag.tap = target->tap;
+	or1k->jtag.or1k_jtag_inited = 0;
+	or1k->jtag.or1k_jtag_module_selected = -1;
 
 	or1k_build_reg_cache(target);
 

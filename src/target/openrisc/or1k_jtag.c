@@ -33,49 +33,46 @@
 /* Mohor SoC debug interface defines */
  
 /* Module selection 4-bits */
-#define OR1K_MOHORDBGIF_MODULE_WB	0x0
-#define OR1K_MOHORDBGIF_MODULE_CPU0	0x1
-#define OR1K_MOHORDBGIF_MODULE_CPU1	0x2 /* Not implemented/used */
+#define OR1K_MOHORDBGIF_MODULE_WB			0x0
+#define OR1K_MOHORDBGIF_MODULE_CPU0			0x1
+#define OR1K_MOHORDBGIF_MODULE_CPU1			0x2
 
 /* Wishbone module commands */
-#define OR1K_MOHORDBGIF_WB_MODULE_CMD_GO 0x0
-#define OR1K_MOHORDBGIF_WB_MODULE_CMD_READ 0x1
-#define OR1K_MOHORDBGIF_WB_MODULE_CMD_WRITE 0x2
+#define OR1K_MOHORDBGIF_WB_MODULE_CMD_GO		0x0
+#define OR1K_MOHORDBGIF_WB_MODULE_CMD_READ		0x1
+#define OR1K_MOHORDBGIF_WB_MODULE_CMD_WRITE		0x2
 
 /* Wishbone bus access command defines */
-#define OR1K_MOHORDBGIF_WB_ACC_WRITE8  0x0
-#define OR1K_MOHORDBGIF_WB_ACC_WRITE16 0x1
-#define OR1K_MOHORDBGIF_WB_ACC_WRITE32 0x2
-#define OR1K_MOHORDBGIF_WB_ACC_READ8   0x4
-#define OR1K_MOHORDBGIF_WB_ACC_READ16  0x5
-#define OR1K_MOHORDBGIF_WB_ACC_READ32  0x6
+#define OR1K_MOHORDBGIF_WB_ACC_WRITE8			0x0
+#define OR1K_MOHORDBGIF_WB_ACC_WRITE16			0x1
+#define OR1K_MOHORDBGIF_WB_ACC_WRITE32			0x2
+#define OR1K_MOHORDBGIF_WB_ACC_READ8			0x4
+#define OR1K_MOHORDBGIF_WB_ACC_READ16			0x5
+#define OR1K_MOHORDBGIF_WB_ACC_READ32			0x6
 
 /* CPU module command defines */
-#define OR1K_MOHORDBGIF_CPU_ACC_WRITE  0x2
-#define OR1K_MOHORDBGIF_CPU_ACC_READ  0x6
+#define OR1K_MOHORDBGIF_CPU_ACC_WRITE			0x2
+#define OR1K_MOHORDBGIF_CPU_ACC_READ			0x6
 
 /* CPU module commands */
-#define OR1K_MOHORDBGIF_CPU_MODULE_CMD_GO 0x0
-#define OR1K_MOHORDBGIF_CPU_MODULE_CMD_READ 0x1
-#define OR1K_MOHORDBGIF_CPU_MODULE_CMD_WRITE 0x2
-#define OR1K_MOHORDBGIF_CPU_MODULE_CMD_CTRL_READ 0x3
-#define OR1K_MOHORDBGIF_CPU_MODULE_CMD_CTRL_WRITE 0x4
+#define OR1K_MOHORDBGIF_CPU_MODULE_CMD_GO		0x0
+#define OR1K_MOHORDBGIF_CPU_MODULE_CMD_READ		0x1
+#define OR1K_MOHORDBGIF_CPU_MODULE_CMD_WRITE		0x2
+#define OR1K_MOHORDBGIF_CPU_MODULE_CMD_CTRL_READ	0x3
+#define OR1K_MOHORDBGIF_CPU_MODULE_CMD_CTRL_WRITE	0x4
 
 /* Module select response status codes */
-#define OR1K_MOHORDBGIF_MODULE_SELECT_OK 0x0
-#define OR1K_MOHORDBGIF_MODULE_SELECT_CRC_ERROR 0x1
-#define OR1K_MOHORDBGIF_MODULE_SELECT_MODULE_NOT_EXIST 0x2
+#define OR1K_MOHORDBGIF_MODULE_SELECT_OK		0x0
+#define OR1K_MOHORDBGIF_MODULE_SELECT_CRC_ERROR		0x1
+#define OR1K_MOHORDBGIF_MODULE_SELECT_MODULE_NOT_EXIST	0x2
 
 /* Command status codes */
-#define OR1K_MOHORDBGIF_CMD_OK 0x0
-#define OR1K_MOHORDBGIF_CMD_CRC_ERROR 0x1
-#define OR1K_MOHORDBGIF_CMD_WB_ERROR 0x4
-#define OR1K_MOHORDBGIF_CMD_OURUN_ERROR 0x8
+#define OR1K_MOHORDBGIF_CMD_OK				0x0
+#define OR1K_MOHORDBGIF_CMD_CRC_ERROR			0x1
+#define OR1K_MOHORDBGIF_CMD_WB_ERROR			0x4
+#define OR1K_MOHORDBGIF_CMD_OURUN_ERROR			0x8
 
-#define OR1K_JTAG_MOHOR_DBG_CRC_POLY      0x04c11db7
-
-static int or1k_jtag_inited = 0;
-static int or1k_jtag_module_selected = -1;
+#define OR1K_JTAG_MOHOR_DBG_CRC_POLY			0x04c11db7
 
 int or1k_jtag_init(struct or1k_jtag *jtag_info)
 {
@@ -86,10 +83,10 @@ int or1k_jtag_init(struct or1k_jtag *jtag_info)
 		return retval;
 
 	/* TAP should now be configured to communicate with debug interface */
-	or1k_jtag_inited = 1;
+	jtag_info->or1k_jtag_inited = 1;
 
 	/* TAP reset - not sure what state debug module chain is in now */
-	or1k_jtag_module_selected = -1;
+	jtag_info->or1k_jtag_module_selected = -1;
 
 	return ERROR_OK;
 }
@@ -207,7 +204,7 @@ int or1k_jtag_mohor_debug_select_module(struct or1k_jtag *jtag_info,
 		return ERROR_FAIL;
 	} else if ((in_status & 0xf) == OR1K_MOHORDBGIF_MODULE_SELECT_OK) {
 		LOG_DEBUG(" setting mohor debug IF OK");
-		or1k_jtag_module_selected = module;
+		jtag_info->or1k_jtag_module_selected = module;
 	} else {
 		LOG_ERROR(" debug IF module select status: Unknown status (%x)"
 			  , in_status & 0xf);
@@ -870,10 +867,10 @@ int or1k_jtag_read_cpu(struct or1k_jtag *jtag_info,
 {
 	int i;
 
-	if (!or1k_jtag_inited)
+	if (!jtag_info->or1k_jtag_inited)
 		or1k_jtag_init(jtag_info);
 
-	if (or1k_jtag_module_selected != OR1K_MOHORDBGIF_MODULE_CPU0)
+	if (jtag_info->or1k_jtag_module_selected != OR1K_MOHORDBGIF_MODULE_CPU0)
 		or1k_jtag_mohor_debug_select_module(jtag_info,
 						    OR1K_MOHORDBGIF_MODULE_CPU0);
 
@@ -901,10 +898,10 @@ int or1k_jtag_write_cpu(struct or1k_jtag *jtag_info,
 	int i;
 	uint32_t value_be;
 
-	if (!or1k_jtag_inited)
+	if (!jtag_info->or1k_jtag_inited)
 		or1k_jtag_init(jtag_info);
 
-	if (or1k_jtag_module_selected != OR1K_MOHORDBGIF_MODULE_CPU0)
+	if (jtag_info->or1k_jtag_module_selected != OR1K_MOHORDBGIF_MODULE_CPU0)
 		or1k_jtag_mohor_debug_select_module(jtag_info,
 						    OR1K_MOHORDBGIF_MODULE_CPU0);
 
@@ -944,10 +941,10 @@ int or1k_jtag_read_cpu_cr(struct or1k_jtag *jtag_info,
 	uint32_t in_zeroes0;
 	uint32_t in_zeroes1;
 
-	if (!or1k_jtag_inited)
+	if (!jtag_info->or1k_jtag_inited)
 		or1k_jtag_init(jtag_info);
 
-	if (or1k_jtag_module_selected != OR1K_MOHORDBGIF_MODULE_CPU0)
+	if (jtag_info->or1k_jtag_module_selected != OR1K_MOHORDBGIF_MODULE_CPU0)
 		or1k_jtag_mohor_debug_select_module(jtag_info,
 						    OR1K_MOHORDBGIF_MODULE_CPU0);
 	tap = jtag_info->tap;
@@ -1085,10 +1082,10 @@ int or1k_jtag_write_cpu_cr(struct or1k_jtag *jtag_info,
 	LOG_DEBUG(" writing CPU control reg, reset: %d, stall: %d",
 		  reset, stall);
 
-	if (!or1k_jtag_inited)
+	if (!jtag_info->or1k_jtag_inited)
 		or1k_jtag_init(jtag_info);
 
-	if (or1k_jtag_module_selected != OR1K_MOHORDBGIF_MODULE_CPU0)
+	if (jtag_info->or1k_jtag_module_selected != OR1K_MOHORDBGIF_MODULE_CPU0)
 		or1k_jtag_mohor_debug_select_module(jtag_info,
 						    OR1K_MOHORDBGIF_MODULE_CPU0);
 
@@ -1201,10 +1198,10 @@ int or1k_jtag_read_memory32(struct or1k_jtag *jtag_info,
 {
 	int i;
 
-	if (!or1k_jtag_inited)
+	if (!jtag_info->or1k_jtag_inited)
 		or1k_jtag_init(jtag_info);
 
-	if (or1k_jtag_module_selected != OR1K_MOHORDBGIF_MODULE_WB)
+	if (jtag_info->or1k_jtag_module_selected != OR1K_MOHORDBGIF_MODULE_WB)
 		or1k_jtag_mohor_debug_select_module(jtag_info,
 						    OR1K_MOHORDBGIF_MODULE_WB);
 
@@ -1236,10 +1233,10 @@ int or1k_jtag_read_memory16(struct or1k_jtag *jtag_info,
 int or1k_jtag_read_memory8(struct or1k_jtag *jtag_info,
 			   uint32_t addr, int count, uint8_t *buffer)
 {
-	if (!or1k_jtag_inited)
+	if (!jtag_info->or1k_jtag_inited)
 		or1k_jtag_init(jtag_info);
 
-	if (or1k_jtag_module_selected != OR1K_MOHORDBGIF_MODULE_WB)
+	if (jtag_info->or1k_jtag_module_selected != OR1K_MOHORDBGIF_MODULE_WB)
 		or1k_jtag_mohor_debug_select_module(jtag_info,
 						    OR1K_MOHORDBGIF_MODULE_WB);
 
@@ -1266,10 +1263,10 @@ int or1k_jtag_read_memory8(struct or1k_jtag *jtag_info,
 int or1k_jtag_write_memory32(struct or1k_jtag *jtag_info,
 			     uint32_t addr, int count, const uint32_t *buffer)
 {
-	if (!or1k_jtag_inited)
+	if (!jtag_info->or1k_jtag_inited)
 		or1k_jtag_init(jtag_info);
 
-	if (or1k_jtag_module_selected != OR1K_MOHORDBGIF_MODULE_WB)
+	if (jtag_info->or1k_jtag_module_selected != OR1K_MOHORDBGIF_MODULE_WB)
 		or1k_jtag_mohor_debug_select_module(jtag_info,
 						    OR1K_MOHORDBGIF_MODULE_WB);
 
@@ -1298,10 +1295,10 @@ int or1k_jtag_write_memory16(struct or1k_jtag *jtag_info,
 int or1k_jtag_write_memory8(struct or1k_jtag *jtag_info,
 			    uint32_t addr, int count, const uint8_t *buffer)
 {
-	if (!or1k_jtag_inited)
+	if (!jtag_info->or1k_jtag_inited)
 		or1k_jtag_init(jtag_info);
 
-	if (or1k_jtag_module_selected != OR1K_MOHORDBGIF_MODULE_WB)
+	if (jtag_info->or1k_jtag_module_selected != OR1K_MOHORDBGIF_MODULE_WB)
 		or1k_jtag_mohor_debug_select_module(jtag_info,
 						    OR1K_MOHORDBGIF_MODULE_WB);
 
