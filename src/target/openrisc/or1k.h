@@ -22,6 +22,7 @@
 #define OR1K_H
 
 #include <helper/types.h>
+#include "target.h"
 
 #define GROUP0		(0  << 11)
 #define GROUP1		(1  << 11)
@@ -34,8 +35,6 @@
 #define GROUP8		(8  << 11)
 #define GROUP9		(9  << 11)
 #define GROUP10		(10 << 11)
-
-struct target;
 
 /* OR1K registers */
 enum or1k_reg_nums {
@@ -128,6 +127,10 @@ enum or1k_debug_reg_nums {
 	OR1K_DEBUG_REG_NUM
 };
 
+/* CPU module control register bits */
+#define OR1K_CPU_CR_RESET 1
+#define OR1K_CPU_CR_STALL 2
+
 /* OR1K Debug registers and bits needed for resuming */
 #define OR1K_DEBUG_REG_BASE (6<<11) /* Debug registers Base address */
 #define OR1K_DMR1_CPU_REG_ADD (OR1K_DEBUG_REG_BASE+16)/* Debug Mode Register 1 0x3010 */
@@ -136,7 +139,7 @@ enum or1k_debug_reg_nums {
 //#define OR1K_DRR_CPU_REG_ADD  (OR1K_DEBUG_REG_BASE+21)/* Debug Reason Register 0x3015 */
 #define OR1K_DMR1_ST 	0x00400000	/* Single-step trace */
 #define OR1K_DMR1_BT	0x00800000	/* Branch trace */
-#define OR1K_DMR2_WGB   	0x003ff000	/* Watchpoints generating breakpoint */
+#define OR1K_DMR2_WGB	0x003ff000	/* Watchpoints generating breakpoint */
 #define OR1K_DSR_TE	0x00002000	/* Trap exception */
 /* OR1K Instruction cache registers needed for invalidating instruction memory
  * during adding and removing breakpoints */
