@@ -77,8 +77,7 @@ enum or1k_reg_nums {
 };
 
 
-struct or1k_common
-{
+struct or1k_common {
 	struct or1k_jtag jtag;
 	struct reg_cache *core_cache;
 	uint32_t core_regs[OR1KNUMCOREREGS];
@@ -88,25 +87,22 @@ struct or1k_common
 static inline struct or1k_common *
 target_to_or1k(struct target *target)
 {
-	return (struct or1k_common*)target->arch_info;
+	return (struct or1k_common *)target->arch_info;
 }
 
-struct or1k_core_reg
-{
+struct or1k_core_reg {
 	const char *name;
-	uint32_t list_num; /* Index in register cache */
-	uint32_t spr_num; /* Number in architecture's SPR space */
+	uint32_t list_num;   /* Index in register cache */
+	uint32_t spr_num;    /* Number in architecture's SPR space */
 	struct target *target;
 	struct or1k_common *or1k_common;
 	const char *feature; /* feature name in XML tdesc file */
 	const char *group;   /* register group in XML tdesc file */
-
 };
 
-struct or1k_core_reg_init
-{
+struct or1k_core_reg_init {
 	const char *name;
-	uint32_t spr_num; /* Number in architecture's SPR space */
+	uint32_t spr_num;    /* Number in architecture's SPR space */
 	const char *feature; /* feature name in XML tdesc file */
 	const char *group;   /* register group in XML tdesc file */
 };
@@ -114,7 +110,7 @@ struct or1k_core_reg_init
 /* Make this available to or1k_jtag.h */
 extern struct or1k_core_reg *or1k_core_reg_list_arch_info;
 
-/*! ORBIS32 Trap instruction */
+/* ORBIS32 Trap instruction */
 #define OR1K_TRAP_INSTR  0x21000001
 
 enum or1k_debug_reg_nums {
@@ -132,17 +128,14 @@ enum or1k_debug_reg_nums {
 #define OR1K_CPU_CR_STALL 2
 
 /* OR1K Debug registers and bits needed for resuming */
-#define OR1K_DEBUG_REG_BASE (6<<11) /* Debug registers Base address */
-#define OR1K_DMR1_CPU_REG_ADD (OR1K_DEBUG_REG_BASE+16)/* Debug Mode Register 1 0x3010 */
-//#define OR1K_DMR2_CPU_REG_ADD (OR1K_DEBUG_REG_BASE+17)/* Debug Mode Register 2 0x3011 */
-//#define OR1K_DSR_CPU_REG_ADD (OR1K_DEBUG_REG_BASE+20)/* Debug Stop Register 0x3014 */
-//#define OR1K_DRR_CPU_REG_ADD  (OR1K_DEBUG_REG_BASE+21)/* Debug Reason Register 0x3015 */
+#define OR1K_DEBUG_REG_BASE (6 << 11) /* Debug registers Base address */
+#define OR1K_DMR1_CPU_REG_ADD (OR1K_DEBUG_REG_BASE + 16)/* Debug Mode Register 1 0x3010 */
 #define OR1K_DMR1_ST 	0x00400000	/* Single-step trace */
 #define OR1K_DMR1_BT	0x00800000	/* Branch trace */
 #define OR1K_DMR2_WGB	0x003ff000	/* Watchpoints generating breakpoint */
 #define OR1K_DSR_TE	0x00002000	/* Trap exception */
 /* OR1K Instruction cache registers needed for invalidating instruction memory
  * during adding and removing breakpoints */
-#define OR1K_ICBIR_CPU_REG_ADD ((4<<11)+2)/* IC Block Invalidate Register 0x2002 */
+#define OR1K_ICBIR_CPU_REG_ADD ((4 << 11) + 2)/* IC Block Invalidate Register 0x2002 */
 
 #endif

@@ -26,4 +26,4 @@
 
 int or1k_tap_init(struct or1k_jtag *jtag_info);
 
-#endif //_OR1K_TAP_H_
+#endif

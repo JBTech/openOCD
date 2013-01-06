@@ -31,7 +31,7 @@
 #include "jtag/jtag.h"
 
 /* Mohor SoC debug interface defines */
- 
+
 /* Module selection 4-bits */
 #define OR1K_MOHORDBGIF_MODULE_WB			0x0
 #define OR1K_MOHORDBGIF_MODULE_CPU0			0x1
