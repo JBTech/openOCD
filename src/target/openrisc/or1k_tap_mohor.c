@@ -71,7 +71,5 @@ int or1k_tap_mohor_register(void)
 	vjtag_tap->init = or1k_tap_mohor_init;
 	list_add_tail(&vjtag_tap->list, &tap_list);
 
-	printf("Register or1k_tap_mohor_register\n");
-
 	return 0;
 }
