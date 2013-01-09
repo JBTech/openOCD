@@ -38,6 +38,7 @@
 #include "or1k_jtag.h"
 #include "or1k_tap.h"
 #include "or1k.h"
+#include "or1k_du.h"
 
 #include <helper/time_support.h>
 #include "server/server.h"
@@ -46,10 +47,14 @@
 #include "fileio.h"
 
 LIST_HEAD(tap_list);
+LIST_HEAD(du_list);
 
 extern int or1k_tap_vjtag_register(void);
 extern int or1k_tap_mohor_register(void);
-
+/*
+extern int or1k_du_mohor_register(void);
+extern int or1k_du_adv_register(void);
+*/
 static int or1k_read_core_reg(struct target *target, int num);
 static int or1k_write_core_reg(struct target *target, int num);
 
@@ -327,8 +332,9 @@ static int or1k_create_reg_list(struct target *target)
 static int or1k_jtag_read_regs(struct or1k_jtag *jtag_info, uint32_t *regs)
 {
 	int retval;
+	struct or1k_du *du_core = or1k_jtag_to_du(jtag_info);
 
-	retval = or1k_jtag_read_cpu(jtag_info,
+	retval = du_core->or1k_jtag_read_cpu(jtag_info,
 			or1k_core_reg_list_arch_info[OR1K_REG_R0].spr_num, OR1K_REG_R31+1,
 			regs+OR1K_REG_R0);
 	if (retval != ERROR_OK)
@@ -340,8 +346,9 @@ static int or1k_jtag_read_regs(struct or1k_jtag *jtag_info, uint32_t *regs)
 static int or1k_jtag_write_regs(struct or1k_jtag *jtag_info, uint32_t *regs)
 {
 	int retval;
+	struct or1k_du *du_core = or1k_jtag_to_du(jtag_info);
 
-	retval = or1k_jtag_write_cpu(jtag_info,
+	retval = du_core->or1k_jtag_write_cpu(jtag_info,
 			or1k_core_reg_list_arch_info[OR1K_REG_R0].spr_num, OR1K_REG_R31+1,
 			&regs[OR1K_REG_R0]);
 	if (retval != ERROR_OK)
@@ -354,11 +361,12 @@ int or1k_save_context(struct target *target)
 {
 	int retval, i, regs_read = 0;
 	struct or1k_common *or1k = target_to_or1k(target);
+	struct or1k_du *du_core = or1k_to_du(or1k);
 
 	for (i = 0; i < OR1KNUMCOREREGS; i++) {
 		if (!or1k->core_cache->reg_list[i].valid) {
 			if (i == OR1K_REG_PPC || i == OR1K_REG_NPC || i == OR1K_REG_SR) {
-				or1k_jtag_read_cpu(&or1k->jtag,
+				du_core->or1k_jtag_read_cpu(&or1k->jtag,
 						or1k_core_reg_list_arch_info[i].spr_num, 1,
 						&or1k->core_regs[i]);
 			} else if (!regs_read) {
@@ -383,13 +391,14 @@ int or1k_restore_context(struct target *target)
 {
 	int retval, i, reg_write = 0;
 	struct or1k_common *or1k = target_to_or1k(target);
+	struct or1k_du *du_core = or1k_to_du(or1k);
 
 	for (i = 0; i < OR1KNUMCOREREGS; i++) {
 		if (or1k->core_cache->reg_list[i].dirty) {
 			or1k_write_core_reg(target, i);
 
 			if (i == OR1K_REG_PPC || i == OR1K_REG_NPC || i == OR1K_REG_SR) {
-				or1k_jtag_write_cpu(&or1k->jtag,
+				du_core->or1k_jtag_write_cpu(&or1k->jtag,
 						or1k_core_reg_list_arch_info[i].spr_num, 1,
 						&or1k->core_regs[i]);
 			} else
@@ -412,6 +421,7 @@ static int or1k_read_core_reg(struct target *target, int num)
 	uint32_t reg_value;
 	int retval;
 	struct or1k_common *or1k = target_to_or1k(target);
+	struct or1k_du *du_core = or1k_to_du(or1k);
 
 	if ((num < 0) || (num >= or1k->nb_regs))
 		return ERROR_COMMAND_SYNTAX_ERROR;
@@ -424,7 +434,7 @@ static int or1k_read_core_reg(struct target *target, int num)
 		or1k->core_cache->reg_list[num].dirty = 0;
 	} else {
 		/* This is an spr, always read value from HW */
-		retval = or1k_jtag_read_cpu(&or1k->jtag, or1k_core_reg_list_arch_info[num].spr_num, 1, &reg_value);
+		retval = du_core->or1k_jtag_read_cpu(&or1k->jtag, or1k_core_reg_list_arch_info[num].spr_num, 1, &reg_value);
 		if (retval != ERROR_OK)
 			return retval;
 		buf_set_u32(or1k->core_cache->reg_list[num].value, 0, 32, reg_value);
@@ -467,6 +477,7 @@ static int or1k_set_core_reg(struct reg *reg, uint8_t *buf)
 	struct or1k_core_reg *or1k_reg = reg->arch_info;
 	struct target *target = or1k_reg->target;
 	struct or1k_common *or1k = target_to_or1k(target);
+	struct or1k_du *du_core = or1k_to_du(or1k);
 	uint32_t value = buf_get_u32(buf, 0, 32);
 	int retval;
 
@@ -479,7 +490,7 @@ static int or1k_set_core_reg(struct reg *reg, uint8_t *buf)
 		reg->valid = 1;
 	} else {
 		/* This is an spr, write it to the HW */
-		retval = or1k_jtag_write_cpu(&or1k->jtag, or1k_reg->spr_num, 1, &value);
+		retval = du_core->or1k_jtag_write_cpu(&or1k->jtag, or1k_reg->spr_num, 1, &value);
 		if (retval != ERROR_OK)
 			return retval;
 	}
@@ -581,6 +592,7 @@ static int or1k_debug_entry(struct target *target)
 static int or1k_halt(struct target *target)
 {
 	struct or1k_common *or1k = target_to_or1k(target);
+	struct or1k_du *du_core = or1k_to_du(or1k);
 	int retval;
 
 	LOG_DEBUG("target->state: %s",
@@ -605,20 +617,26 @@ static int or1k_halt(struct target *target)
 		}
 	}
 
-	/* Mohor debug unit-specific. */
-	retval = or1k_jtag_write_cpu_cr(&or1k->jtag, 1, 0);
-	if (retval != ERROR_OK)
-		return retval;
+	/* Stall the CPU. This is specific to mohor and advanced debug interface cores.
+	 * Other cores may have to do something different here.
+	 */
+	if (!strcmp(du_core->name, "mohor") || !strcmp(du_core->name, "adv")) {
+		retval = du_core->or1k_jtag_write_cpu_cr(&or1k->jtag, 1, 0);
+		if (retval != ERROR_OK)
+			return retval;
+	}
 
 	target->debug_reason = DBG_REASON_DBGRQ;
 
 	return ERROR_OK;
 }
 
-static int or1k_is_cpu_running(struct target *target, int* running)
+static int or1k_is_cpu_running(struct target *target, int *running)
 {
 	struct or1k_common *or1k = target_to_or1k(target);
-	int retval;
+	struct or1k_du *du_core = or1k_to_du(or1k);
+
+	int retval = 0;     /* TODO REMOVE THIS INIT AND FIX MOHOR SPECIFIC TEST */
 	uint32_t cpu_cr;
 
 	/* Have a retry loop to determine of the CPU is running.
@@ -631,17 +649,18 @@ static int or1k_is_cpu_running(struct target *target, int* running)
 	while (tries < RETRIES_MAX) {
 
 		tries++;
-		/* Specific to Mohor debug interface - others may have to do
-		 * something different here.
+		/* This is specific to mohor and advanced debug interface cores.
+		 * Other cores may have to do something different here.
 		 */
-		retval = or1k_jtag_read_cpu_cr(&or1k->jtag, &cpu_cr);
+		if (!strcmp(du_core->name, "mohor") || !strcmp(du_core->name, "adv"))
+			retval = du_core->or1k_jtag_read_cpu_cr(&or1k->jtag, &cpu_cr);
 
 		if (retval != ERROR_OK) {
 			LOG_WARNING("Debug IF CPU control reg read failure.");
 			/* Try once to restart the JTAG infrastructure -
 			   quite possibly the board has just been reset. */
 			LOG_WARNING("Resetting JTAG TAP state and reconnectiong to debug IF.");
-			or1k_jtag_init(&or1k->jtag);
+			du_core->or1k_jtag_init(&or1k->jtag);
 
 			LOG_WARNING("attempt %d of %d", tries, RETRIES_MAX);
 
@@ -651,8 +670,13 @@ static int or1k_is_cpu_running(struct target *target, int* running)
 			continue;
 
 		} else {
-			/* Specific to Mohor debug interface */
-			*running = !(cpu_cr & OR1K_CPU_CR_STALL);
+			/* This is specific to mohor and advanced debug interface cores.
+			* Other cores may have to do something different here.
+			*/
+			if (!strcmp(du_core->name, "mohor") || !strcmp(du_core->name, "adv"))
+				*running = !(cpu_cr & OR1K_CPU_CR_STALL);
+			else
+				*running = 0;
 			return retval;
 		}
 	}
@@ -663,7 +687,6 @@ static int or1k_is_cpu_running(struct target *target, int* running)
 
 static int or1k_poll(struct target *target)
 {
-
 	int retval;
 	int running;
 
@@ -744,6 +767,7 @@ static int or1k_resume_or_step(struct target *target, int current,
 			       int debug_execution, int step)
 {
 	struct or1k_common *or1k = target_to_or1k(target);
+	struct or1k_du *du_core = or1k_to_du(or1k);
 	struct breakpoint *breakpoint = NULL;
 	uint32_t resume_pc;
 	int retval;
@@ -769,7 +793,7 @@ static int or1k_resume_or_step(struct target *target, int current,
 		or1k_restore_context(target);
 
 	/* read debug registers (starting from DMR1 register) */
-	or1k_jtag_read_cpu(&or1k->jtag, OR1K_DMR1_CPU_REG_ADD, OR1K_DEBUG_REG_NUM, debug_reg_list);
+	du_core->or1k_jtag_read_cpu(&or1k->jtag, OR1K_DMR1_CPU_REG_ADD, OR1K_DEBUG_REG_NUM, debug_reg_list);
 
 	/* Clear Debug Reason Register (DRR) */
 	debug_reg_list[OR1K_DEBUG_REG_DRR] = 0;
@@ -792,7 +816,7 @@ static int or1k_resume_or_step(struct target *target, int current,
 	debug_reg_list[OR1K_DEBUG_REG_DSR] |= OR1K_DSR_TE;
 
 	/* write debug registers (starting from DMR1 register) */
-	retval = or1k_jtag_write_cpu(&or1k->jtag, OR1K_DMR1_CPU_REG_ADD, OR1K_DEBUG_REG_NUM, debug_reg_list);
+	retval = du_core->or1k_jtag_write_cpu(&or1k->jtag, OR1K_DMR1_CPU_REG_ADD, OR1K_DEBUG_REG_NUM, debug_reg_list);
 	if (retval != ERROR_OK)
 		return retval;
 
@@ -811,10 +835,14 @@ static int or1k_resume_or_step(struct target *target, int current,
 	}
 	/* Unstall time */
 
-	/* Mohor debug if, clearing control register unstalls */
-	retval = or1k_jtag_write_cpu_cr(&or1k->jtag, 0, 0);
-	if (retval != ERROR_OK)
-		return retval;
+	/* Unstall CPU. This is specific to mohor and advanced debug interface cores.
+	 * Other cores may have to do something different here.
+	 */
+	if (!strcmp(du_core->name, "mohor") || !strcmp(du_core->name, "adv")) {
+		retval = du_core->or1k_jtag_write_cpu_cr(&or1k->jtag, 0, 0);
+		if (retval != ERROR_OK)
+			return retval;
+	}
 
 	if (step)
 		target->debug_reason = DBG_REASON_SINGLESTEP;
@@ -864,6 +892,7 @@ static int or1k_add_breakpoint(struct target *target,
 			       struct breakpoint *breakpoint)
 {
 	struct or1k_common *or1k = target_to_or1k(target);
+	struct or1k_du *du_core = or1k_to_du(or1k);
 	int retval;
 
 	LOG_DEBUG("Adding breakpoint: addr 0x%08x, len %d, type %d, set: %d, id: %d",
@@ -875,22 +904,22 @@ static int or1k_add_breakpoint(struct target *target,
 		LOG_ERROR("HW breakpoints not supported for now. Doing SW breakpoint.");
 
 	/* Read and save the instruction */
-	or1k_jtag_read_memory32(&or1k->jtag,
-				breakpoint->address ,
-				1,
-				(uint32_t *)breakpoint->orig_instr);
+	du_core->or1k_jtag_read_memory32(&or1k->jtag,
+					 breakpoint->address ,
+					 1,
+					 (uint32_t *)breakpoint->orig_instr);
 
 	/* Sub in the OR1K trap instruction */
 	uint32_t or1k_trap_insn;
 	/* set correct endianess */
 	target_buffer_set_u32(target, (uint8_t *)&or1k_trap_insn, OR1K_TRAP_INSTR);
-	or1k_jtag_write_memory32(&or1k->jtag,
-				breakpoint->address ,
-				 1,
-				 (uint32_t *)&or1k_trap_insn);
+	du_core->or1k_jtag_write_memory32(&or1k->jtag,
+					  breakpoint->address ,
+					  1,
+					  (uint32_t *)&or1k_trap_insn);
 
 	/* invalidate instruction cache */
-	retval = or1k_jtag_write_cpu(&or1k->jtag,
+	retval = du_core->or1k_jtag_write_cpu(&or1k->jtag,
 			OR1K_ICBIR_CPU_REG_ADD, 1, &breakpoint->address);
 	if (retval != ERROR_OK)
 		return retval;
@@ -902,6 +931,7 @@ static int or1k_remove_breakpoint(struct target *target,
 				  struct breakpoint *breakpoint)
 {
 	struct or1k_common *or1k = target_to_or1k(target);
+	struct or1k_du *du_core = or1k_to_du(or1k);
 	int retval;
 
 	LOG_DEBUG("Removing breakpoint: addr %08x, len %d, type %d, set: %d, id: %d",
@@ -913,13 +943,13 @@ static int or1k_remove_breakpoint(struct target *target,
 		LOG_ERROR("HW breakpoints not supported for now. Doing SW breakpoint.");
 
 	/* Replace the removed instruction */
-	or1k_jtag_write_memory32(&or1k->jtag,
-				breakpoint->address ,
-				 1,
-				 (uint32_t *)breakpoint->orig_instr);
+	du_core->or1k_jtag_write_memory32(&or1k->jtag,
+					  breakpoint->address ,
+					  1,
+					  (uint32_t *)breakpoint->orig_instr);
 
 	/* invalidate instruction cache */
-	retval = or1k_jtag_write_cpu(&or1k->jtag,
+	retval = du_core->or1k_jtag_write_cpu(&or1k->jtag,
 			OR1K_ICBIR_CPU_REG_ADD, 1, &breakpoint->address);
 	if (retval != ERROR_OK)
 		return retval;
@@ -945,6 +975,7 @@ static int or1k_bulk_read_memory(struct target *target, uint32_t address,
 		uint32_t count, const uint8_t *buffer)
 {
 	struct or1k_common *or1k = target_to_or1k(target);
+	struct or1k_du *du_core = or1k_to_du(or1k);
 	const unsigned int blocks_per_round = 1024; /* some resonable value */
 	unsigned int blocks_this_round;
 	int retval;
@@ -961,7 +992,7 @@ static int or1k_bulk_read_memory(struct target *target, uint32_t address,
 		blocks_this_round = (block_count_left > blocks_per_round) ?
 			blocks_per_round : block_count_left;
 
-		retval = or1k_jtag_read_memory32(&or1k->jtag,
+		retval = du_core->or1k_jtag_read_memory32(&or1k->jtag,
 					 block_count_address ,
 					 blocks_this_round,
 					 (uint32_t *)block_count_buffer);
@@ -980,6 +1011,7 @@ static int or1k_bulk_write_memory(struct target *target, uint32_t address,
 		uint32_t count, const uint8_t *buffer)
 {
 	struct or1k_common *or1k = target_to_or1k(target);
+	struct or1k_du *du_core = or1k_to_du(or1k);
 	const unsigned int blocks_per_round = 1024; /* some reasonable value */
 	unsigned int blocks_this_round;
 
@@ -995,7 +1027,7 @@ static int or1k_bulk_write_memory(struct target *target, uint32_t address,
 		blocks_this_round = (block_count_left > blocks_per_round) ?
 			blocks_per_round : block_count_left;
 
-		or1k_jtag_write_memory32(&or1k->jtag,
+		du_core->or1k_jtag_write_memory32(&or1k->jtag,
 					 block_count_address ,
 					 blocks_this_round,
 					 (uint32_t *)block_count_buffer);
@@ -1012,6 +1044,7 @@ static int or1k_read_memory(struct target *target, uint32_t address,
 		uint32_t size, uint32_t count, uint8_t *buffer)
 {
 	struct or1k_common *or1k = target_to_or1k(target);
+	struct or1k_du *du_core = or1k_to_du(or1k);
 
 	LOG_DEBUG("address: 0x%8.8" PRIx32 ", size: 0x%8.8" PRIx32
 		  ",count: 0x%8.8" PRIx32 "", address, size, count);
@@ -1036,17 +1069,17 @@ static int or1k_read_memory(struct target *target, uint32_t address,
 
 	switch (size) {
 	case 4:
-		return or1k_jtag_read_memory32(&or1k->jtag, address,
+		return du_core->or1k_jtag_read_memory32(&or1k->jtag, address,
 					       count,
 					       (uint32_t *)(void *)buffer);
 		break;
 	case 2:
-		return or1k_jtag_read_memory16(&or1k->jtag, address,
+		return du_core->or1k_jtag_read_memory16(&or1k->jtag, address,
 					       count,
 					       (uint16_t *)(void *)buffer);
 		break;
 	case 1:
-		return or1k_jtag_read_memory8(&or1k->jtag, address,
+		return du_core->or1k_jtag_read_memory8(&or1k->jtag, address,
 					      count,
 					      buffer);
 		break;
@@ -1061,6 +1094,7 @@ static int or1k_write_memory(struct target *target, uint32_t address,
 		uint32_t size, uint32_t count, const uint8_t *buffer)
 {
 	struct or1k_common *or1k = target_to_or1k(target);
+	struct or1k_du *du_core = or1k_to_du(or1k);
 
 	LOG_DEBUG("address: 0x%8.8" PRIx32 ", size: 0x%8.8" PRIx32
 		  ", count: 0x%8.8" PRIx32 "", address, size, count);
@@ -1084,15 +1118,15 @@ static int or1k_write_memory(struct target *target, uint32_t address,
 
 	switch (size) {
 	case 4:
-		return or1k_jtag_write_memory32(&or1k->jtag, address, count,
+		return du_core->or1k_jtag_write_memory32(&or1k->jtag, address, count,
 						(uint32_t *)(void *)buffer);
 		break;
 	case 2:
-		return or1k_jtag_write_memory16(&or1k->jtag, address, count,
+		return du_core->or1k_jtag_write_memory16(&or1k->jtag, address, count,
 						(uint16_t *)(void *)buffer);
 		break;
 	case 1:
-		return or1k_jtag_write_memory8(&or1k->jtag, address, count,
+		return du_core->or1k_jtag_write_memory8(&or1k->jtag, address, count,
 					       buffer);
 		break;
 	default:
@@ -1127,7 +1161,10 @@ static int or1k_target_create(struct target *target, Jim_Interp *interp)
 
 	or1k_tap_vjtag_register();
 	or1k_tap_mohor_register();
-
+/*
+	or1k_du_mohor_register(void);
+	or1k_du_adv_register(void);
+*/
 	return ERROR_OK;
 }
 
@@ -1135,6 +1172,7 @@ static int or1k_examine(struct target *target)
 {
 	uint32_t cpu_cr;
 	struct or1k_common *or1k = target_to_or1k(target);
+	struct or1k_du *du_core = or1k_to_du(or1k);
 
 	if (!target_was_examined(target)) {
 		target_set_examined(target);
@@ -1143,15 +1181,17 @@ static int or1k_examine(struct target *target)
 
 		/* check for processor halted */
 
-		/* Possible specific to Mohor debug interface - others may
-		 * have to do something different here.
+		/* This is specific to mohor and advanced debug interface cores.
+		 * Other cores may have to do something different here.
 		 */
-		or1k_jtag_read_cpu_cr(&or1k->jtag, &cpu_cr);
-		if (cpu_cr & OR1K_CPU_CR_STALL) {
-			LOG_DEBUG("target is halted");
-			target->state = TARGET_HALTED;
-		} else
-			target->state = TARGET_RUNNING;
+		if (!strcmp(du_core->name, "mohor") || !strcmp(du_core->name, "adv")) {
+			du_core->or1k_jtag_read_cpu_cr(&or1k->jtag, &cpu_cr);
+			if (cpu_cr & OR1K_CPU_CR_STALL) {
+				LOG_DEBUG("target is halted");
+				target->state = TARGET_HALTED;
+			} else
+				target->state = TARGET_RUNNING;
+		}
 	}
 
 	return ERROR_OK;
@@ -1236,6 +1276,45 @@ COMMAND_HANDLER(or1k_tap_list_command_handler)
 	return ERROR_OK;
 }
 
+COMMAND_HANDLER(or1k_du_select_command_handler)
+{
+	struct target *target = get_current_target(CMD_CTX);
+	struct or1k_common *or1k = target_to_or1k(target);
+	struct or1k_jtag *jtag = &or1k->jtag;
+	struct or1k_du *or1k_du;
+
+	if (CMD_ARGC != 1)
+		return ERROR_COMMAND_SYNTAX_ERROR;
+
+	list_for_each_entry(or1k_du, &tap_list, list) {
+		if (or1k_du->name) {
+			if (!strcmp(CMD_ARGV[0], or1k_du->name)) {
+				jtag->du_core = or1k_du;
+				LOG_INFO("%s debug unit selected", or1k_du->name);
+				return ERROR_OK;
+			}
+		}
+	}
+
+	LOG_ERROR("%s unknown, no debug unit selected", CMD_ARGV[0]);
+	return ERROR_COMMAND_SYNTAX_ERROR;
+}
+
+COMMAND_HANDLER(or1k_du_list_command_handler)
+{
+	struct or1k_du *or1k_du;
+
+	if (CMD_ARGC != 0)
+		return ERROR_COMMAND_SYNTAX_ERROR;
+
+	list_for_each_entry(or1k_du, &du_list, list) {
+		if (or1k_du->name)
+			command_print(CMD_CTX, "%s", or1k_du->name);
+	}
+
+	return ERROR_OK;
+}
+
 COMMAND_HANDLER(or1k_addreg_command_handler)
 {
 	struct target *target = get_current_target(CMD_CTX);
@@ -1268,15 +1347,29 @@ static const struct command_registration or1k_hw_ip_command_handlers[] = {
 		"tap_select",
 		.handler = or1k_tap_select_command_handler,
 		.mode = COMMAND_ANY,
-		.usage = "select_tap name",
-		.help = "Select the TAP IP used",
+		.usage = "tap_select name",
+		.help = "Select the TAP core to use",
 	},
 	{
 		"tap_list",
 		.handler = or1k_tap_list_command_handler,
 		.mode = COMMAND_ANY,
+		.usage = "tap_list",
+		.help = "Display available TAP core",
+	},
+	{
+		"du_select",
+		.handler = or1k_du_select_command_handler,
+		.mode = COMMAND_ANY,
+		.usage = "du_select name",
+		.help = "Select the Debug Unit core to use",
+	},
+	{
+		"du_list",
+		.handler = or1k_du_list_command_handler,
+		.mode = COMMAND_ANY,
 		.usage = "select_tap name",
-		.help = "Select the TAP IP used",
+		.help = "Display available Debug Unit core",
 	},
 	COMMAND_REGISTRATION_DONE
 };

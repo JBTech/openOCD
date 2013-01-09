@@ -31,37 +31,8 @@ struct or1k_jtag {
 	int or1k_jtag_inited;
 	int or1k_jtag_module_selected;
 	struct or1k_tap_ip *tap_ip;
+	struct or1k_du *du_core;
 };
-
-int or1k_jtag_init(struct or1k_jtag *jtag_info);
-
-/* Currently hard set in functions to 32-bits */
-int or1k_jtag_read_cpu(struct or1k_jtag *jtag_info,
-		uint32_t addr, int count, uint32_t *value);
-int or1k_jtag_write_cpu(struct or1k_jtag *jtag_info,
-		uint32_t addr, int count, const uint32_t *value);
-
-int or1k_jtag_read_cpu_cr(struct or1k_jtag *jtag_info,
-		uint32_t *value);
-
-int or1k_jtag_write_cpu_cr(struct or1k_jtag *jtag_info,
-			   uint32_t stall, uint32_t reset);
-
-
-int or1k_jtag_read_memory32(struct or1k_jtag *jtag_info,
-		uint32_t addr, int count, uint32_t *buffer);
-int or1k_jtag_read_memory16(struct or1k_jtag *jtag_info,
-		uint32_t addr, int count, uint16_t *buffer);
-int or1k_jtag_read_memory8(struct or1k_jtag *jtag_info,
-		uint32_t addr, int count, uint8_t *buffer);
-
-int or1k_jtag_write_memory32(struct or1k_jtag *jtag_info,
-		uint32_t addr, int count, const uint32_t *buffer);
-int or1k_jtag_write_memory16(struct or1k_jtag *jtag_info,
-		uint32_t addr, int count, const uint16_t *buffer);
-int or1k_jtag_write_memory8(struct or1k_jtag *jtag_info,
-		uint32_t addr, int count, const uint8_t *buffer);
-
 
 #endif /* OR1K_JTAG */
 
