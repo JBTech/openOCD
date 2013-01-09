@@ -158,8 +158,9 @@ int find_status_bit(void *_buf, int len)
 int or1k_jtag_init(struct or1k_jtag *jtag_info)
 {
 	int retval;
+	struct or1k_tap_ip *tap_ip = jtag_info->tap_ip;
 
-	retval = or1k_tap_init(jtag_info);
+	retval = tap_ip->init(jtag_info);
 	if (retval != ERROR_OK)
 		return retval;
 

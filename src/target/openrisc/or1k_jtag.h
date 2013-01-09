@@ -30,6 +30,7 @@ struct or1k_jtag {
 	struct jtag_tap *tap;
 	int or1k_jtag_inited;
 	int or1k_jtag_module_selected;
+	struct or1k_tap_ip *tap_ip;
 };
 
 int or1k_jtag_init(struct or1k_jtag *jtag_info);

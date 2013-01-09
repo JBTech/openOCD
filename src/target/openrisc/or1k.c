@@ -36,6 +36,7 @@
 #include "breakpoints.h"
 #include "target_type.h"
 #include "or1k_jtag.h"
+#include "or1k_tap.h"
 #include "or1k.h"
 
 #include <helper/time_support.h>
@@ -43,6 +44,11 @@
 #include "server/gdb_server.h"
 
 #include "fileio.h"
+
+LIST_HEAD(tap_list);
+
+extern int or1k_tap_vjtag_register(void);
+extern int or1k_tap_mohor_register(void);
 
 static int or1k_read_core_reg(struct target *target, int num);
 static int or1k_write_core_reg(struct target *target, int num);
@@ -1119,6 +1125,9 @@ static int or1k_target_create(struct target *target, Jim_Interp *interp)
 
 	or1k_create_reg_list(target);
 
+	or1k_tap_vjtag_register();
+	or1k_tap_mohor_register();
+
 	return ERROR_OK;
 }
 
@@ -1188,6 +1197,45 @@ static int or1k_checksum_memory(struct target *target, uint32_t address,
 
 }
 
+COMMAND_HANDLER(or1k_tap_select_command_handler)
+{
+	struct target *target = get_current_target(CMD_CTX);
+	struct or1k_common *or1k = target_to_or1k(target);
+	struct or1k_jtag *jtag = &or1k->jtag;
+	struct or1k_tap_ip *or1k_tap;
+
+	if (CMD_ARGC != 1)
+		return ERROR_COMMAND_SYNTAX_ERROR;
+
+	list_for_each_entry(or1k_tap, &tap_list, list) {
+		if (or1k_tap->name) {
+			if (!strcmp(CMD_ARGV[0], or1k_tap->name)) {
+				jtag->tap_ip = or1k_tap;
+				LOG_INFO("%s tap selected", or1k_tap->name);
+				return ERROR_OK;
+			}
+		}
+	}
+
+	LOG_ERROR("%s unknown, no tap selected", CMD_ARGV[0]);
+	return ERROR_COMMAND_SYNTAX_ERROR;
+}
+
+COMMAND_HANDLER(or1k_tap_list_command_handler)
+{
+	struct or1k_tap_ip *or1k_tap;
+
+	if (CMD_ARGC != 0)
+		return ERROR_COMMAND_SYNTAX_ERROR;
+
+	list_for_each_entry(or1k_tap, &tap_list, list) {
+		if (or1k_tap->name)
+			command_print(CMD_CTX, "%s", or1k_tap->name);
+	}
+
+	return ERROR_OK;
+}
+
 COMMAND_HANDLER(or1k_addreg_command_handler)
 {
 	struct target *target = get_current_target(CMD_CTX);
@@ -1215,6 +1263,24 @@ COMMAND_HANDLER(or1k_addreg_command_handler)
 	return ERROR_OK;
 }
 
+static const struct command_registration or1k_hw_ip_command_handlers[] = {
+	{
+		"tap_select",
+		.handler = or1k_tap_select_command_handler,
+		.mode = COMMAND_ANY,
+		.usage = "select_tap name",
+		.help = "Select the TAP IP used",
+	},
+	{
+		"tap_list",
+		.handler = or1k_tap_list_command_handler,
+		.mode = COMMAND_ANY,
+		.usage = "select_tap name",
+		.help = "Select the TAP IP used",
+	},
+	COMMAND_REGISTRATION_DONE
+};
+
 static const struct command_registration or1k_reg_command_handlers[] = {
 	{
 		"addreg",
@@ -1229,6 +1295,9 @@ static const struct command_registration or1k_reg_command_handlers[] = {
 const struct command_registration or1k_command_handlers[] = {
 	{
 		.chain = or1k_reg_command_handlers,
+	},
+	{
+		.chain = or1k_hw_ip_command_handlers,
 	},
 	COMMAND_REGISTRATION_DONE
 };

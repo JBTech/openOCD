@@ -11,7 +11,6 @@ OR1K_JTAG_FILES = openrisc/or1k_jtag_adv.c
 else
 OR1K_JTAG_FILES = openrisc/or1k_jtag.c
 endif
-OR1K_JTAG_FILES += openrisc/or1k_tap.c
 
 BIN2C		= $(top_builddir)/src/helper/bin2char$(EXEEXT_FOR_BUILD)
 
@@ -118,6 +117,8 @@ MIPS32_SRC = \
 
 OR1K_SRC = \
 	openrisc/or1k.c \
+	openrisc/or1k_tap_vjtag.c \
+	openrisc/or1k_tap_mohor.c \
 	$(OR1K_JTAG_FILES)
 
 

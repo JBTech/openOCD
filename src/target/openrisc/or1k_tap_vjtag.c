@@ -24,8 +24,6 @@
 
 #include "jtag/jtag.h"
 
-#define VERBOSE_SLD_NODE
-
 /* Contains constants relevant to the Altera Virtual JTAG
  * device, which are not included in the BSDL.
  * As of this writing, these are constant across every
@@ -55,10 +53,9 @@
 #define INST_ID(x)			((x >> 0)  & 0xff)
 
 /* tap instructions - Mohor JTAG TAP */
-#define OR1K_TAP_INST_DEBUG		0x8
+#define OR1K_TAP_INST_IDCODE 0x2
+#define OR1K_TAP_INST_DEBUG 0x8
 
-#if (ALTERA_VJTAG == 1)
-#ifdef VERBOSE_SLD_NODE
 static char *id_to_string(unsigned char id)
 {
 	switch (id) {
@@ -73,23 +70,21 @@ static char *id_to_string(unsigned char id)
 	}
 	return "unknown";
 }
-#endif
+
 static unsigned char guess_addr_width(unsigned char number_of_nodes)
 {
 	unsigned char width = 0;
 
 	while (number_of_nodes) {
 		number_of_nodes >>= 1;
-		width++;
+		width ++;
 	}
 
 	return width;
 }
-#endif /* (ALTERA_VJTAG == 1) */
 
-int or1k_tap_init(struct or1k_jtag *jtag_info)
+static int or1k_tap_vjtag_init(struct or1k_jtag *jtag_info)
 {
-#if (ALTERA_VJTAG == 1)
 	struct scan_field field;
 	struct jtag_tap *tap;
 	int i;
@@ -157,7 +152,6 @@ int or1k_tap_init(struct or1k_jtag *jtag_info)
 	nb_nodes = NB_NODES(hub_info);
 	m_width = M_WIDTH(hub_info);
 
-#ifdef VERBOSE_SLD_NODE
 	LOG_DEBUG("SLD HUB Configuration register");
 	LOG_DEBUG("------------------------------");
 	LOG_DEBUG("m_width         = %d", m_width);
@@ -165,7 +159,6 @@ int or1k_tap_init(struct or1k_jtag *jtag_info)
 	LOG_DEBUG("nb_of_node      = %d", nb_nodes);
 	LOG_DEBUG("version         = %d", VER(hub_info));
 	LOG_DEBUG("VIR length      = %d", guess_addr_width(nb_nodes) + m_width);
-#endif
 
 	/* Because the number of SLD nodes is now known, the Nodes on the hub can be
 	 * enumerated by repeating the 8 four-bit nibble scans, once for each Node,
@@ -184,7 +177,7 @@ int or1k_tap_init(struct or1k_jtag *jtag_info)
 			jtag_execute_queue();
 			node_info = ((node_info >> 4) | ((ret & 0xf) << 28));
 		}
-#ifdef VERBOSE_SLD_NODE
+
 		LOG_DEBUG("Node info register");
 		LOG_DEBUG("--------------------");
 		LOG_DEBUG("instance_id     = %d", ID(node_info));
@@ -192,7 +185,7 @@ int or1k_tap_init(struct or1k_jtag *jtag_info)
 		LOG_DEBUG("node_id         = %d (%s)", ID(node_info),
 						       id_to_string(ID(node_info)));
 		LOG_DEBUG("version         = %d", VER(node_info));
-#endif
+
 		if (ID(node_info) == VJTAG_NODE_ID)
 			vjtag_node_address = node_index + 1;
 	}
@@ -219,39 +212,20 @@ int or1k_tap_init(struct or1k_jtag *jtag_info)
 	jtag_add_ir_scan(tap, &field, TAP_IDLE);
 
 	jtag_execute_queue();
-#else /* (ALTERA_VJTAG == 1) */
 
-	LOG_DEBUG(" Initialising OpenCores JTAG TAP");
-
-	/* Put TAP into state where it can talk to the debug interface
-	   by shifting in correct value to IR. */
-	struct jtag_tap *tap;
-
-	tap = jtag_info->tap;
-	if (tap == NULL)
-		return ERROR_FAIL;
-
-
-	struct scan_field field;
-	uint8_t t[4];
-	uint8_t ret[4];
-
-	field.num_bits = tap->ir_length;
-	field.out_value = t;
-	/* OpenCores Mohor JTAG TAP-specific */
-	buf_set_u32(t, 0, field.num_bits, OR1K_TAP_INST_DEBUG);
-	field.in_value = ret;
-
-	/* Ensure TAP is reset - maybe not necessary*/
-	jtag_add_tlr();
-
-	jtag_add_ir_scan(tap, &field, TAP_IDLE);
-	if (jtag_execute_queue() != ERROR_OK) {
-		LOG_ERROR(" setting TAP's IR to DEBUG failed");
-		return ERROR_FAIL;
-	}
-
-#endif /* (ALTERA_VJTAG == 1) */
 	return ERROR_OK;
+}
 
+int or1k_tap_vjtag_register(void)
+{
+	struct or1k_tap_ip *vjtag_tap;
+	vjtag_tap = malloc(sizeof(struct or1k_tap_ip));
+
+	vjtag_tap->name = "vjtag";
+	vjtag_tap->init = or1k_tap_vjtag_init;
+	list_add_tail(&vjtag_tap->list, &tap_list);
+
+	printf("Register or1k_tap_vjtag_register\n");
+
+	return 0;
 }

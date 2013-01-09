@@ -10,6 +10,8 @@ proc fpga_test_init {} {
 
 gdb_port 50001
 
+tap_select vjtag
+
 addreg rtest 0x1234 group0 system
 
 init
