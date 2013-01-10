@@ -62,14 +62,13 @@ int or1k_tap_mohor_init(struct or1k_jtag *jtag_info)
 
 }
 
+static struct or1k_tap_ip mohor_tap = {
+	.name = "mohor",
+	.init = or1k_tap_mohor_init,
+};
+
 int or1k_tap_mohor_register(void)
 {
-	struct or1k_tap_ip *vjtag_tap;
-	vjtag_tap = malloc(sizeof(struct or1k_tap_ip));
-
-	vjtag_tap->name = "mohor";
-	vjtag_tap->init = or1k_tap_mohor_init;
-	list_add_tail(&vjtag_tap->list, &tap_list);
-
+	list_add_tail(&mohor_tap.list, &tap_list);
 	return 0;
 }
