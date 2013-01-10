@@ -31,12 +31,10 @@
 #endif
 
 #include "or1k_tap.h"
-#include "or1k_jtag.h"
 #include "or1k.h"
 #include "or1k_du.h"
 
 #include "target.h"
-#include "helper/types.h"
 #include "jtag/jtag.h"
 
 /* Definitions for the top-level debug unit.  This really just consists
@@ -53,12 +51,14 @@
 /* Polynomial for the CRC calculation
  * Yes, it's backwards.  Yes, this is on purpose.
  * The hardware is designed this way to save on logic and routing,
- * and it's really all the same to us here. */
+ * and it's really all the same to us here.
+ */
 #define ADBG_CRC_POLY 0xedb88320
 
 /* These are for the internal registers in the Wishbone module
  * The first is the length of the index register,
- * the indexes of the various registers are defined after that. */
+ * the indexes of the various registers are defined after that.
+ */
 #define DBG_WB_REG_SEL_LEN 1
 #define DBG_WB_REG_ERROR 0
 

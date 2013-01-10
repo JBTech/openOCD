@@ -30,21 +30,14 @@
 
 #include "jtag/jtag.h"
 #include "register.h"
-#include "algorithm.h"
 #include "target.h"
 #include "tdesc.h"
 #include "breakpoints.h"
 #include "target_type.h"
-#include "or1k_jtag.h"
+#include "fileio.h"
 #include "or1k_tap.h"
 #include "or1k.h"
 #include "or1k_du.h"
-
-#include <helper/time_support.h>
-#include "server/server.h"
-#include "server/gdb_server.h"
-
-#include "fileio.h"
 
 LIST_HEAD(tap_list);
 LIST_HEAD(du_list);
@@ -357,7 +350,7 @@ static int or1k_jtag_write_regs(struct or1k_jtag *jtag_info, uint32_t *regs)
 	return ERROR_OK;
 }
 
-int or1k_save_context(struct target *target)
+static int or1k_save_context(struct target *target)
 {
 	int retval, i, regs_read = 0;
 	struct or1k_common *or1k = target_to_or1k(target);
@@ -386,8 +379,7 @@ int or1k_save_context(struct target *target)
 	return ERROR_OK;
 }
 
-
-int or1k_restore_context(struct target *target)
+static int or1k_restore_context(struct target *target)
 {
 	int retval, i, reg_write = 0;
 	struct or1k_common *or1k = target_to_or1k(target);
@@ -1196,12 +1188,12 @@ static int or1k_examine(struct target *target)
 	return ERROR_OK;
 }
 
-int or1k_arch_state(struct target *target)
+static int or1k_arch_state(struct target *target)
 {
 	return ERROR_OK;
 }
 
-int or1k_get_gdb_reg_list(struct target *target, struct reg **reg_list[],
+static int or1k_get_gdb_reg_list(struct target *target, struct reg **reg_list[],
 			  int *reg_list_size, int list_type)
 {
 	struct or1k_common *or1k = target_to_or1k(target);
@@ -1384,7 +1376,7 @@ static const struct command_registration or1k_reg_command_handlers[] = {
 	COMMAND_REGISTRATION_DONE
 };
 
-const struct command_registration or1k_command_handlers[] = {
+static const struct command_registration or1k_command_handlers[] = {
 	{
 		.chain = or1k_reg_command_handlers,
 	},

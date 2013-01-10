@@ -173,7 +173,6 @@ noinst_HEADERS = \
 	avr32_mem.h \
 	avr32_regs.h \
 	openrisc/or1k.h \
-	openrisc/or1k_jtag.h
 	openrisc/or1k_tap.h \
 	openrisc/or1k_du.h
 

@@ -18,16 +18,20 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include "or1k_tap.h"
-#include "or1k_jtag.h"
+#include "or1k.h"
 
 #include "jtag/jtag.h"
 
-#define OR1K_TAP_INST_DEBUG		0x8
+#define OR1K_TAP_INST_DEBUG	0x8
 
 static int or1k_tap_mohor_init(struct or1k_jtag *jtag_info)
 {
-	LOG_DEBUG(" Initialising OpenCores JTAG TAP");
+	LOG_DEBUG("Initialising OpenCores JTAG TAP");
 
 	/* Put TAP into state where it can talk to the debug interface
 	   by shifting in correct value to IR. */
@@ -53,7 +57,7 @@ static int or1k_tap_mohor_init(struct or1k_jtag *jtag_info)
 
 	jtag_add_ir_scan(tap, &field, TAP_IDLE);
 	if (jtag_execute_queue() != ERROR_OK) {
-		LOG_ERROR(" setting TAP's IR to DEBUG failed");
+		LOG_ERROR("Setting TAP's IR to DEBUG failed");
 		return ERROR_FAIL;
 	}
 

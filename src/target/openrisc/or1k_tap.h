@@ -21,11 +21,14 @@
 #ifndef _OR1K_TAP_H_
 #define _OR1K_TAP_H_
 
-#include "or1k_jtag.h"
-#include <helper/list.h>
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 
-/* linear list over all available or1k taps
- */
+#include <helper/list.h>
+#include "or1k.h"
+
+/* Linear list over all available or1k taps */
 extern struct list_head tap_list;
 
 struct or1k_tap_ip {

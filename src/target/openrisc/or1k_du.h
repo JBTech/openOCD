@@ -17,13 +17,15 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
+ 
 #ifndef OR1K_DU
 #define OR1K_DU
 
-#include "helper/types.h"
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 
-/* linear list over all available or1k debug unit
- */
+/* Linear list over all available or1k debug unit */
 extern struct list_head du_list;
 
 struct or1k_du {
@@ -73,5 +75,5 @@ static inline struct or1k_du *or1k_to_du(struct or1k_common *or1k)
 	return (struct or1k_du *)jtag->du_core;
 }
 
-#endif /* OR1K_DU */
+#endif
 
