@@ -616,6 +616,10 @@ static int or1k_halt(struct target *target)
 		retval = du_core->or1k_jtag_write_cpu_cr(&or1k->jtag, 1, 0);
 		if (retval != ERROR_OK)
 			return retval;
+	} else {
+		LOG_ERROR("Stalling the cpu for this debug"
+			  "interface is not implemented");
+		return ERROR_FAIL;
 	}
 
 	target->debug_reason = DBG_REASON_DBGRQ;
@@ -628,7 +632,7 @@ static int or1k_is_cpu_running(struct target *target, int *running)
 	struct or1k_common *or1k = target_to_or1k(target);
 	struct or1k_du *du_core = or1k_to_du(or1k);
 
-	int retval = 0;     /* TODO REMOVE THIS INIT AND FIX MOHOR SPECIFIC TEST */
+	int retval;
 	uint32_t cpu_cr;
 
 	/* Have a retry loop to determine of the CPU is running.
@@ -646,6 +650,11 @@ static int or1k_is_cpu_running(struct target *target, int *running)
 		 */
 		if (!strcmp(du_core->name, "mohor") || !strcmp(du_core->name, "adv"))
 			retval = du_core->or1k_jtag_read_cpu_cr(&or1k->jtag, &cpu_cr);
+		else {
+			LOG_ERROR("Reading the running status of the cpu for this debug"
+				  "interface is not implemented");
+			return ERROR_FAIL;
+		}
 
 		if (retval != ERROR_OK) {
 			LOG_WARNING("Debug IF CPU control reg read failure.");
@@ -665,10 +674,8 @@ static int or1k_is_cpu_running(struct target *target, int *running)
 			/* This is specific to mohor and advanced debug interface cores.
 			* Other cores may have to do something different here.
 			*/
-			if (!strcmp(du_core->name, "mohor") || !strcmp(du_core->name, "adv"))
-				*running = !(cpu_cr & OR1K_CPU_CR_STALL);
-			else
-				*running = 0;
+			*running = !(cpu_cr & OR1K_CPU_CR_STALL);
+
 			return retval;
 		}
 	}
@@ -834,6 +841,10 @@ static int or1k_resume_or_step(struct target *target, int current,
 		retval = du_core->or1k_jtag_write_cpu_cr(&or1k->jtag, 0, 0);
 		if (retval != ERROR_OK)
 			return retval;
+	} else {
+		LOG_ERROR("Unstalling the cpu for this debug"
+			  "interface is not implemented");
+		return ERROR_FAIL;
 	}
 
 	if (step)
@@ -1178,10 +1189,14 @@ static int or1k_examine(struct target *target)
 		if (!strcmp(du_core->name, "mohor") || !strcmp(du_core->name, "adv")) {
 			du_core->or1k_jtag_read_cpu_cr(&or1k->jtag, &cpu_cr);
 			if (cpu_cr & OR1K_CPU_CR_STALL) {
-				LOG_DEBUG("target is halted");
+				LOG_DEBUG("Target is halted");
 				target->state = TARGET_HALTED;
 			} else
 				target->state = TARGET_RUNNING;
+		} else {
+			LOG_ERROR("Reading the running status of the cpu for this debug"
+				  "interface is not implemented");
+			return ERROR_FAIL;
 		}
 	}
 
