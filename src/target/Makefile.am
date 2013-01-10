@@ -6,12 +6,6 @@ else
 OOCD_TRACE_FILES =
 endif
 
-if ADV_DEBUG_SYS
-OR1K_JTAG_FILES = openrisc/or1k_jtag_adv.c
-else
-OR1K_JTAG_FILES = openrisc/or1k_jtag.c
-endif
-
 BIN2C		= $(top_builddir)/src/helper/bin2char$(EXEEXT_FOR_BUILD)
 
 DEBUG_HANDLER	= $(srcdir)/xscale/debug_handler.bin
@@ -119,7 +113,8 @@ OR1K_SRC = \
 	openrisc/or1k.c \
 	openrisc/or1k_tap_vjtag.c \
 	openrisc/or1k_tap_mohor.c \
-	$(OR1K_JTAG_FILES)
+	openrisc/or1k_du_adv.c \
+	openrisc/or1k_du_mohor.c
 
 
 noinst_HEADERS = \

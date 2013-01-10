@@ -1,8 +1,5 @@
 /***************************************************************************
- *   Support for the adv_dbg_if. It only support ADBG_OPT_HISPEED flagged  *
- *   version of the IP.                                                    *
- *                                                                         *
- *   Copyright (C) 2012 by Franck Jullien                                  *
+ *   Copyright (C) 2013 by Franck Jullien                                  *
  *   elec4fun@gmail.com                                                    *
  *                                                                         *
  *   Inpired from adv_jtag_bridge which is:                                *
@@ -36,6 +33,7 @@
 #include "or1k_tap.h"
 #include "or1k_jtag.h"
 #include "or1k.h"
+#include "or1k_du.h"
 
 #include "target.h"
 #include "helper/types.h"
@@ -119,7 +117,7 @@ unsigned long current_reg_idx[DBG_MAX_MODULES];
 
 const char *chain_name[] = {"WISHBONE", "CPU0", "CPU1", "JSP"};
 
-uint32_t adbg_compute_crc(uint32_t crc_in, uint32_t data_in, int length_bits)
+static uint32_t adbg_compute_crc(uint32_t crc_in, uint32_t data_in, int length_bits)
 {
 	int i;
 	unsigned int d, c;
@@ -135,7 +133,7 @@ uint32_t adbg_compute_crc(uint32_t crc_in, uint32_t data_in, int length_bits)
 	return crc_out;
 }
 
-int find_status_bit(void *_buf, int len)
+static int find_status_bit(void *_buf, int len)
 {
 	int i = 0;
 	int count = 0;
@@ -155,7 +153,7 @@ int find_status_bit(void *_buf, int len)
 	return ret;
 }
 
-int or1k_jtag_init(struct or1k_jtag *jtag_info)
+static int or1k_adv_jtag_init(struct or1k_jtag *jtag_info)
 {
 	int retval;
 	struct or1k_tap_ip *tap_ip = jtag_info->tap_ip;
@@ -177,7 +175,7 @@ int or1k_jtag_init(struct or1k_jtag *jtag_info)
 }
 
 /* Selects one of the modules in the debug unit (e.g. wishbone unit, CPU0, etc.) */
-int adbg_select_module(struct or1k_jtag *jtag_info, int chain)
+static int adbg_select_module(struct or1k_jtag *jtag_info, int chain)
 {
 	struct jtag_tap *tap;
 	struct scan_field field;
@@ -212,7 +210,7 @@ int adbg_select_module(struct or1k_jtag *jtag_info, int chain)
  * 4 bits opcode
  * n bits index
  */
-int adbg_select_ctrl_reg(struct or1k_jtag *jtag_info, unsigned long regidx)
+static int adbg_select_ctrl_reg(struct or1k_jtag *jtag_info, unsigned long regidx)
 {
 	struct jtag_tap *tap;
 	struct scan_field field;
@@ -275,7 +273,7 @@ int adbg_select_ctrl_reg(struct or1k_jtag *jtag_info, unsigned long regidx)
  * (and become the LSB of the command)
  * up through the MSB of data[0], then the LSB of data[1], etc.
  */
-int adbg_ctrl_write(struct or1k_jtag *jtag_info, unsigned long regidx, uint32_t *cmd_data, int length_bits)
+static int adbg_ctrl_write(struct or1k_jtag *jtag_info, unsigned long regidx, uint32_t *cmd_data, int length_bits)
 {
 	struct jtag_tap *tap;
 	struct scan_field field[10]; /* We assume no more than 320 databits */
@@ -350,7 +348,7 @@ int adbg_ctrl_write(struct or1k_jtag *jtag_info, unsigned long regidx, uint32_t 
 /* Reads control register (internal to the debug unit)
  * Currently only 1 register in the CPU module, so no register select
  */
-int adbg_ctrl_read(struct or1k_jtag *jtag_info, unsigned long regidx, uint32_t *data, int databits)
+static int adbg_ctrl_read(struct or1k_jtag *jtag_info, unsigned long regidx, uint32_t *data, int databits)
 {
 	struct jtag_tap *tap;
 	struct scan_field field[10]; /* We assume no more than 320 databits */
@@ -427,7 +425,7 @@ int adbg_ctrl_read(struct or1k_jtag *jtag_info, unsigned long regidx, uint32_t *
  * 32-bit address
  * 16-bit length (of the burst, in words)
  */
-int adbg_burst_command(struct or1k_jtag *jtag_info, unsigned int opcode,
+static int adbg_burst_command(struct or1k_jtag *jtag_info, unsigned int opcode,
 		       unsigned long address, int length_words)
 {
 	struct jtag_tap *tap;
@@ -458,8 +456,7 @@ int adbg_burst_command(struct or1k_jtag *jtag_info, unsigned int opcode,
 	return ERROR_OK;
 }
 
-
-int adbg_wb_burst_read(struct or1k_jtag *jtag_info, int word_size_bytes,
+static int adbg_wb_burst_read(struct or1k_jtag *jtag_info, int word_size_bytes,
 			int word_count, unsigned long start_address, void *data)
 {
 	struct jtag_tap *tap;
@@ -630,7 +627,7 @@ retry_read_full:
 }
 
 /* Set up and execute a burst write to a contiguous set of addresses */
-int adbg_wb_burst_write(struct or1k_jtag *jtag_info, const void *data, int word_size_bytes,
+static int adbg_wb_burst_write(struct or1k_jtag *jtag_info, const void *data, int word_size_bytes,
 			int word_count, unsigned long start_address)
 {
 	struct scan_field *field;
@@ -808,13 +805,12 @@ retry_full_write:
 	return ERROR_OK;
 }
 
-
 /* Currently hard set in functions to 32-bits */
-int or1k_jtag_read_cpu(struct or1k_jtag *jtag_info,
+static int or1k_adv_jtag_read_cpu(struct or1k_jtag *jtag_info,
 		uint32_t addr, int count, uint32_t *value)
 {
 	if (!jtag_info->or1k_jtag_inited)
-		or1k_jtag_init(jtag_info);
+		or1k_adv_jtag_init(jtag_info);
 
 	adbg_select_module(jtag_info, DC_CPU0);
 	adbg_wb_burst_read(jtag_info, 4, count, addr, value);
@@ -822,11 +818,11 @@ int or1k_jtag_read_cpu(struct or1k_jtag *jtag_info,
 	return ERROR_OK;
 }
 
-int or1k_jtag_write_cpu(struct or1k_jtag *jtag_info,
+static int or1k_adv_jtag_write_cpu(struct or1k_jtag *jtag_info,
 		uint32_t addr, int count, const uint32_t *value)
 {
 	if (!jtag_info->or1k_jtag_inited)
-		or1k_jtag_init(jtag_info);
+		or1k_adv_jtag_init(jtag_info);
 
 	adbg_select_module(jtag_info, DC_CPU0);
 	adbg_wb_burst_write(jtag_info, value, 4, count, addr);
@@ -835,13 +831,13 @@ int or1k_jtag_write_cpu(struct or1k_jtag *jtag_info,
 }
 
 
-int or1k_jtag_read_cpu_cr(struct or1k_jtag *jtag_info,
+static int or1k_adv_jtag_read_cpu_cr(struct or1k_jtag *jtag_info,
 			  uint32_t *value)
 {
 	uint32_t data;
 
 	if (!jtag_info->or1k_jtag_inited)
-		or1k_jtag_init(jtag_info);
+		or1k_adv_jtag_init(jtag_info);
 
 	adbg_select_module(jtag_info, DC_CPU0);
 	adbg_ctrl_read(jtag_info, DBG_CPU0_REG_STATUS, &data, 2);
@@ -856,7 +852,7 @@ int or1k_jtag_read_cpu_cr(struct or1k_jtag *jtag_info,
 	return ERROR_OK;
 }
 
-int or1k_jtag_write_cpu_cr(struct or1k_jtag *jtag_info,
+static int or1k_adv_jtag_write_cpu_cr(struct or1k_jtag *jtag_info,
 			   uint32_t stall, uint32_t reset)
 {
 	uint32_t dataword = 0;
@@ -865,7 +861,7 @@ int or1k_jtag_write_cpu_cr(struct or1k_jtag *jtag_info,
 	dataword |= reset << 1;
 
 	if (!jtag_info->or1k_jtag_inited)
-		or1k_jtag_init(jtag_info);
+		or1k_adv_jtag_init(jtag_info);
 
 	adbg_select_module(jtag_info, DC_CPU0);
 	adbg_ctrl_write(jtag_info, DBG_CPU0_REG_STATUS, &dataword, 2);
@@ -873,7 +869,7 @@ int or1k_jtag_write_cpu_cr(struct or1k_jtag *jtag_info,
 	return ERROR_OK;
 }
 
-int or1k_jtag_read_memory32(struct or1k_jtag *jtag_info,
+static int or1k_adv_jtag_read_memory32(struct or1k_jtag *jtag_info,
 			    uint32_t addr, int count, uint32_t *buffer)
 {
 	int i, retval;
@@ -881,7 +877,7 @@ int or1k_jtag_read_memory32(struct or1k_jtag *jtag_info,
 	LOG_DEBUG("Reading WB32 at 0x%08X", addr);
 
 	if (!jtag_info->or1k_jtag_inited)
-		or1k_jtag_init(jtag_info);
+		or1k_adv_jtag_init(jtag_info);
 
 	adbg_select_module(jtag_info, DC_WISHBONE);
 	retval = adbg_wb_burst_read(jtag_info, 4, count, addr, buffer);
@@ -895,7 +891,7 @@ int or1k_jtag_read_memory32(struct or1k_jtag *jtag_info,
 
 }
 
-int or1k_jtag_read_memory16(struct or1k_jtag *jtag_info,
+static int or1k_adv_jtag_read_memory16(struct or1k_jtag *jtag_info,
 			    uint32_t addr, int count, uint16_t *buffer)
 {
 	int retval;
@@ -903,7 +899,7 @@ int or1k_jtag_read_memory16(struct or1k_jtag *jtag_info,
 	LOG_DEBUG("Reading WB16 at 0x%08X", addr);
 
 	if (!jtag_info->or1k_jtag_inited)
-		or1k_jtag_init(jtag_info);
+		or1k_adv_jtag_init(jtag_info);
 
 	adbg_select_module(jtag_info, DC_WISHBONE);
 	retval = adbg_wb_burst_read(jtag_info, 2, count, addr, buffer);
@@ -913,7 +909,7 @@ int or1k_jtag_read_memory16(struct or1k_jtag *jtag_info,
 	return ERROR_OK;
 }
 
-int or1k_jtag_read_memory8(struct or1k_jtag *jtag_info,
+static int or1k_adv_jtag_read_memory8(struct or1k_jtag *jtag_info,
 			   uint32_t addr, int count, uint8_t *buffer)
 {
 	int retval;
@@ -921,7 +917,7 @@ int or1k_jtag_read_memory8(struct or1k_jtag *jtag_info,
 	LOG_DEBUG("Reading WB8 at 0x%08X", addr);
 
 	if (!jtag_info->or1k_jtag_inited)
-		or1k_jtag_init(jtag_info);
+		or1k_adv_jtag_init(jtag_info);
 
 	adbg_select_module(jtag_info, DC_WISHBONE);
 	retval = adbg_wb_burst_read(jtag_info, 1, count, addr, buffer);
@@ -931,7 +927,7 @@ int or1k_jtag_read_memory8(struct or1k_jtag *jtag_info,
 	return ERROR_OK;
 }
 
-int or1k_jtag_write_memory32(struct or1k_jtag *jtag_info,
+static int or1k_adv_jtag_write_memory32(struct or1k_jtag *jtag_info,
 			     uint32_t addr, int count, const uint32_t *buffer)
 {
 	int i;
@@ -942,7 +938,7 @@ int or1k_jtag_write_memory32(struct or1k_jtag *jtag_info,
 		h_u32_to_be((uint8_t *) &buffer[i], buffer[i]);
 
 	if (!jtag_info->or1k_jtag_inited)
-		or1k_jtag_init(jtag_info);
+		or1k_adv_jtag_init(jtag_info);
 
 	adbg_select_module(jtag_info, DC_WISHBONE);
 	adbg_wb_burst_write(jtag_info, buffer, 4, count, addr);
@@ -951,13 +947,13 @@ int or1k_jtag_write_memory32(struct or1k_jtag *jtag_info,
 
 }
 
-int or1k_jtag_write_memory16(struct or1k_jtag *jtag_info,
+static int or1k_adv_jtag_write_memory16(struct or1k_jtag *jtag_info,
 			     uint32_t addr, int count, const uint16_t *buffer)
 {
 	LOG_DEBUG("Writing WB16 at 0x%08X", addr);
 
 	if (!jtag_info->or1k_jtag_inited)
-		or1k_jtag_init(jtag_info);
+		or1k_adv_jtag_init(jtag_info);
 
 	adbg_select_module(jtag_info, DC_WISHBONE);
 	adbg_wb_burst_write(jtag_info, buffer, 2, count, addr);
@@ -965,13 +961,13 @@ int or1k_jtag_write_memory16(struct or1k_jtag *jtag_info,
 	return ERROR_OK;
 }
 
-int or1k_jtag_write_memory8(struct or1k_jtag *jtag_info,
+static int or1k_adv_jtag_write_memory8(struct or1k_jtag *jtag_info,
 			    uint32_t addr, int count, const uint8_t *buffer)
 {
 	LOG_DEBUG("Writing WB8 at 0x%08X", addr);
 
 	if (!jtag_info->or1k_jtag_inited)
-		or1k_jtag_init(jtag_info);
+		or1k_adv_jtag_init(jtag_info);
 
 	adbg_select_module(jtag_info, DC_WISHBONE);
 	adbg_wb_burst_write(jtag_info, buffer, 1, count, addr);
@@ -979,4 +975,23 @@ int or1k_jtag_write_memory8(struct or1k_jtag *jtag_info,
 	return ERROR_OK;
 }
 
+static struct or1k_du or1k_du_adv = {
+	.name = "adv",
+	.or1k_jtag_init           = or1k_adv_jtag_init,
+	.or1k_jtag_read_cpu       = or1k_adv_jtag_read_cpu,
+	.or1k_jtag_write_cpu      = or1k_adv_jtag_write_cpu,
+	.or1k_jtag_read_cpu_cr    = or1k_adv_jtag_read_cpu_cr,
+	.or1k_jtag_write_cpu_cr   = or1k_adv_jtag_write_cpu_cr,
+	.or1k_jtag_read_memory32  = or1k_adv_jtag_read_memory32,
+	.or1k_jtag_read_memory16  = or1k_adv_jtag_read_memory16,
+	.or1k_jtag_read_memory8   = or1k_adv_jtag_read_memory8,
+	.or1k_jtag_write_memory32 = or1k_adv_jtag_write_memory32,
+	.or1k_jtag_write_memory16 = or1k_adv_jtag_write_memory16,
+	.or1k_jtag_write_memory8  = or1k_adv_jtag_write_memory8,
+};
 
+int or1k_du_adv_register(void)
+{
+	list_add_tail(&or1k_du_adv.list, &du_list);
+	return 0;
+}

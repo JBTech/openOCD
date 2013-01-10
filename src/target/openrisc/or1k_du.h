@@ -22,10 +22,13 @@
 
 #include "helper/types.h"
 
+/* linear list over all available or1k debug unit
+ */
+extern struct list_head du_list;
+
 struct or1k_du {
 	const char *name;
 	struct list_head list;
-	struct jtag_tap *tap;
 
 	int (*or1k_jtag_init)(struct or1k_jtag *jtag_info);
 

@@ -2,10 +2,10 @@
  *   Copyright (C) 2011 by Julius Baxter                                   *
  *   julius@opencores.org                                                  *
  *                                                                         *
- *   Copyright (C) 2012 by Franck Jullien                                  *
+ *   Copyright (C) 2013 by Franck Jullien                                  *
  *   elec4fun@gmail.com                                                    *
  *                                                                         *
- *   Copyright (C) 2012 by Marek Czerski                                   *
+ *   Copyright (C) 2013 by Marek Czerski                                   *
  *   ma.czerski@gmail.com                                                  *
  *                                                                         *
  *                                                                         *
@@ -51,10 +51,10 @@ LIST_HEAD(du_list);
 
 extern int or1k_tap_vjtag_register(void);
 extern int or1k_tap_mohor_register(void);
-/*
+
 extern int or1k_du_mohor_register(void);
 extern int or1k_du_adv_register(void);
-*/
+
 static int or1k_read_core_reg(struct target *target, int num);
 static int or1k_write_core_reg(struct target *target, int num);
 
@@ -1136,7 +1136,6 @@ static int or1k_write_memory(struct target *target, uint32_t address,
 	return ERROR_OK;
 }
 
-
 static int or1k_init_target(struct command_context *cmd_ctx,
 		struct target *target)
 {
@@ -1161,10 +1160,10 @@ static int or1k_target_create(struct target *target, Jim_Interp *interp)
 
 	or1k_tap_vjtag_register();
 	or1k_tap_mohor_register();
-/*
-	or1k_du_mohor_register(void);
-	or1k_du_adv_register(void);
-*/
+
+	or1k_du_mohor_register();
+	or1k_du_adv_register();
+
 	return ERROR_OK;
 }
 
@@ -1286,7 +1285,7 @@ COMMAND_HANDLER(or1k_du_select_command_handler)
 	if (CMD_ARGC != 1)
 		return ERROR_COMMAND_SYNTAX_ERROR;
 
-	list_for_each_entry(or1k_du, &tap_list, list) {
+	list_for_each_entry(or1k_du, &du_list, list) {
 		if (or1k_du->name) {
 			if (!strcmp(CMD_ARGV[0], or1k_du->name)) {
 				jtag->du_core = or1k_du;

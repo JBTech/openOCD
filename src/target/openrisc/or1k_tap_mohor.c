@@ -1,6 +1,5 @@
 /***************************************************************************
- *                                                                         *
- *   Copyright (C) 2012 by Franck Jullien                                  *
+ *   Copyright (C) 2013 by Franck Jullien                                  *
  *   elec4fun@gmail.com                                                    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -26,7 +25,7 @@
 
 #define OR1K_TAP_INST_DEBUG		0x8
 
-int or1k_tap_mohor_init(struct or1k_jtag *jtag_info)
+static int or1k_tap_mohor_init(struct or1k_jtag *jtag_info)
 {
 	LOG_DEBUG(" Initialising OpenCores JTAG TAP");
 

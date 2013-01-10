@@ -25,6 +25,7 @@
 #include "or1k_tap.h"
 #include "or1k_jtag.h"
 #include "or1k.h"
+#include "or1k_du.h"
 
 #include "target.h"
 #include "helper/types.h"
@@ -74,7 +75,7 @@
 
 #define OR1K_JTAG_MOHOR_DBG_CRC_POLY			0x04c11db7
 
-int or1k_jtag_init(struct or1k_jtag *jtag_info)
+static int or1k_mohor_jtag_init(struct or1k_jtag *jtag_info)
 {
 	int retval;
 	struct or1k_tap_ip *tap_ip = jtag_info->tap_ip;
@@ -103,7 +104,7 @@ static uint32_t or1k_jtag_mohor_debug_crc_calc(uint32_t crc,
 }
 
 
-int or1k_jtag_mohor_debug_select_module(struct or1k_jtag *jtag_info,
+static int or1k_jtag_mohor_debug_select_module(struct or1k_jtag *jtag_info,
 					uint32_t module)
 {
 	struct jtag_tap *tap;
@@ -216,7 +217,7 @@ int or1k_jtag_mohor_debug_select_module(struct or1k_jtag *jtag_info,
 
 }
 
-int or1k_jtag_mohor_debug_set_command(struct or1k_jtag *jtag_info,
+static int or1k_jtag_mohor_debug_set_command(struct or1k_jtag *jtag_info,
 				       uint32_t out_accesstype,
 				       uint32_t out_address,
 				       uint32_t out_length_bytes)
@@ -355,7 +356,7 @@ int or1k_jtag_mohor_debug_set_command(struct or1k_jtag *jtag_info,
 
 }
 
-int or1k_jtag_mohor_debug_single_read_go(struct or1k_jtag *jtag_info,
+static int or1k_jtag_mohor_debug_single_read_go(struct or1k_jtag *jtag_info,
 					 int type_size_bytes,
 					 int length,
 					 uint8_t *data)
@@ -507,7 +508,7 @@ error_finish:
 	return ERROR_FAIL;
 }
 
-int or1k_jtag_mohor_debug_multiple_read_go(struct or1k_jtag *jtag_info,
+static int or1k_jtag_mohor_debug_multiple_read_go(struct or1k_jtag *jtag_info,
 					   int type_size_bytes, int length,
 					   uint8_t *data)
 {
@@ -689,7 +690,7 @@ error_finish:
 
 }
 
-int or1k_jtag_mohor_debug_read_go(struct or1k_jtag *jtag_info,
+static int or1k_jtag_mohor_debug_read_go(struct or1k_jtag *jtag_info,
 				  int type_size_bytes,
 				  int length,
 				  uint8_t *data)
@@ -861,15 +862,14 @@ int or1k_jtag_mohor_debug_write_go(struct or1k_jtag *jtag_info,
 	return ERROR_OK;
 }
 
-
 /* Currently hard set in functions to 32-bits */
-int or1k_jtag_read_cpu(struct or1k_jtag *jtag_info,
+static int or1k_mohor_jtag_read_cpu(struct or1k_jtag *jtag_info,
 		uint32_t addr, int count, uint32_t *value)
 {
 	int i;
 
 	if (!jtag_info->or1k_jtag_inited)
-		or1k_jtag_init(jtag_info);
+		or1k_mohor_jtag_init(jtag_info);
 
 	if (jtag_info->or1k_jtag_module_selected != OR1K_MOHORDBGIF_MODULE_CPU0)
 		or1k_jtag_mohor_debug_select_module(jtag_info,
@@ -893,14 +893,14 @@ int or1k_jtag_read_cpu(struct or1k_jtag *jtag_info,
 	return ERROR_OK;
 }
 
-int or1k_jtag_write_cpu(struct or1k_jtag *jtag_info,
+static int or1k_mohor_jtag_write_cpu(struct or1k_jtag *jtag_info,
 		uint32_t addr, int count, const uint32_t *value)
 {
 	int i;
 	uint32_t value_be;
 
 	if (!jtag_info->or1k_jtag_inited)
-		or1k_jtag_init(jtag_info);
+		or1k_mohor_jtag_init(jtag_info);
 
 	if (jtag_info->or1k_jtag_module_selected != OR1K_MOHORDBGIF_MODULE_CPU0)
 		or1k_jtag_mohor_debug_select_module(jtag_info,
@@ -924,8 +924,7 @@ int or1k_jtag_write_cpu(struct or1k_jtag *jtag_info,
 
 }
 
-
-int or1k_jtag_read_cpu_cr(struct or1k_jtag *jtag_info,
+static int or1k_mohor_jtag_read_cpu_cr(struct or1k_jtag *jtag_info,
 			  uint32_t *value)
 {
 	struct jtag_tap *tap;
@@ -943,7 +942,7 @@ int or1k_jtag_read_cpu_cr(struct or1k_jtag *jtag_info,
 	uint32_t in_zeroes1;
 
 	if (!jtag_info->or1k_jtag_inited)
-		or1k_jtag_init(jtag_info);
+		or1k_mohor_jtag_init(jtag_info);
 
 	if (jtag_info->or1k_jtag_module_selected != OR1K_MOHORDBGIF_MODULE_CPU0)
 		or1k_jtag_mohor_debug_select_module(jtag_info,
@@ -1067,7 +1066,7 @@ int or1k_jtag_read_cpu_cr(struct or1k_jtag *jtag_info,
 	return ERROR_OK;
 }
 
-int or1k_jtag_write_cpu_cr(struct or1k_jtag *jtag_info,
+static int or1k_mohor_jtag_write_cpu_cr(struct or1k_jtag *jtag_info,
 			   uint32_t stall, uint32_t reset)
 {
 	struct jtag_tap *tap;
@@ -1084,7 +1083,7 @@ int or1k_jtag_write_cpu_cr(struct or1k_jtag *jtag_info,
 		  reset, stall);
 
 	if (!jtag_info->or1k_jtag_inited)
-		or1k_jtag_init(jtag_info);
+		or1k_mohor_jtag_init(jtag_info);
 
 	if (jtag_info->or1k_jtag_module_selected != OR1K_MOHORDBGIF_MODULE_CPU0)
 		or1k_jtag_mohor_debug_select_module(jtag_info,
@@ -1194,13 +1193,13 @@ int or1k_jtag_write_cpu_cr(struct or1k_jtag *jtag_info,
 	return ERROR_OK;
 }
 
-int or1k_jtag_read_memory32(struct or1k_jtag *jtag_info,
+static int or1k_mohor_jtag_read_memory32(struct or1k_jtag *jtag_info,
 			    uint32_t addr, int count, uint32_t *buffer)
 {
 	int i;
 
 	if (!jtag_info->or1k_jtag_inited)
-		or1k_jtag_init(jtag_info);
+		or1k_mohor_jtag_init(jtag_info);
 
 	if (jtag_info->or1k_jtag_module_selected != OR1K_MOHORDBGIF_MODULE_WB)
 		or1k_jtag_mohor_debug_select_module(jtag_info,
@@ -1224,18 +1223,18 @@ int or1k_jtag_read_memory32(struct or1k_jtag *jtag_info,
 	return ERROR_OK;
 }
 
-int or1k_jtag_read_memory16(struct or1k_jtag *jtag_info,
+static int or1k_mohor_jtag_read_memory16(struct or1k_jtag *jtag_info,
 			    uint32_t addr, int count, uint16_t *buffer)
 {
 	/* TODO - this function! */
 	return ERROR_OK;
 }
 
-int or1k_jtag_read_memory8(struct or1k_jtag *jtag_info,
+static int or1k_mohor_jtag_read_memory8(struct or1k_jtag *jtag_info,
 			   uint32_t addr, int count, uint8_t *buffer)
 {
 	if (!jtag_info->or1k_jtag_inited)
-		or1k_jtag_init(jtag_info);
+		or1k_mohor_jtag_init(jtag_info);
 
 	if (jtag_info->or1k_jtag_module_selected != OR1K_MOHORDBGIF_MODULE_WB)
 		or1k_jtag_mohor_debug_select_module(jtag_info,
@@ -1261,11 +1260,11 @@ int or1k_jtag_read_memory8(struct or1k_jtag *jtag_info,
 	return ERROR_OK;
 }
 
-int or1k_jtag_write_memory32(struct or1k_jtag *jtag_info,
+static int or1k_mohor_jtag_write_memory32(struct or1k_jtag *jtag_info,
 			     uint32_t addr, int count, const uint32_t *buffer)
 {
 	if (!jtag_info->or1k_jtag_inited)
-		or1k_jtag_init(jtag_info);
+		or1k_mohor_jtag_init(jtag_info);
 
 	if (jtag_info->or1k_jtag_module_selected != OR1K_MOHORDBGIF_MODULE_WB)
 		or1k_jtag_mohor_debug_select_module(jtag_info,
@@ -1286,18 +1285,18 @@ int or1k_jtag_write_memory32(struct or1k_jtag *jtag_info,
 
 }
 
-int or1k_jtag_write_memory16(struct or1k_jtag *jtag_info,
+static int or1k_mohor_jtag_write_memory16(struct or1k_jtag *jtag_info,
 			     uint32_t addr, int count, const uint16_t *buffer)
 {
 	/* TODO - this function! */
 	return ERROR_OK;
 }
 
-int or1k_jtag_write_memory8(struct or1k_jtag *jtag_info,
+static int or1k_mohor_jtag_write_memory8(struct or1k_jtag *jtag_info,
 			    uint32_t addr, int count, const uint8_t *buffer)
 {
 	if (!jtag_info->or1k_jtag_inited)
-		or1k_jtag_init(jtag_info);
+		or1k_mohor_jtag_init(jtag_info);
 
 	if (jtag_info->or1k_jtag_module_selected != OR1K_MOHORDBGIF_MODULE_WB)
 		or1k_jtag_mohor_debug_select_module(jtag_info,
@@ -1316,3 +1315,23 @@ int or1k_jtag_write_memory8(struct or1k_jtag *jtag_info,
 	return ERROR_OK;
 }
 
+static struct or1k_du or1k_du_mohor = {
+	.name = "mohor",
+	.or1k_jtag_init           = or1k_mohor_jtag_init,
+	.or1k_jtag_read_cpu       = or1k_mohor_jtag_read_cpu,
+	.or1k_jtag_write_cpu      = or1k_mohor_jtag_write_cpu,
+	.or1k_jtag_read_cpu_cr    = or1k_mohor_jtag_read_cpu_cr,
+	.or1k_jtag_write_cpu_cr   = or1k_mohor_jtag_write_cpu_cr,
+	.or1k_jtag_read_memory32  = or1k_mohor_jtag_read_memory32,
+	.or1k_jtag_read_memory16  = or1k_mohor_jtag_read_memory16,
+	.or1k_jtag_read_memory8   = or1k_mohor_jtag_read_memory8,
+	.or1k_jtag_write_memory32 = or1k_mohor_jtag_write_memory32,
+	.or1k_jtag_write_memory16 = or1k_mohor_jtag_write_memory16,
+	.or1k_jtag_write_memory8  = or1k_mohor_jtag_write_memory8,
+};
+
+int or1k_du_mohor_register(void)
+{
+	list_add_tail(&or1k_du_mohor.list, &du_list);
+	return 0;
+}

@@ -1,6 +1,5 @@
 /***************************************************************************
- *                                                                         *
- *   Copyright (C) 2012 by Franck Jullien                                  *
+ *   Copyright (C) 2013 by Franck Jullien                                  *
  *   elec4fun@gmail.com                                                    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -215,7 +214,6 @@ static int or1k_tap_vjtag_init(struct or1k_jtag *jtag_info)
 
 	return ERROR_OK;
 }
-
 
 static struct or1k_tap_ip vjtag_tap = {
 	.name = "vjtag",
