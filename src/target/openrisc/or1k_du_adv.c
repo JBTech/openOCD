@@ -240,7 +240,7 @@ static int adbg_select_ctrl_reg(struct or1k_jtag *jtag_info, unsigned long regid
 		opcode = DBG_CPU1_CMD_IREG_SEL;
 		break;
 	default:
-		LOG_DEBUG("Illegal debug chain selected (%i) while selecting control register");
+		LOG_DEBUG("Illegal debug chain selected (%i) while selecting control register",
 			  jtag_info->or1k_jtag_module_selected);
 		return ERROR_FAIL;
 	}
