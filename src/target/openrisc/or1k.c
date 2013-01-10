@@ -421,7 +421,7 @@ static int or1k_read_core_reg(struct target *target, int num)
 	if ((num >= 0) && (num < OR1KNUMCOREREGS)) {
 		reg_value = or1k->core_regs[num];
 		buf_set_u32(or1k->core_cache->reg_list[num].value, 0, 32, reg_value);
-		LOG_DEBUG("read core reg %i value 0x%" PRIx32 "", num , reg_value);
+		LOG_DEBUG("Read core reg %i value 0x%08x", num , reg_value);
 		or1k->core_cache->reg_list[num].valid = 1;
 		or1k->core_cache->reg_list[num].dirty = 0;
 	} else {
@@ -430,7 +430,7 @@ static int or1k_read_core_reg(struct target *target, int num)
 		if (retval != ERROR_OK)
 			return retval;
 		buf_set_u32(or1k->core_cache->reg_list[num].value, 0, 32, reg_value);
-		LOG_DEBUG("read spr reg %i value 0x%" PRIx32 "", num , reg_value);
+		LOG_DEBUG("Read spr reg %i value 0x%08x", num , reg_value);
 	}
 
 	return ERROR_OK;
@@ -446,7 +446,7 @@ static int or1k_write_core_reg(struct target *target, int num)
 
 	reg_value = buf_get_u32(or1k->core_cache->reg_list[num].value, 0, 32);
 	or1k->core_regs[num] = reg_value;
-	LOG_DEBUG("write core reg %i value 0x%" PRIx32 "", num , reg_value);
+	LOG_DEBUG("Write core reg %i value 0x%08x", num , reg_value);
 	or1k->core_cache->reg_list[num].valid = 1;
 	or1k->core_cache->reg_list[num].dirty = 0;
 
@@ -591,17 +591,17 @@ static int or1k_halt(struct target *target)
 		  target_state_name(target));
 
 	if (target->state == TARGET_HALTED) {
-		LOG_DEBUG("target was already halted");
+		LOG_DEBUG("Target was already halted");
 		return ERROR_OK;
 	}
 
 	if (target->state == TARGET_UNKNOWN)
-		LOG_WARNING("target was in unknown state when halt was requested");
+		LOG_WARNING("Target was in unknown state when halt was requested");
 
 	if (target->state == TARGET_RESET) {
 		if ((jtag_get_reset_config() & RESET_SRST_PULLS_TRST) &&
 		    jtag_get_srst()) {
-			LOG_ERROR("can't request a halt while in reset if nSRST pulls nTRST");
+			LOG_ERROR("Can't request a halt while in reset if nSRST pulls nTRST");
 			return ERROR_TARGET_FAILURE;
 		} else {
 			target->debug_reason = DBG_REASON_DBGRQ;
@@ -663,7 +663,7 @@ static int or1k_is_cpu_running(struct target *target, int *running)
 			LOG_WARNING("Resetting JTAG TAP state and reconnectiong to debug IF.");
 			du_core->or1k_jtag_init(&or1k->jtag);
 
-			LOG_WARNING("attempt %d of %d", tries, RETRIES_MAX);
+			LOG_WARNING("...attempt %d of %d", tries, RETRIES_MAX);
 
 			/* TODO: perhaps some sort of time delay here. 1s? */
 			sleep(1);
@@ -772,11 +772,11 @@ static int or1k_resume_or_step(struct target *target, int current,
 	int retval;
 	uint32_t debug_reg_list[OR1K_DEBUG_REG_NUM];
 
-	LOG_DEBUG(" addr: 0x%x, stepping: %d, handle breakpoints %d\n",
-		  address, step, handle_breakpoints);
+	LOG_DEBUG("Addr: 0x%x, stepping: %s, handle breakpoints %s\n",
+		  address, step?"yes":"no", handle_breakpoints?"yes":"no");
 
 	if (target->state != TARGET_HALTED) {
-		LOG_WARNING("target not halted");
+		LOG_WARNING("Target not halted");
 		return ERROR_TARGET_NOT_HALTED;
 	}
 
@@ -826,7 +826,7 @@ static int or1k_resume_or_step(struct target *target, int current,
 		/* Single step past breakpoint at current address */
 		breakpoint = breakpoint_find(target, resume_pc);
 		if (breakpoint) {
-			LOG_DEBUG("unset breakpoint at 0x%8.8" PRIx32 "", breakpoint->address);
+			LOG_DEBUG("Unset breakpoint at 0x%08x", breakpoint->address);
 #if 0
 			/* Do appropriate things here to remove breakpoint. */
 #endif
@@ -858,11 +858,11 @@ static int or1k_resume_or_step(struct target *target, int current,
 	if (!debug_execution) {
 		target->state = TARGET_RUNNING;
 		target_call_event_callbacks(target, TARGET_EVENT_RESUMED);
-		LOG_DEBUG("target resumed at 0x%" PRIx32 "", resume_pc);
+		LOG_DEBUG("Target resumed at 0x%08x", resume_pc);
 	} else {
 		target->state = TARGET_DEBUG_RUNNING;
 		target_call_event_callbacks(target, TARGET_EVENT_DEBUG_RESUMED);
-		LOG_DEBUG("target debug resumed at 0x%" PRIx32 "", resume_pc);
+		LOG_DEBUG("Target debug resumed at 0x%08x", resume_pc);
 	}
 
 	return ERROR_OK;
@@ -937,7 +937,7 @@ static int or1k_remove_breakpoint(struct target *target,
 	struct or1k_du *du_core = or1k_to_du(or1k);
 	int retval;
 
-	LOG_DEBUG("Removing breakpoint: addr %08x, len %d, type %d, set: %d, id: %d",
+	LOG_DEBUG("Removing breakpoint: addr 0x%08x, len %d, type %d, set: %d, id: %d",
 		  breakpoint->address, breakpoint->length, breakpoint->type,
 		  breakpoint->set, breakpoint->unique_id);
 
@@ -989,7 +989,7 @@ static int or1k_bulk_read_memory(struct target *target, uint32_t address,
 	uint8_t *block_count_buffer = (uint8_t *) buffer;
 
 	/* Count is in 4-byte words */
-	LOG_DEBUG("address 0x%x count %d", address, count);
+	LOG_DEBUG("Read %d bytes at 0x%08x", count << 2, address);
 
 	while (block_count_left) {
 		blocks_this_round = (block_count_left > blocks_per_round) ?
@@ -1024,7 +1024,7 @@ static int or1k_bulk_write_memory(struct target *target, uint32_t address,
 	uint8_t *block_count_buffer = (uint8_t *) buffer;
 
 	/* Count is in 4-byte words */
-	LOG_DEBUG("address 0x%x count %d", address, count);
+	LOG_DEBUG("Write %d bytes at 0x%08x", count << 2, address);
 
 	while (block_count_left) {
 		blocks_this_round = (block_count_left > blocks_per_round) ?
@@ -1049,8 +1049,7 @@ static int or1k_read_memory(struct target *target, uint32_t address,
 	struct or1k_common *or1k = target_to_or1k(target);
 	struct or1k_du *du_core = or1k_to_du(or1k);
 
-	LOG_DEBUG("address: 0x%8.8" PRIx32 ", size: 0x%8.8" PRIx32
-		  ",count: 0x%8.8" PRIx32 "", address, size, count);
+	LOG_DEBUG("Read memory at 0x%08x, size: %d, count: 0x%08x", address, size, count);
 
 	if (target->state != TARGET_HALTED) {
 		LOG_WARNING("target not halted");
@@ -1099,11 +1098,10 @@ static int or1k_write_memory(struct target *target, uint32_t address,
 	struct or1k_common *or1k = target_to_or1k(target);
 	struct or1k_du *du_core = or1k_to_du(or1k);
 
-	LOG_DEBUG("address: 0x%8.8" PRIx32 ", size: 0x%8.8" PRIx32
-		  ", count: 0x%8.8" PRIx32 "", address, size, count);
+	LOG_DEBUG("Write memory at 0x%08x, size: %d, count: 0x%08x", address, size, count);
 
 	if (target->state != TARGET_HALTED) {
-		LOG_WARNING("target not halted");
+		LOG_WARNING("Target not halted");
 		return ERROR_TARGET_NOT_HALTED;
 	}
 
@@ -1386,7 +1384,7 @@ static const struct command_registration or1k_reg_command_handlers[] = {
 		.handler = or1k_addreg_command_handler,
 		.mode = COMMAND_ANY,
 		.usage = "addreg name addr feature group",
-		.help = "add a register to the register list",
+		.help = "Add a register to the register list",
 	},
 	COMMAND_REGISTRATION_DONE
 };
