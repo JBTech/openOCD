@@ -1309,6 +1309,40 @@ COMMAND_HANDLER(or1k_addreg_command_handler)
 	return ERROR_OK;
 }
 
+COMMAND_HANDLER(or1k_readreg_command_handler)
+{
+	struct target *target = get_current_target(CMD_CTX);
+	struct or1k_common *or1k = target_to_or1k(target);
+	struct or1k_du *du_core = or1k_to_du(or1k);
+	uint32_t reg_value;
+	int retval;
+	int i;
+
+	if (CMD_ARGC != 1)
+		return ERROR_COMMAND_SYNTAX_ERROR;
+
+	for (i = 0; i < or1k->nb_regs; i++) {
+
+		if (!or1k->arch_info[i].name)
+			continue;
+
+		if (!strcmp(or1k->arch_info[i].name, CMD_ARGV[0])) {
+			retval = du_core->or1k_jtag_read_cpu(&or1k->jtag,
+							     or1k->arch_info[i].spr_num,
+							     1,
+							     &reg_value);
+			if (retval != ERROR_OK)
+				return retval;
+			command_print(CMD_CTX, "%s: 0x%08x (%d)", or1k->arch_info[i].name,
+				      reg_value, reg_value);
+			return ERROR_OK;
+		}
+	}
+
+	LOG_INFO("Couldn't find register %s", CMD_ARGV[0]);
+	return ERROR_OK;
+}
+
 static const struct command_registration or1k_hw_ip_command_handlers[] = {
 	{
 		"tap_select",
@@ -1348,6 +1382,13 @@ static const struct command_registration or1k_reg_command_handlers[] = {
 		.mode = COMMAND_ANY,
 		.usage = "addreg name addr feature group",
 		.help = "Add a register to the register list",
+	},
+	{
+		"readreg",
+		.handler = or1k_readreg_command_handler,
+		.mode = COMMAND_ANY,
+		.usage = "readreg name",
+		.help = "Read the register *name*",
 	},
 	COMMAND_REGISTRATION_DONE
 };
