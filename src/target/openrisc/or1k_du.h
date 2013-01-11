@@ -25,6 +25,12 @@
 #include "config.h"
 #endif
 
+#define CPU_STALL	0
+#define CPU_UNSTALL	1
+
+#define CPU_RESET	0
+#define CPU_NOT_RESET	1
+
 /* Linear list over all available or1k debug unit */
 extern struct list_head du_list;
 
@@ -34,16 +40,17 @@ struct or1k_du {
 
 	int (*or1k_jtag_init)(struct or1k_jtag *jtag_info);
 
+	int (*or1k_is_cpu_running)(struct or1k_jtag *jtag_info, int *running);
+
+	int (*or1k_cpu_stall)(struct or1k_jtag *jtag_info, int action);
+
+	int (*or1k_cpu_reset)(struct or1k_jtag *jtag_info, int action);
+
 	int (*or1k_jtag_read_cpu)(struct or1k_jtag *jtag_info,
 				  uint32_t addr, int count, uint32_t *value);
 
 	int (*or1k_jtag_write_cpu)(struct or1k_jtag *jtag_info,
 				   uint32_t addr, int count, const uint32_t *value);
-
-	int (*or1k_jtag_read_cpu_cr)(struct or1k_jtag *jtag_info, uint32_t *value);
-
-	int (*or1k_jtag_write_cpu_cr)(struct or1k_jtag *jtag_info, uint32_t stall,
-				      uint32_t reset);
 
 	int (*or1k_jtag_read_memory32)(struct or1k_jtag *jtag_info, uint32_t addr,
 					int count, uint32_t *buffer);

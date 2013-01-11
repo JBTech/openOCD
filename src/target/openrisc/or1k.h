@@ -131,10 +131,6 @@ enum or1k_debug_reg_nums {
 	OR1K_DEBUG_REG_NUM
 };
 
-/* CPU module control register bits */
-#define OR1K_CPU_CR_RESET 1
-#define OR1K_CPU_CR_STALL 2
-
 /* OR1K Debug registers and bits needed for resuming */
 #define OR1K_DEBUG_REG_BASE	(6 << 11)                  /* Debug registers Base address */
 #define OR1K_DMR1_CPU_REG_ADD	(OR1K_DEBUG_REG_BASE + 16) /* Debug Mode Register 1 0x3010 */

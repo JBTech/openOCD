@@ -31,6 +31,10 @@
 
 /* Mohor SoC debug interface defines */
 
+/* CPU control register bits mask */
+#define OR1K_MOHORDBGIF_CPU_CR_STALL	0x02
+#define OR1K_MOHORDBGIF_CPU_CR_RESET	0x01
+
 /* Module selection 4-bits */
 #define OR1K_MOHORDBGIF_MODULE_WB			0x0
 #define OR1K_MOHORDBGIF_MODULE_CPU0			0x1
@@ -983,20 +987,20 @@ static int or1k_mohor_jtag_read_cpu_cr(struct or1k_jtag *jtag_info,
 	fields[2].in_value = NULL;
 
 	/* 52-bit control register */
-	fields[3].num_bits = 1;
+	fields[3].num_bits = 2;
 	fields[3].out_value = NULL;
-	fields[3].in_value = (uint8_t *)&in_reset;
+	fields[3].in_value = (uint8_t *)&value;
 
 	fields[4].num_bits = 1;
 	fields[4].out_value = NULL;
-	fields[4].in_value = (uint8_t *)&in_stall;
+	fields[4].in_value = NULL;
 
 	/* Assuming the next 50 bits will always be 0 */
 	fields[5].num_bits = 32;
 	fields[5].out_value = NULL;
 	fields[5].in_value = (uint8_t *)&in_zeroes0;
 
-	fields[6].num_bits = 18;
+	fields[6].num_bits = 17;
 	fields[6].out_value = NULL;
 	fields[6].in_value = (uint8_t *)&in_zeroes1;
 
@@ -1052,20 +1056,10 @@ static int or1k_mohor_jtag_read_cpu_cr(struct or1k_jtag *jtag_info,
 		return ERROR_FAIL;
 	}
 
-	/* Convey status of control register */
-	*value = 0;
-
-	if (in_reset & 0x1)
-		*value |= OR1K_CPU_CR_RESET;
-
-	if (in_stall & 0x1)
-		*value |= OR1K_CPU_CR_STALL;
-
 	return ERROR_OK;
 }
 
-static int or1k_mohor_jtag_write_cpu_cr(struct or1k_jtag *jtag_info,
-			   uint32_t stall, uint32_t reset)
+static int or1k_mohor_jtag_write_cpu_cr(struct or1k_jtag *jtag_info, uint32_t *value)
 {
 	struct jtag_tap *tap;
 	struct scan_field fields[9];
@@ -1077,8 +1071,9 @@ static int or1k_mohor_jtag_write_cpu_cr(struct or1k_jtag *jtag_info,
 	uint32_t in_crc;
 	uint32_t expected_in_crc;
 
-	LOG_DEBUG(" writing CPU control reg, reset: %d, stall: %d",
-		  reset, stall);
+	LOG_DEBUG("Writing CPU control 0x%08x, reset: %d, stall: %d",
+		  *value, !!(*value & OR1K_MOHORDBGIF_CPU_CR_RESET),
+		  !!(*value & OR1K_MOHORDBGIF_CPU_CR_STALL));
 
 	if (!jtag_info->or1k_jtag_inited)
 		or1k_mohor_jtag_init(jtag_info);
@@ -1113,19 +1108,19 @@ static int or1k_mohor_jtag_write_cpu_cr(struct or1k_jtag *jtag_info,
 	fields[1].in_value = NULL;
 
 	/* 52-bit control register */
-	fields[2].num_bits = 1;
-	fields[2].out_value = (uint8_t *)&reset;
+	fields[2].num_bits = 2;
+	fields[2].out_value = (uint8_t *)value;
 	fields[2].in_value = NULL;
 
 	fields[3].num_bits = 1;
-	fields[3].out_value = (uint8_t *)&stall;
+	fields[3].out_value = NULL;
 	fields[3].in_value = NULL;
 
 	fields[4].num_bits = 32;
 	fields[4].out_value = NULL;
 	fields[4].in_value = NULL;
 
-	fields[5].num_bits = 18;
+	fields[5].num_bits = 17;
 	fields[5].out_value = NULL;
 	fields[5].in_value = NULL;
 
@@ -1134,8 +1129,10 @@ static int or1k_mohor_jtag_write_cpu_cr(struct or1k_jtag *jtag_info,
 	out_crc = or1k_jtag_mohor_debug_crc_calc(out_crc, out_module_select_bit);
 	for (i = 0; i < 4; i++)
 		out_crc = or1k_jtag_mohor_debug_crc_calc(out_crc, ((out_cmd >> i) & 0x1));
-	out_crc = or1k_jtag_mohor_debug_crc_calc(out_crc, reset);
-	out_crc = or1k_jtag_mohor_debug_crc_calc(out_crc, stall);
+
+	for (i = 0; i < 2; i++)
+		out_crc = or1k_jtag_mohor_debug_crc_calc(out_crc, ((*value >> i) & 0x1));
+
 	for (i = 0; i < 50; i++)
 		out_crc = or1k_jtag_mohor_debug_crc_calc(out_crc, 0);
 	out_crc = flip_u32(out_crc, 32);
@@ -1187,6 +1184,74 @@ static int or1k_mohor_jtag_write_cpu_cr(struct or1k_jtag *jtag_info,
 			  , in_status);
 		return ERROR_FAIL;
 	}
+
+	return ERROR_OK;
+}
+
+static int or1k_mohor_cpu_stall(struct or1k_jtag *jtag_info, int action)
+{
+	uint32_t cpu_cr;
+	int retval;
+
+	if (!jtag_info->or1k_jtag_inited)
+		or1k_mohor_jtag_init(jtag_info);
+
+	retval = or1k_mohor_jtag_read_cpu_cr(jtag_info, &cpu_cr);
+	if (retval != ERROR_OK)
+		return retval;
+
+	if (action == CPU_STALL)
+		cpu_cr |= OR1K_MOHORDBGIF_CPU_CR_STALL;
+	else
+		cpu_cr &= ~OR1K_MOHORDBGIF_CPU_CR_STALL;
+
+	retval = or1k_mohor_jtag_write_cpu_cr(jtag_info, &cpu_cr);
+	if (retval != ERROR_OK)
+		return retval;
+
+	return ERROR_OK;
+}
+
+static int or1k_mohor_is_cpu_running(struct or1k_jtag *jtag_info, int *running)
+{
+	uint32_t cpu_cr;
+	int retval;
+
+	if (!jtag_info->or1k_jtag_inited)
+		or1k_mohor_jtag_init(jtag_info);
+
+	retval = or1k_mohor_jtag_read_cpu_cr(jtag_info, &cpu_cr);
+	if (retval != ERROR_OK)
+		return retval;
+
+	if (cpu_cr & OR1K_MOHORDBGIF_CPU_CR_STALL)
+		*running = 0;
+	else
+		*running = 1;
+
+	return ERROR_OK;
+}
+
+static int or1k_mohor_cpu_reset(struct or1k_jtag *jtag_info, int action)
+{
+	uint32_t cpu_cr;
+	int retval;
+
+	if (!jtag_info->or1k_jtag_inited)
+		or1k_mohor_jtag_init(jtag_info);
+
+	retval = or1k_mohor_jtag_read_cpu_cr(jtag_info, &cpu_cr);
+	if (retval != ERROR_OK)
+		return retval;
+
+	if (action == CPU_STALL)
+		cpu_cr |= OR1K_MOHORDBGIF_CPU_CR_RESET;
+	else
+		cpu_cr &= ~OR1K_MOHORDBGIF_CPU_CR_RESET;
+
+	retval = or1k_mohor_jtag_write_cpu_cr(jtag_info, &cpu_cr);
+	if (retval != ERROR_OK)
+		return retval;
 
 	return ERROR_OK;
 }
@@ -1316,13 +1381,18 @@ static int or1k_mohor_jtag_write_memory8(struct or1k_jtag *jtag_info,
 static struct or1k_du or1k_du_mohor = {
 	.name = "mohor",
 	.or1k_jtag_init           = or1k_mohor_jtag_init,
+
+	.or1k_is_cpu_running      = or1k_mohor_is_cpu_running,
+	.or1k_cpu_stall           = or1k_mohor_cpu_stall,
+	.or1k_cpu_reset           = or1k_mohor_cpu_reset,
+
 	.or1k_jtag_read_cpu       = or1k_mohor_jtag_read_cpu,
 	.or1k_jtag_write_cpu      = or1k_mohor_jtag_write_cpu,
-	.or1k_jtag_read_cpu_cr    = or1k_mohor_jtag_read_cpu_cr,
-	.or1k_jtag_write_cpu_cr   = or1k_mohor_jtag_write_cpu_cr,
+
 	.or1k_jtag_read_memory32  = or1k_mohor_jtag_read_memory32,
 	.or1k_jtag_read_memory16  = or1k_mohor_jtag_read_memory16,
 	.or1k_jtag_read_memory8   = or1k_mohor_jtag_read_memory8,
+
 	.or1k_jtag_write_memory32 = or1k_mohor_jtag_write_memory32,
 	.or1k_jtag_write_memory16 = or1k_mohor_jtag_write_memory16,
 	.or1k_jtag_write_memory8  = or1k_mohor_jtag_write_memory8,

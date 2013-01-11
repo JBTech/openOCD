@@ -48,6 +48,10 @@
 #define DC_CPU1     2
 #define DC_JSP      3
 
+/* CPU control register bits mask */
+#define DBG_CPU_CR_STALL	0x01
+#define DBG_CPU_CR_RESET	0x02
+
 /* Polynomial for the CRC calculation
  * Yes, it's backwards.  Yes, this is on purpose.
  * The hardware is designed this way to save on logic and routing,
@@ -539,7 +543,7 @@ retry_read_full:
 	spare_bytes = total_size_bytes % 4;
 
 	/* Allocate correct number of scan fields */
-	field = malloc((total_size_32+1)*sizeof(*field));
+	field = malloc((total_size_32 + 1) * sizeof(*field));
 
 	in_buffer = malloc(total_size_bytes);
 
@@ -837,41 +841,62 @@ static int or1k_adv_jtag_write_cpu(struct or1k_jtag *jtag_info,
 	return ERROR_OK;
 }
 
-
-static int or1k_adv_jtag_read_cpu_cr(struct or1k_jtag *jtag_info,
-			  uint32_t *value)
+static int or1k_adv_cpu_stall(struct or1k_jtag *jtag_info, int action)
 {
-	uint32_t data;
+	uint32_t cpu_cr;
 
 	if (!jtag_info->or1k_jtag_inited)
 		or1k_adv_jtag_init(jtag_info);
 
 	adbg_select_module(jtag_info, DC_CPU0);
-	adbg_ctrl_read(jtag_info, DBG_CPU0_REG_STATUS, &data, 2);
+	adbg_ctrl_read(jtag_info, DBG_CPU0_REG_STATUS, &cpu_cr, 2);
 
-	*value = 0;
-	if (data & 1)
-		*value |= OR1K_CPU_CR_STALL;
+	if (action == CPU_STALL)
+		cpu_cr |= DBG_CPU_CR_STALL;
+	else
+		cpu_cr &= ~DBG_CPU_CR_STALL;
 
-	if (data & 2)
-		*value |= OR1K_CPU_CR_RESET;
+	adbg_select_module(jtag_info, DC_CPU0);
+	adbg_ctrl_write(jtag_info, DBG_CPU0_REG_STATUS, &cpu_cr, 2);
 
 	return ERROR_OK;
 }
 
-static int or1k_adv_jtag_write_cpu_cr(struct or1k_jtag *jtag_info,
-			   uint32_t stall, uint32_t reset)
+static int or1k_adv_is_cpu_running(struct or1k_jtag *jtag_info, int *running)
 {
-	uint32_t dataword = 0;
-
-	dataword |= stall;
-	dataword |= reset << 1;
+	uint32_t cpu_cr;
 
 	if (!jtag_info->or1k_jtag_inited)
 		or1k_adv_jtag_init(jtag_info);
 
 	adbg_select_module(jtag_info, DC_CPU0);
-	adbg_ctrl_write(jtag_info, DBG_CPU0_REG_STATUS, &dataword, 2);
+	adbg_ctrl_read(jtag_info, DBG_CPU0_REG_STATUS, &cpu_cr, 2);
+
+	if (cpu_cr & DBG_CPU_CR_STALL)
+		*running = 0;
+	else
+		*running = 1;
+
+	return ERROR_OK;
+}
+
+static int or1k_adv_cpu_reset(struct or1k_jtag *jtag_info, int action)
+{
+	uint32_t cpu_cr;
+
+	if (!jtag_info->or1k_jtag_inited)
+		or1k_adv_jtag_init(jtag_info);
+
+	adbg_select_module(jtag_info, DC_CPU0);
+	adbg_ctrl_read(jtag_info, DBG_CPU0_REG_STATUS, &cpu_cr, 2);
+
+	if (action == CPU_RESET)
+		cpu_cr |= DBG_CPU_CR_RESET;
+	else
+		cpu_cr &= ~DBG_CPU_CR_RESET;
+
+	adbg_select_module(jtag_info, DC_CPU0);
+	adbg_ctrl_write(jtag_info, DBG_CPU0_REG_STATUS, &cpu_cr, 2);
 
 	return ERROR_OK;
 }
@@ -985,13 +1010,18 @@ static int or1k_adv_jtag_write_memory8(struct or1k_jtag *jtag_info,
 static struct or1k_du or1k_du_adv = {
 	.name = "adv",
 	.or1k_jtag_init           = or1k_adv_jtag_init,
+
+	.or1k_is_cpu_running      = or1k_adv_is_cpu_running,
+	.or1k_cpu_stall           = or1k_adv_cpu_stall,
+	.or1k_cpu_reset           = or1k_adv_cpu_reset,
+
 	.or1k_jtag_read_cpu       = or1k_adv_jtag_read_cpu,
 	.or1k_jtag_write_cpu      = or1k_adv_jtag_write_cpu,
-	.or1k_jtag_read_cpu_cr    = or1k_adv_jtag_read_cpu_cr,
-	.or1k_jtag_write_cpu_cr   = or1k_adv_jtag_write_cpu_cr,
+
 	.or1k_jtag_read_memory32  = or1k_adv_jtag_read_memory32,
 	.or1k_jtag_read_memory16  = or1k_adv_jtag_read_memory16,
 	.or1k_jtag_read_memory8   = or1k_adv_jtag_read_memory8,
+
 	.or1k_jtag_write_memory32 = or1k_adv_jtag_write_memory32,
 	.or1k_jtag_write_memory16 = or1k_adv_jtag_write_memory16,
 	.or1k_jtag_write_memory8  = or1k_adv_jtag_write_memory8,
