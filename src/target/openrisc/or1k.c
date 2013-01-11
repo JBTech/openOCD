@@ -51,7 +51,7 @@ extern int or1k_du_adv_register(void);
 static int or1k_read_core_reg(struct target *target, int num);
 static int or1k_write_core_reg(struct target *target, int num);
 
-struct or1k_core_reg *or1k_core_reg_list_arch_info;
+static struct or1k_core_reg *or1k_core_reg_list_arch_info;
 
 struct or1k_core_reg_init or1k_init_reg_list[] = {
 	{"r0"       , GROUP0 + 1024, "group0", NULL},
@@ -322,28 +322,30 @@ static int or1k_create_reg_list(struct target *target)
 	return ERROR_OK;
 }
 
-static int or1k_jtag_read_regs(struct or1k_jtag *jtag_info, uint32_t *regs)
+static int or1k_jtag_read_regs(struct or1k_common *or1k, uint32_t *regs)
 {
 	int retval;
-	struct or1k_du *du_core = or1k_jtag_to_du(jtag_info);
+	struct or1k_du *du_core = or1k_jtag_to_du(&or1k->jtag);
 
-	retval = du_core->or1k_jtag_read_cpu(jtag_info,
-			or1k_core_reg_list_arch_info[OR1K_REG_R0].spr_num, OR1K_REG_R31+1,
-			regs+OR1K_REG_R0);
+	retval = du_core->or1k_jtag_read_cpu(&or1k->jtag,
+			or1k->arch_info[OR1K_REG_R0].spr_num, OR1K_REG_R31 + 1,
+			regs + OR1K_REG_R0);
+
 	if (retval != ERROR_OK)
 		return retval;
 
 	return ERROR_OK;
 }
 
-static int or1k_jtag_write_regs(struct or1k_jtag *jtag_info, uint32_t *regs)
+static int or1k_jtag_write_regs(struct or1k_common *or1k, uint32_t *regs)
 {
 	int retval;
-	struct or1k_du *du_core = or1k_jtag_to_du(jtag_info);
+	struct or1k_du *du_core = or1k_jtag_to_du(&or1k->jtag);
 
-	retval = du_core->or1k_jtag_write_cpu(jtag_info,
-			or1k_core_reg_list_arch_info[OR1K_REG_R0].spr_num, OR1K_REG_R31+1,
+	retval = du_core->or1k_jtag_write_cpu(&or1k->jtag,
+			or1k->arch_info[OR1K_REG_R0].spr_num, OR1K_REG_R31 + 1,
 			&regs[OR1K_REG_R0]);
+
 	if (retval != ERROR_OK)
 		return retval;
 
@@ -360,11 +362,11 @@ static int or1k_save_context(struct target *target)
 		if (!or1k->core_cache->reg_list[i].valid) {
 			if (i == OR1K_REG_PPC || i == OR1K_REG_NPC || i == OR1K_REG_SR) {
 				du_core->or1k_jtag_read_cpu(&or1k->jtag,
-						or1k_core_reg_list_arch_info[i].spr_num, 1,
+						or1k->arch_info[i].spr_num, 1,
 						&or1k->core_regs[i]);
 			} else if (!regs_read) {
 				/* read gpr registers at once (but only one time in this loop) */
-				retval = or1k_jtag_read_regs(&or1k->jtag, or1k->core_regs);
+				retval = or1k_jtag_read_regs(or1k, or1k->core_regs);
 				if (retval != ERROR_OK)
 					return retval;
 				/* prevent next reads in this loop */
@@ -391,7 +393,7 @@ static int or1k_restore_context(struct target *target)
 
 			if (i == OR1K_REG_PPC || i == OR1K_REG_NPC || i == OR1K_REG_SR) {
 				du_core->or1k_jtag_write_cpu(&or1k->jtag,
-						or1k_core_reg_list_arch_info[i].spr_num, 1,
+						or1k->arch_info[i].spr_num, 1,
 						&or1k->core_regs[i]);
 			} else
 				reg_write = 1;
@@ -400,7 +402,7 @@ static int or1k_restore_context(struct target *target)
 
 	if (reg_write) {
 		/* read gpr registers at once (but only one time in this loop) */
-		retval = or1k_jtag_write_regs(&or1k->jtag, or1k->core_regs);
+		retval = or1k_jtag_write_regs(or1k, or1k->core_regs);
 		if (retval != ERROR_OK)
 			return retval;
 	}
@@ -426,7 +428,7 @@ static int or1k_read_core_reg(struct target *target, int num)
 		or1k->core_cache->reg_list[num].dirty = 0;
 	} else {
 		/* This is an spr, always read value from HW */
-		retval = du_core->or1k_jtag_read_cpu(&or1k->jtag, or1k_core_reg_list_arch_info[num].spr_num, 1, &reg_value);
+		retval = du_core->or1k_jtag_read_cpu(&or1k->jtag, or1k->arch_info[num].spr_num, 1, &reg_value);
 		if (retval != ERROR_OK)
 			return retval;
 		buf_set_u32(or1k->core_cache->reg_list[num].value, 0, 32, reg_value);
@@ -497,7 +499,6 @@ static const struct reg_arch_type or1k_reg_type = {
 
 static struct reg_cache *or1k_build_reg_cache(struct target *target)
 {
-	int num_regs = OR1KNUMCOREREGS;
 	struct or1k_common *or1k = target_to_or1k(target);
 	struct reg_cache **cache_p = register_get_last_cache_p(&target->reg_cache);
 	struct reg_cache *cache = malloc(sizeof(struct reg_cache));
@@ -510,9 +511,10 @@ static struct reg_cache *or1k_build_reg_cache(struct target *target)
 	cache->name = "openrisc 1000 registers";
 	cache->next = NULL;
 	cache->reg_list = reg_list;
-	cache->num_regs = num_regs;
+	cache->num_regs = or1k->nb_regs;
 	(*cache_p) = cache;
 	or1k->core_cache = cache;
+	or1k->arch_info = arch_info;
 
 	for (i = 0; i < or1k->nb_regs; i++) {
 		arch_info[i] = or1k_core_reg_list_arch_info[i];

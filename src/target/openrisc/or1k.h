@@ -93,6 +93,7 @@ struct or1k_common {
 	struct reg_cache *core_cache;
 	uint32_t core_regs[OR1KNUMCOREREGS];
 	int nb_regs;
+	struct or1k_core_reg *arch_info;
 };
 
 static inline struct or1k_common *
