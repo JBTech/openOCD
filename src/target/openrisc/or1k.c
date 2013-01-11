@@ -1333,8 +1333,10 @@ COMMAND_HANDLER(or1k_readreg_command_handler)
 							     &reg_value);
 			if (retval != ERROR_OK)
 				return retval;
-			command_print(CMD_CTX, "%s: 0x%08x (%d)", or1k->arch_info[i].name,
-				      reg_value, reg_value);
+			command_print(CMD_CTX, "name        value         group");
+			command_print(CMD_CTX, "-------------------------------");
+			command_print(CMD_CTX, "%-10s  0x%08x    %s", or1k->arch_info[i].name,
+				      reg_value, or1k->arch_info[i].group);
 			return ERROR_OK;
 		}
 	}
