@@ -1323,7 +1323,7 @@ COMMAND_HANDLER(or1k_readreg_command_handler)
 
 	for (i = 0; i < or1k->nb_regs; i++) {
 
-		if (!or1k->arch_info[i].name)
+		if (or1k->arch_info[i].name == NULL)
 			continue;
 
 		if (!strcmp(or1k->arch_info[i].name, CMD_ARGV[0])) {
@@ -1342,6 +1342,41 @@ COMMAND_HANDLER(or1k_readreg_command_handler)
 	}
 
 	LOG_INFO("Couldn't find register %s", CMD_ARGV[0]);
+	return ERROR_OK;
+}
+
+COMMAND_HANDLER(or1k_readgroup_command_handler)
+{
+	struct target *target = get_current_target(CMD_CTX);
+	struct or1k_common *or1k = target_to_or1k(target);
+	struct or1k_du *du_core = or1k_to_du(or1k);
+	uint32_t reg_value;
+	int retval;
+	int i;
+
+	if (CMD_ARGC != 1)
+		return ERROR_COMMAND_SYNTAX_ERROR;
+
+	command_print(CMD_CTX, "name        value         group");
+	command_print(CMD_CTX, "-------------------------------");
+
+	for (i = 0; i < or1k->nb_regs; i++) {
+
+		if (or1k->arch_info[i].group == NULL)
+			continue;
+
+		if (!strcmp(or1k->arch_info[i].group, CMD_ARGV[0])) {
+			retval = du_core->or1k_jtag_read_cpu(&or1k->jtag,
+							     or1k->arch_info[i].spr_num,
+							     1,
+							     &reg_value);
+			if (retval != ERROR_OK)
+				return retval;
+			command_print(CMD_CTX, "%-10s  0x%08x    %s", or1k->arch_info[i].name,
+				      reg_value, or1k->arch_info[i].group);
+		}
+	}
+
 	return ERROR_OK;
 }
 
@@ -1391,6 +1426,13 @@ static const struct command_registration or1k_reg_command_handlers[] = {
 		.mode = COMMAND_ANY,
 		.usage = "readreg name",
 		.help = "Read the register *name*",
+	},
+	{
+		"readgroup",
+		.handler = or1k_readgroup_command_handler,
+		.mode = COMMAND_ANY,
+		.usage = "readgroup group",
+		.help = "Read all registers in *group*",
 	},
 	COMMAND_REGISTRATION_DONE
 };
