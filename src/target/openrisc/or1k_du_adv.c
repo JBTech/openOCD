@@ -114,12 +114,7 @@
 #define STATUS_BYTES			1
 #define CRC_LEN				4
 
-/* Currently selected internal register in each module
- * cuts down on unnecessary transfers
- */
-unsigned long current_reg_idx[DBG_MAX_MODULES];
-
-const char *chain_name[] = {"WISHBONE", "CPU0", "CPU1", "JSP"};
+static const char *chain_name[] = {"WISHBONE", "CPU0", "CPU1", "JSP"};
 
 static uint32_t adbg_compute_crc(uint32_t crc_in, uint32_t data_in, int length_bits)
 {
@@ -172,7 +167,8 @@ static int or1k_adv_jtag_init(struct or1k_jtag *jtag_info)
 	/* TAP reset - not sure what state debug module chain is in now */
 	jtag_info->or1k_jtag_module_selected = -1;
 
-	memset(current_reg_idx, 0, DBG_MAX_MODULES * sizeof(unsigned long));
+	jtag_info->current_reg_idx = malloc(DBG_MAX_MODULES * sizeof(unsigned long));
+	memset(jtag_info->current_reg_idx, 0, DBG_MAX_MODULES * sizeof(unsigned long));
 
 	return ERROR_OK;
 
@@ -227,7 +223,7 @@ static int adbg_select_ctrl_reg(struct or1k_jtag *jtag_info, unsigned long regid
 		return ERROR_FAIL;
 
 	/* If this reg is already selected, don't do a JTAG transaction */
-	if (current_reg_idx[jtag_info->or1k_jtag_module_selected] == regidx)
+	if (jtag_info->current_reg_idx[jtag_info->or1k_jtag_module_selected] == regidx)
 		return ERROR_OK;
 
 	switch (jtag_info->or1k_jtag_module_selected) {
@@ -260,7 +256,7 @@ static int adbg_select_ctrl_reg(struct or1k_jtag *jtag_info, unsigned long regid
 
 	jtag_execute_queue();
 
-	current_reg_idx[jtag_info->or1k_jtag_module_selected] = regidx;
+	jtag_info->current_reg_idx[jtag_info->or1k_jtag_module_selected] = regidx;
 
 	return ERROR_OK;
 }

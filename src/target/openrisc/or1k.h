@@ -84,6 +84,7 @@ struct or1k_jtag {
 	struct jtag_tap *tap;
 	int or1k_jtag_inited;
 	int or1k_jtag_module_selected;
+	unsigned long *current_reg_idx;
 	struct or1k_tap_ip *tap_ip;
 	struct or1k_du *du_core;
 };
