@@ -32,8 +32,8 @@
 /* Mohor SoC debug interface defines */
 
 /* CPU control register bits mask */
-#define OR1K_MOHORDBGIF_CPU_CR_STALL	0x02
-#define OR1K_MOHORDBGIF_CPU_CR_RESET	0x01
+#define OR1K_MOHORDBGIF_CPU_CR_STALL			0x2
+#define OR1K_MOHORDBGIF_CPU_CR_RESET			0x1
 
 /* Module selection 4-bits */
 #define OR1K_MOHORDBGIF_MODULE_WB			0x0
@@ -77,6 +77,8 @@
 
 #define OR1K_JTAG_MOHOR_DBG_CRC_POLY			0x04c11db7
 
+static const char *chain_name[] = {"WISHBONE", "CPU0", "CPU1", "JSP"};
+
 static int or1k_mohor_jtag_init(struct or1k_jtag *jtag_info)
 {
 	int retval;
@@ -99,7 +101,8 @@ static uint32_t or1k_jtag_mohor_debug_crc_calc(uint32_t crc,
 					       uint32_t input_bit)
 {
 	uint32_t d = (input_bit) ? 0xfffffff : 0x0000000;
-	uint32_t crc_32 = ((crc >> 31)&1) ? 0xfffffff : 0x0000000;
+	uint32_t crc_32 = ((crc >> 31) & 1) ? 0xfffffff : 0x0000000;
+
 	crc <<= 1;
 
 	return crc ^ ((d ^ crc_32) & OR1K_JTAG_MOHOR_DBG_CRC_POLY);
@@ -123,9 +126,9 @@ static int or1k_jtag_mohor_debug_select_module(struct or1k_jtag *jtag_info,
 	if (tap == NULL)
 		return ERROR_FAIL;
 
-	if (module > 15) {
-		LOG_ERROR("setting debug interface module failed (%d)"
-			  , module);
+	/* Module can't be more than 4 bits */
+	if (module > 0xf) {
+		LOG_ERROR("Setting debug interface module failed %d", module);
 		return ERROR_FAIL;
 	}
 
@@ -174,12 +177,12 @@ static int or1k_jtag_mohor_debug_select_module(struct or1k_jtag *jtag_info,
 	fields[4].out_value = NULL;
 	fields[4].in_value = (uint8_t *)&in_crc;
 
-	LOG_DEBUG(" setting mohor debug IF module: %d", module);
+	LOG_DEBUG("Setting mohor debug IF module: %s", chain_name[module]);
 
 	jtag_add_dr_scan(tap, 5, fields, TAP_IDLE);
 
 	if (jtag_execute_queue() != ERROR_OK) {
-		LOG_ERROR(" performing module change failed");
+		LOG_ERROR("Performing module change failed");
 		return ERROR_FAIL;
 	}
 
@@ -187,36 +190,35 @@ static int or1k_jtag_mohor_debug_select_module(struct or1k_jtag *jtag_info,
 	expected_in_crc = 0xffffffff;
 	for (i = 0; i < 4; i++)
 		expected_in_crc = or1k_jtag_mohor_debug_crc_calc(expected_in_crc,
-								 ((in_status>>i) &
+								 ((in_status >> i) &
 								  0x1));
 	/* Check CRCs now */
 	/* Bit reverse received CRC */
 	expected_in_crc = flip_u32(expected_in_crc, 32);
 
 	if (in_crc != expected_in_crc) {
-		LOG_ERROR(" received CRC (0x%08x) not same as calculated CRC (0x%08x)"
+		LOG_ERROR("Received CRC (0x%08x) not same as calculated CRC (0x%08x)"
 			  , in_crc, expected_in_crc);
 		return ERROR_FAIL;
 	}
 
 	if (in_status & OR1K_MOHORDBGIF_MODULE_SELECT_CRC_ERROR) {
-		LOG_ERROR(" debug IF module select status: CRC error");
+		LOG_ERROR("Debug IF module select status: CRC error");
 		return ERROR_FAIL;
 	} else if (in_status & OR1K_MOHORDBGIF_MODULE_SELECT_MODULE_NOT_EXIST) {
-		LOG_ERROR(" debug IF module select status: Invalid module (%d)"
-			  , module);
+		LOG_ERROR("Debug IF module select status: Invalid module %s",
+			  chain_name[module]);
 		return ERROR_FAIL;
 	} else if ((in_status & 0xf) == OR1K_MOHORDBGIF_MODULE_SELECT_OK) {
-		LOG_DEBUG(" setting mohor debug IF OK");
+		LOG_DEBUG("Setting mohor debug IF OK");
 		jtag_info->or1k_jtag_module_selected = module;
 	} else {
-		LOG_ERROR(" debug IF module select status: Unknown status (%x)"
-			  , in_status & 0xf);
+		LOG_ERROR("Debug IF module select status: Unknown status (%x)",
+			  in_status & 0xf);
 		return ERROR_FAIL;
 	}
 
 	return ERROR_OK;
-
 }
 
 static int or1k_jtag_mohor_debug_set_command(struct or1k_jtag *jtag_info,
@@ -337,19 +339,19 @@ static int or1k_jtag_mohor_debug_set_command(struct or1k_jtag *jtag_info,
 	expected_in_crc = flip_u32(expected_in_crc, 32);
 
 	if (in_crc != expected_in_crc) {
-		LOG_ERROR(" received CRC (0x%08x) not same as calculated CRC (0x%08x)"
+		LOG_ERROR("Received CRC (0x%08x) not same as calculated CRC (0x%08x)"
 			  , in_crc, expected_in_crc);
 		return ERROR_FAIL;
 	}
 
 	if (in_status & OR1K_MOHORDBGIF_CMD_CRC_ERROR) {
-		LOG_ERROR(" debug IF CPU command write status: CRC error"
+		LOG_ERROR("Debug IF CPU command write status: CRC error"
 			  );
 		return ERROR_FAIL;
 	} else if ((in_status & 0xff) == OR1K_MOHORDBGIF_CMD_OK) {
 		/*LOG_DEBUG(" debug IF command write OK");*/
 	} else {
-		LOG_ERROR(" debug IF command write: Unknown status (%d)"
+		LOG_ERROR("Debug IF command write: Unknown status (%d)"
 			  , in_status);
 		return ERROR_FAIL;
 	}
