@@ -348,7 +348,7 @@ static int or1k_jtag_mohor_debug_set_command(struct or1k_jtag *jtag_info,
 		LOG_ERROR("Debug IF CPU command write status: CRC error"
 			  );
 		return ERROR_FAIL;
-	} else if ((in_status & 0xff) == OR1K_MOHORDBGIF_CMD_OK) {
+	} else if ((in_status & 0x0f) == OR1K_MOHORDBGIF_CMD_OK) {
 		/*LOG_DEBUG(" debug IF command write OK");*/
 	} else {
 		LOG_ERROR("Debug IF command write: Unknown status (%d)"
@@ -932,7 +932,7 @@ static int or1k_mohor_jtag_read_cpu_cr(struct or1k_jtag *jtag_info,
 			  uint32_t *value)
 {
 	struct jtag_tap *tap;
-	struct scan_field fields[9];
+	struct scan_field fields[8];
 	int i;
 	uint32_t out_module_select_bit;
 	uint32_t out_cmd;
@@ -991,32 +991,28 @@ static int or1k_mohor_jtag_read_cpu_cr(struct or1k_jtag *jtag_info,
 	/* 52-bit control register */
 	fields[3].num_bits = 2;
 	fields[3].out_value = NULL;
-	fields[3].in_value = (uint8_t *)&value;
-
-	fields[4].num_bits = 1;
-	fields[4].out_value = NULL;
-	fields[4].in_value = NULL;
+	fields[3].in_value = (uint8_t *)value;
 
 	/* Assuming the next 50 bits will always be 0 */
-	fields[5].num_bits = 32;
-	fields[5].out_value = NULL;
-	fields[5].in_value = (uint8_t *)&in_zeroes0;
+	fields[4].num_bits = 32;
+	fields[4].out_value = NULL;
+	fields[4].in_value = (uint8_t *)&in_zeroes0;
 
-	fields[6].num_bits = 17;
-	fields[6].out_value = NULL;
-	fields[6].in_value = (uint8_t *)&in_zeroes1;
+	fields[5].num_bits = 18;
+	fields[5].out_value = NULL;
+	fields[5].in_value = (uint8_t *)&in_zeroes1;
 
 	/* Status coming in */
-	fields[7].num_bits = 4;
-	fields[7].out_value = NULL;
-	fields[7].in_value = (uint8_t *)&in_status;
+	fields[6].num_bits = 4;
+	fields[6].out_value = NULL;
+	fields[6].in_value = (uint8_t *)&in_status;
 
 	/* CRC coming in */
-	fields[8].num_bits = 32;
-	fields[8].out_value = NULL;
-	fields[8].in_value = (uint8_t *)&in_crc;
+	fields[7].num_bits = 32;
+	fields[7].out_value = NULL;
+	fields[7].in_value = (uint8_t *)&in_crc;
 
-	jtag_add_dr_scan(tap, 9, fields, TAP_IDLE);
+	jtag_add_dr_scan(tap, 8, fields, TAP_IDLE);
 
 	if (jtag_execute_queue() != ERROR_OK) {
 		LOG_ERROR(" performing CPU CR read failed");
@@ -1025,6 +1021,10 @@ static int or1k_mohor_jtag_read_cpu_cr(struct or1k_jtag *jtag_info,
 
 	/* Calculate expected CRC for status */
 	expected_in_crc = 0xffffffff;
+
+	in_reset = *value & 0x01;
+	in_stall = *value & 0x02;
+
 	expected_in_crc = or1k_jtag_mohor_debug_crc_calc(expected_in_crc, in_reset);
 	expected_in_crc = or1k_jtag_mohor_debug_crc_calc(expected_in_crc, in_stall);
 	/* Assuming next 50 bits are zero - we don't check, though!*/
@@ -1064,7 +1064,7 @@ static int or1k_mohor_jtag_read_cpu_cr(struct or1k_jtag *jtag_info,
 static int or1k_mohor_jtag_write_cpu_cr(struct or1k_jtag *jtag_info, uint32_t *value)
 {
 	struct jtag_tap *tap;
-	struct scan_field fields[9];
+	struct scan_field fields[8];
 	int i;
 	uint32_t out_module_select_bit;
 	uint32_t out_cmd;
@@ -1114,17 +1114,13 @@ static int or1k_mohor_jtag_write_cpu_cr(struct or1k_jtag *jtag_info, uint32_t *v
 	fields[2].out_value = (uint8_t *)value;
 	fields[2].in_value = NULL;
 
-	fields[3].num_bits = 1;
+	fields[3].num_bits = 32;
 	fields[3].out_value = NULL;
 	fields[3].in_value = NULL;
 
-	fields[4].num_bits = 32;
+	fields[4].num_bits = 18;
 	fields[4].out_value = NULL;
 	fields[4].in_value = NULL;
-
-	fields[5].num_bits = 17;
-	fields[5].out_value = NULL;
-	fields[5].in_value = NULL;
 
 	/* CRC calculations */
 	out_crc = 0xffffffff;
@@ -1140,21 +1136,21 @@ static int or1k_mohor_jtag_write_cpu_cr(struct or1k_jtag *jtag_info, uint32_t *v
 	out_crc = flip_u32(out_crc, 32);
 
 	/* CRC going out */
-	fields[6].num_bits = 32;
-	fields[6].out_value = (uint8_t *)&out_crc;
-	fields[6].in_value = NULL;
+	fields[5].num_bits = 32;
+	fields[5].out_value = (uint8_t *)&out_crc;
+	fields[5].in_value = NULL;
 
 	/* Status coming in */
-	fields[7].num_bits = 4;
-	fields[7].out_value = NULL;
-	fields[7].in_value = (uint8_t *)&in_status;
+	fields[6].num_bits = 4;
+	fields[6].out_value = NULL;
+	fields[6].in_value = (uint8_t *)&in_status;
 
 	/* CRC coming in */
-	fields[8].num_bits = 32;
-	fields[8].out_value = NULL;
-	fields[8].in_value = (uint8_t *)&in_crc;
+	fields[7].num_bits = 32;
+	fields[7].out_value = NULL;
+	fields[7].in_value = (uint8_t *)&in_crc;
 
-	jtag_add_dr_scan(tap, 9, fields, TAP_IDLE);
+	jtag_add_dr_scan(tap, 8, fields, TAP_IDLE);
 
 	if (jtag_execute_queue() != ERROR_OK) {
 		LOG_ERROR(" performing CPU CR write failed");
@@ -1403,5 +1399,15 @@ static struct or1k_du or1k_du_mohor = {
 int or1k_du_mohor_register(void)
 {
 	list_add_tail(&or1k_du_mohor.list, &du_list);
+	return 0;
+}
+
+int test_mohor(struct or1k_jtag *jtag_info)
+{
+	if (!jtag_info->or1k_jtag_inited)
+		or1k_mohor_jtag_init(jtag_info);
+
+	or1k_jtag_mohor_debug_select_module(jtag_info, OR1K_MOHORDBGIF_MODULE_CPU0);
+
 	return 0;
 }
