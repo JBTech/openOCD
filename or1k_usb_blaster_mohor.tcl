@@ -4,7 +4,7 @@ usb_blaster pin6 1
 usb_blaster pin8 1
 
 # Configure the target
-source [find ./tcl/target/vjtag.cfg]
+source [find ./tcl/target/or1k_vjtag.cfg]
 
 # Set GDB port
 gdb_port 50001
@@ -13,7 +13,7 @@ gdb_port 50001
 tap_select vjtag
 
 # Select the debug unit core we are using
-du_select adv
+du_select mohor
 
 # Add a new register in the cpu register list. This register will be
 # included in the generated target descriptor file.
