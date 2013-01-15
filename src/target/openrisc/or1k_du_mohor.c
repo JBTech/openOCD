@@ -113,8 +113,10 @@ static int or1k_jtag_mohor_debug_select_module(struct or1k_jtag *jtag_info,
 					uint32_t module)
 {
 	struct jtag_tap *tap;
+	struct or1k_tap_ip *tap_ip = jtag_info->tap_ip;
 	struct scan_field fields[5];
 	int i;
+	int extra_bit_fix = 0;
 	uint32_t out_module_select_bit;
 	uint32_t out_module;
 	uint32_t out_crc;
@@ -167,8 +169,11 @@ static int or1k_jtag_mohor_debug_select_module(struct or1k_jtag *jtag_info,
 	fields[2].out_value = (uint8_t *)&out_crc;
 	fields[2].in_value = NULL;
 
+	if (!strcmp(tap_ip->name, "vjtag"))
+		extra_bit_fix = 1;
+
 	/* Status coming in */
-	fields[3].num_bits = 4;
+	fields[3].num_bits = 4 + extra_bit_fix;
 	fields[3].out_value = NULL;
 	fields[3].in_value = (uint8_t *)&in_status;
 
@@ -185,6 +190,9 @@ static int or1k_jtag_mohor_debug_select_module(struct or1k_jtag *jtag_info,
 		LOG_ERROR("Performing module change failed");
 		return ERROR_FAIL;
 	}
+
+	if (!strcmp(tap_ip->name, "vjtag"))
+		in_status >>= 1;
 
 	/* Calculate expected CRC for status */
 	expected_in_crc = 0xffffffff;
@@ -227,8 +235,10 @@ static int or1k_jtag_mohor_debug_set_command(struct or1k_jtag *jtag_info,
 				       uint32_t out_length_bytes)
 {
 	struct jtag_tap *tap;
+	struct or1k_tap_ip *tap_ip = jtag_info->tap_ip;
 	struct scan_field fields[8];
 	int i;
+	int extra_bit_fix = 0;
 	uint32_t out_module_select_bit;
 	uint32_t out_cmd;
 	uint32_t out_crc;
@@ -311,8 +321,11 @@ static int or1k_jtag_mohor_debug_set_command(struct or1k_jtag *jtag_info,
 	fields[5].out_value = (uint8_t *)&out_crc;
 	fields[5].in_value = NULL;
 
+	if (!strcmp(tap_ip->name, "vjtag"))
+		extra_bit_fix = 1;
+
 	/* Status coming in */
-	fields[6].num_bits = 4;
+	fields[6].num_bits = 4 + extra_bit_fix;
 	fields[6].out_value = NULL;
 	fields[6].in_value = (uint8_t *)&in_status;
 
@@ -327,6 +340,9 @@ static int or1k_jtag_mohor_debug_set_command(struct or1k_jtag *jtag_info,
 		LOG_ERROR(" performing CPU CR write failed");
 		return ERROR_FAIL;
 	}
+
+	if (!strcmp(tap_ip->name, "vjtag"))
+		in_status >>= 1;
 
 	/* Calculate expected CRC for status */
 	expected_in_crc = 0xffffffff;
@@ -366,8 +382,10 @@ static int or1k_jtag_mohor_debug_single_read_go(struct or1k_jtag *jtag_info,
 					 uint8_t *data)
 {
 	struct jtag_tap *tap;
+	struct or1k_tap_ip *tap_ip = jtag_info->tap_ip;
 	struct scan_field *fields;
 	int i, j;
+	int extra_field = 0;
 	int num_data_fields = length * type_size_bytes;
 	uint32_t out_module_select_bit;
 	uint32_t out_cmd;
@@ -386,6 +404,9 @@ static int or1k_jtag_mohor_debug_single_read_go(struct or1k_jtag *jtag_info,
 	if (tap == NULL)
 		return ERROR_FAIL;
 
+	if (!strcmp(tap_ip->name, "vjtag"))
+		extra_field = 1;
+
 	/*
 	 * Debug GO
 	 * Send:
@@ -399,7 +420,7 @@ static int or1k_jtag_mohor_debug_single_read_go(struct or1k_jtag *jtag_info,
 	   32-bit fields as possible - might speed things up? */
 
 	LOG_DEBUG("Number of data fields: %d", num_data_fields);
-	fields = malloc((num_data_fields + 5) * sizeof(struct scan_field));
+	fields = malloc((num_data_fields + 5 + extra_field) * sizeof(struct scan_field));
 
 	/* 1st bit is module select, set to '0', we're not selecting a module */
 	out_module_select_bit = 0;
@@ -428,23 +449,29 @@ static int or1k_jtag_mohor_debug_single_read_go(struct or1k_jtag *jtag_info,
 	fields[2].out_value = (uint8_t *)&out_crc;
 	fields[2].in_value = NULL;
 
-	for (i = 0; i < num_data_fields; i++) {
-		fields[3+i].num_bits = 8;
-		fields[3+i].out_value = NULL;
-		fields[3+i].in_value = &data[i];
+	if (!strcmp(tap_ip->name, "vjtag")) {
+		fields[3].num_bits = 1;
+		fields[3].out_value = NULL;
+		fields[3].in_value = NULL;
+	}
+
+	for (i = extra_field; i < (num_data_fields + extra_field); i++) {
+		fields[3 + i].num_bits = 8;
+		fields[3 + i].out_value = NULL;
+		fields[3 + i].in_value = &data[i - extra_field];
 	}
 
 	/* Status coming in */
-	fields[3 + num_data_fields].num_bits = 4;
-	fields[3 + num_data_fields].out_value = NULL;
-	fields[3 + num_data_fields].in_value = (uint8_t *)&in_status;
+	fields[3 + (num_data_fields + extra_field)].num_bits = 4;
+	fields[3 + (num_data_fields + extra_field)].out_value = NULL;
+	fields[3 + (num_data_fields + extra_field)].in_value = (uint8_t *)&in_status;
 
 	/* CRC coming in */
-	fields[3 + num_data_fields + 1].num_bits = 32;
-	fields[3 + num_data_fields + 1].out_value = NULL;
-	fields[3 + num_data_fields + 1].in_value = (uint8_t *)&in_crc;
+	fields[3 + (num_data_fields + extra_field) + 1].num_bits = 32;
+	fields[3 + (num_data_fields + extra_field) + 1].out_value = NULL;
+	fields[3 + (num_data_fields + extra_field) + 1].in_value = (uint8_t *)&in_crc;
 
-	jtag_add_dr_scan(tap, 3 + num_data_fields + 2, fields, TAP_IDLE);
+	jtag_add_dr_scan(tap, 3 + num_data_fields + 2 + extra_field, fields, TAP_IDLE);
 
 	if (jtag_execute_queue() != ERROR_OK) {
 		LOG_ERROR("performing GO command failed");
@@ -517,11 +544,13 @@ static int or1k_jtag_mohor_debug_multiple_read_go(struct or1k_jtag *jtag_info,
 					   uint8_t *data)
 {
 	struct jtag_tap *tap;
+	struct or1k_tap_ip *tap_ip = jtag_info->tap_ip;
 	struct scan_field *fields;
 	int num_bytes = length * type_size_bytes;
 	int num_32bit_fields = 0;
 	int num_data_fields;
 	int i, j;
+	int extra_bit_fix = 0;
 	uint32_t out_module_select_bit;
 	uint32_t out_cmd;
 	uint32_t out_crc;
@@ -561,8 +590,11 @@ static int or1k_jtag_mohor_debug_multiple_read_go(struct or1k_jtag *jtag_info,
 	       num_data_fields, num_bytes);
 	assert((num_32bit_fields * 4) == num_bytes);
 
+	if (!strcmp(tap_ip->name, "vjtag"))
+		extra_bit_fix = 1;
+
 	LOG_DEBUG("Number of data fields: %d", num_data_fields);
-	fields = malloc((num_32bit_fields + 5) * sizeof(struct scan_field));
+	fields = malloc((num_32bit_fields + 5 + extra_bit_fix) * sizeof(struct scan_field));
 
 	/* 1st bit is module select, set to '0', we're not selecting a module */
 	out_module_select_bit = 0;
@@ -599,10 +631,16 @@ static int or1k_jtag_mohor_debug_multiple_read_go(struct or1k_jtag *jtag_info,
 		goto error_finish;
 	}
 
-	for (i = 0; i < num_32bit_fields; i++) {
+	if (!strcmp(tap_ip->name, "vjtag")) {
+		fields[3].num_bits = 1;
+		fields[3].out_value = NULL;
+		fields[3].in_value = NULL;
+	}
+
+	for (i = extra_bit_fix; i < (num_32bit_fields + extra_bit_fix); i++) {
 		fields[3+i].num_bits = 32;
 		fields[3+i].out_value = NULL;
-		fields[3+i].in_value = &data[i * 4];
+		fields[3+i].in_value = &data[(i - extra_bit_fix) * 4];
 
 		/* Execute this intro to the transfers */
 		jtag_add_dr_scan(tap, 1,
@@ -615,17 +653,17 @@ static int or1k_jtag_mohor_debug_multiple_read_go(struct or1k_jtag *jtag_info,
 	}
 
 	/* Status coming in */
-	fields[3 + num_data_fields].num_bits = 4;
-	fields[3 + num_data_fields].out_value = NULL;
-	fields[3 + num_data_fields].in_value = (uint8_t *)&in_status;
+	fields[3 + (num_32bit_fields + extra_bit_fix)].num_bits = 4;
+	fields[3 + (num_32bit_fields + extra_bit_fix)].out_value = NULL;
+	fields[3 + (num_32bit_fields + extra_bit_fix)].in_value = (uint8_t *)&in_status;
 
 	/* CRC coming in */
-	fields[3 + num_data_fields + 1].num_bits = 32;
-	fields[3 + num_data_fields + 1].out_value = NULL;
-	fields[3 + num_data_fields + 1].in_value = (uint8_t *)&in_crc;
+	fields[3 + (num_32bit_fields + extra_bit_fix) + 1].num_bits = 32;
+	fields[3 + (num_32bit_fields + extra_bit_fix) + 1].out_value = NULL;
+	fields[3 + (num_32bit_fields + extra_bit_fix) + 1].in_value = (uint8_t *)&in_crc;
 
 	/* Execute the final bits */
-	jtag_add_dr_scan(tap, 2, &fields[3 + num_data_fields], TAP_IDLE);
+	jtag_add_dr_scan(tap, 2, &fields[3 + (num_32bit_fields + extra_bit_fix)], TAP_IDLE);
 
 	if (jtag_execute_queue() != ERROR_OK) {
 		LOG_ERROR("performing GO command failed");
@@ -715,12 +753,14 @@ int or1k_jtag_mohor_debug_write_go(struct or1k_jtag *jtag_info,
 				  uint8_t *data)
 {
 	struct jtag_tap *tap;
+	struct or1k_tap_ip *tap_ip = jtag_info->tap_ip;
 	struct scan_field *fields;
 	int length_bytes;
 	int num_data32_fields;
 	int num_data8_fields;
 	int num_data_fields;
 	int i, j;
+	int extra_bit_fix = 0;
 	uint32_t out_module_select_bit;
 	uint32_t out_cmd;
 	uint32_t out_crc;
@@ -811,8 +851,11 @@ int or1k_jtag_mohor_debug_write_go(struct or1k_jtag *jtag_info,
 	fields[2 + num_data_fields].out_value = (uint8_t *)&out_crc;
 	fields[2 + num_data_fields].in_value = NULL;
 
+	if (!strcmp(tap_ip->name, "vjtag"))
+		extra_bit_fix = 1;
+
 	/* Status coming in */
-	fields[3 + num_data_fields].num_bits = 4;
+	fields[3 + num_data_fields].num_bits = 4 + extra_bit_fix;
 	fields[3 + num_data_fields].out_value = NULL;
 	fields[3 + num_data_fields].in_value = (uint8_t *)&in_status;
 
@@ -831,6 +874,9 @@ int or1k_jtag_mohor_debug_write_go(struct or1k_jtag *jtag_info,
 
 		return ERROR_FAIL;
 	}
+
+	if (!strcmp(tap_ip->name, "vjtag"))
+		in_status >>= 1;
 
 	/* Free fields*/
 	free(fields);
@@ -932,8 +978,10 @@ static int or1k_mohor_jtag_read_cpu_cr(struct or1k_jtag *jtag_info,
 			  uint32_t *value)
 {
 	struct jtag_tap *tap;
+	struct or1k_tap_ip *tap_ip = jtag_info->tap_ip;
 	struct scan_field fields[8];
 	int i;
+	int extra_bit_fix = 0;
 	uint32_t out_module_select_bit;
 	uint32_t out_cmd;
 	uint32_t out_crc;
@@ -988,8 +1036,11 @@ static int or1k_mohor_jtag_read_cpu_cr(struct or1k_jtag *jtag_info,
 	fields[2].out_value = (uint8_t *)&out_crc;
 	fields[2].in_value = NULL;
 
+	if (!strcmp(tap_ip->name, "vjtag"))
+		extra_bit_fix = 1;
+
 	/* 52-bit control register */
-	fields[3].num_bits = 2;
+	fields[3].num_bits = 2 + extra_bit_fix;
 	fields[3].out_value = NULL;
 	fields[3].in_value = (uint8_t *)value;
 
@@ -1021,6 +1072,9 @@ static int or1k_mohor_jtag_read_cpu_cr(struct or1k_jtag *jtag_info,
 
 	/* Calculate expected CRC for status */
 	expected_in_crc = 0xffffffff;
+
+	if (!strcmp(tap_ip->name, "vjtag"))
+		*value >>= 1;
 
 	in_reset = *value & 0x01;
 	in_stall = *value & 0x02;
@@ -1064,8 +1118,10 @@ static int or1k_mohor_jtag_read_cpu_cr(struct or1k_jtag *jtag_info,
 static int or1k_mohor_jtag_write_cpu_cr(struct or1k_jtag *jtag_info, uint32_t *value)
 {
 	struct jtag_tap *tap;
+	struct or1k_tap_ip *tap_ip = jtag_info->tap_ip;
 	struct scan_field fields[8];
 	int i;
+	int extra_bit_fix = 0;
 	uint32_t out_module_select_bit;
 	uint32_t out_cmd;
 	uint32_t out_crc;
@@ -1140,8 +1196,11 @@ static int or1k_mohor_jtag_write_cpu_cr(struct or1k_jtag *jtag_info, uint32_t *v
 	fields[5].out_value = (uint8_t *)&out_crc;
 	fields[5].in_value = NULL;
 
+	if (!strcmp(tap_ip->name, "vjtag"))
+		extra_bit_fix = 1;
+
 	/* Status coming in */
-	fields[6].num_bits = 4;
+	fields[6].num_bits = 4 + extra_bit_fix;
 	fields[6].out_value = NULL;
 	fields[6].in_value = (uint8_t *)&in_status;
 
@@ -1156,6 +1215,9 @@ static int or1k_mohor_jtag_write_cpu_cr(struct or1k_jtag *jtag_info, uint32_t *v
 		LOG_ERROR(" performing CPU CR write failed");
 		return ERROR_FAIL;
 	}
+
+	if (!strcmp(tap_ip->name, "vjtag"))
+		in_status >>= 1;
 
 	/* Calculate expected CRC for status */
 	expected_in_crc = 0xffffffff;
