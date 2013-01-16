@@ -76,6 +76,7 @@
 #define OR1K_MOHORDBGIF_CMD_OURUN_ERROR			0x8
 
 #define OR1K_JTAG_MOHOR_DBG_CRC_POLY			0x04c11db7
+#define ADBG_CRC_POLY 0xedb88320
 
 static const char *chain_name[] = {"WISHBONE", "CPU0", "CPU1", "JSP"};
 
@@ -97,17 +98,21 @@ static int or1k_mohor_jtag_init(struct or1k_jtag *jtag_info)
 	return ERROR_OK;
 }
 
-static uint32_t or1k_jtag_mohor_debug_crc_calc(uint32_t crc,
-					       uint32_t input_bit)
+static uint32_t mohor_compute_crc(uint32_t crc_in, uint32_t data_in, int length_bits)
 {
-	uint32_t d = (input_bit) ? 0xfffffff : 0x0000000;
-	uint32_t crc_32 = ((crc >> 31) & 1) ? 0xfffffff : 0x0000000;
+	int i;
+	unsigned int d, c;
+	uint32_t crc_out = crc_in;
 
-	crc <<= 1;
+	for (i = 0; i < length_bits; i = i+1) {
+		d = ((data_in >> i) & 0x1) ? 0xffffffff : 0;
+		c = (crc_out & 0x1) ? 0xffffffff : 0;
+		crc_out = crc_out >> 1;
+		crc_out = crc_out ^ ((d ^ c) & ADBG_CRC_POLY);
+	}
 
-	return crc ^ ((d ^ crc_32) & OR1K_JTAG_MOHOR_DBG_CRC_POLY);
+	return crc_out;
 }
-
 
 static int or1k_jtag_mohor_debug_select_module(struct or1k_jtag *jtag_info,
 					uint32_t module)
@@ -115,7 +120,6 @@ static int or1k_jtag_mohor_debug_select_module(struct or1k_jtag *jtag_info,
 	struct jtag_tap *tap;
 	struct or1k_tap_ip *tap_ip = jtag_info->tap_ip;
 	struct scan_field fields[5];
-	int i;
 	int extra_bit_fix = 0;
 	uint32_t out_module_select_bit;
 	uint32_t out_module;
@@ -156,13 +160,10 @@ static int or1k_jtag_mohor_debug_select_module(struct or1k_jtag *jtag_info,
 	fields[1].in_value = NULL;
 
 	/* CRC calculations */
+
 	out_crc = 0xffffffff;
-	out_crc = or1k_jtag_mohor_debug_crc_calc(out_crc,
-						 out_module_select_bit);
-	for (i = 0; i < 4; i++)
-		out_crc = or1k_jtag_mohor_debug_crc_calc(out_crc,
-							 ((out_module>>i) & 0x1));
-	out_crc = flip_u32(out_crc, 32);
+	out_crc = mohor_compute_crc(out_crc, out_module_select_bit, 1);
+	out_crc = mohor_compute_crc(out_crc, out_module, 4);
 
 	/* CRC going out */
 	fields[2].num_bits = 32;
@@ -195,14 +196,9 @@ static int or1k_jtag_mohor_debug_select_module(struct or1k_jtag *jtag_info,
 		in_status >>= 1;
 
 	/* Calculate expected CRC for status */
+
 	expected_in_crc = 0xffffffff;
-	for (i = 0; i < 4; i++)
-		expected_in_crc = or1k_jtag_mohor_debug_crc_calc(expected_in_crc,
-								 ((in_status >> i) &
-								  0x1));
-	/* Check CRCs now */
-	/* Bit reverse received CRC */
-	expected_in_crc = flip_u32(expected_in_crc, 32);
+	expected_in_crc = mohor_compute_crc(expected_in_crc, in_status, 4);
 
 	if (in_crc != expected_in_crc) {
 		LOG_ERROR("Received CRC (0x%08x) not same as calculated CRC (0x%08x)"
@@ -237,7 +233,6 @@ static int or1k_jtag_mohor_debug_set_command(struct or1k_jtag *jtag_info,
 	struct jtag_tap *tap;
 	struct or1k_tap_ip *tap_ip = jtag_info->tap_ip;
 	struct scan_field fields[8];
-	int i;
 	int extra_bit_fix = 0;
 	uint32_t out_module_select_bit;
 	uint32_t out_cmd;
@@ -297,26 +292,13 @@ static int or1k_jtag_mohor_debug_set_command(struct or1k_jtag *jtag_info,
 
 	/* CRC calculations */
 	out_crc = 0xffffffff;
-	out_crc = or1k_jtag_mohor_debug_crc_calc(out_crc,
-						 out_module_select_bit);
-	for (i = 0; i < 4; i++)
-		out_crc = or1k_jtag_mohor_debug_crc_calc(out_crc,
-							 ((out_cmd >> i) & 0x1));
-	for (i = 0; i < 4; i++)
-		out_crc = or1k_jtag_mohor_debug_crc_calc(out_crc,
-							 ((out_accesstype >> i) &
-							  0x1));
-	for (i = 0; i < 32; i++)
-		out_crc = or1k_jtag_mohor_debug_crc_calc(out_crc,
-							 ((out_address >> i) &
-							  0x1));
-	for (i = 0; i < 16; i++)
-		out_crc = or1k_jtag_mohor_debug_crc_calc(out_crc,
-							 ((out_length_bytes >> i) &
-							  0x1));
+	out_crc = mohor_compute_crc(out_crc, out_module_select_bit, 1);
+	out_crc = mohor_compute_crc(out_crc, out_cmd, 4);
+	out_crc = mohor_compute_crc(out_crc, out_accesstype, 4);
+	out_crc = mohor_compute_crc(out_crc, out_address, 32);
+	out_crc = mohor_compute_crc(out_crc, out_length_bytes, 16);
 
 	/* CRC going out */
-	out_crc = flip_u32(out_crc, 32);
 	fields[5].num_bits = 32;
 	fields[5].out_value = (uint8_t *)&out_crc;
 	fields[5].in_value = NULL;
@@ -346,13 +328,7 @@ static int or1k_jtag_mohor_debug_set_command(struct or1k_jtag *jtag_info,
 
 	/* Calculate expected CRC for status */
 	expected_in_crc = 0xffffffff;
-	for (i = 0; i < 4; i++)
-		expected_in_crc =
-			or1k_jtag_mohor_debug_crc_calc(expected_in_crc,
-						       ((in_status>>i) & 0x1));
-	/* Check CRCs now */
-	/* Bit reverse received CRC */
-	expected_in_crc = flip_u32(expected_in_crc, 32);
+	expected_in_crc = mohor_compute_crc(expected_in_crc, in_status, 4);
 
 	if (in_crc != expected_in_crc) {
 		LOG_ERROR("Received CRC (0x%08x) not same as calculated CRC (0x%08x)"
@@ -384,7 +360,7 @@ static int or1k_jtag_mohor_debug_single_read_go(struct or1k_jtag *jtag_info,
 	struct jtag_tap *tap;
 	struct or1k_tap_ip *tap_ip = jtag_info->tap_ip;
 	struct scan_field *fields;
-	int i, j;
+	int i;
 	int extra_field = 0;
 	int num_data_fields = length * type_size_bytes;
 	uint32_t out_module_select_bit;
@@ -434,14 +410,10 @@ static int or1k_jtag_mohor_debug_single_read_go(struct or1k_jtag *jtag_info,
 
 	/* CRC calculations */
 	out_crc = 0xffffffff;
-	out_crc = or1k_jtag_mohor_debug_crc_calc(out_crc,
-						 out_module_select_bit);
-	for (i = 0; i < 4; i++)
-		out_crc = or1k_jtag_mohor_debug_crc_calc(out_crc,
-							 ((out_cmd>>i) & 0x1));
+	out_crc = mohor_compute_crc(out_crc, out_module_select_bit, 1);
+	out_crc = mohor_compute_crc(out_crc, out_cmd, 4);
 
 	/* CRC going out */
-	out_crc = flip_u32(out_crc, 32);
 	fields[2].num_bits = 32;
 	fields[2].out_value = (uint8_t *)&out_crc;
 	fields[2].in_value = NULL;
@@ -478,27 +450,13 @@ static int or1k_jtag_mohor_debug_single_read_go(struct or1k_jtag *jtag_info,
 
 	/* Calculate expected CRC for data and status */
 	expected_in_crc = 0xffffffff;
-
 	for (i = 0; i < num_data_fields; i++) {
-		/* Process received data byte at a time */
-		/* Calculate CRC and bit-reverse data */
-		for (j = 0; j < 8; j++)
-			expected_in_crc =
-				or1k_jtag_mohor_debug_crc_calc(expected_in_crc,
-							       ((data[i] >> j) &
-								0x1));
-
+		expected_in_crc = mohor_compute_crc(expected_in_crc, data[i], 8);
 		data[i] = flip_u32((uint32_t)data[i], 8);
 		LOG_DEBUG("%02x", data[i] & 0xff);
 	}
 
-	for (i = 0; i < 4; i++)
-		expected_in_crc =
-			or1k_jtag_mohor_debug_crc_calc(expected_in_crc,
-						       ((in_status >> i) & 0x1));
-	/* Check CRCs now */
-	/* Bit reverse received CRC */
-	in_crc = flip_u32(in_crc, 32);
+	expected_in_crc = mohor_compute_crc(expected_in_crc, in_status, 4);
 
 	if (in_crc != expected_in_crc) {
 		LOG_ERROR(" received CRC (0x%08x) not same as calculated CRC (0x%08x)"
@@ -547,7 +505,7 @@ static int or1k_jtag_mohor_debug_multiple_read_go(struct or1k_jtag *jtag_info,
 	int num_bytes = length * type_size_bytes;
 	int num_32bit_fields = 0;
 	int num_data_fields;
-	int i, j;
+	int i;
 	int extra_bit_fix = 0;
 	uint32_t out_module_select_bit;
 	uint32_t out_cmd;
@@ -606,14 +564,10 @@ static int or1k_jtag_mohor_debug_multiple_read_go(struct or1k_jtag *jtag_info,
 
 	/* CRC calculations */
 	out_crc = 0xffffffff;
-	out_crc = or1k_jtag_mohor_debug_crc_calc(out_crc,
-						 out_module_select_bit);
-	for (i = 0; i < 4; i++)
-		out_crc = or1k_jtag_mohor_debug_crc_calc(out_crc,
-							 ((out_cmd >> i) & 0x1));
+	out_crc = mohor_compute_crc(out_crc, out_module_select_bit, 1);
+	out_crc = mohor_compute_crc(out_crc, out_cmd, 4);
 
 	/* CRC going out */
-	out_crc = flip_u32(out_crc, 32);
 	fields[2].num_bits = 32;
 	fields[2].out_value = (uint8_t *)&out_crc;
 	fields[2].in_value = NULL;
@@ -659,27 +613,13 @@ static int or1k_jtag_mohor_debug_multiple_read_go(struct or1k_jtag *jtag_info,
 
 	/* Calculate expected CRC for data and status */
 	expected_in_crc = 0xffffffff;
-
 	for (i = 0; i < num_bytes; i++) {
-		/* Process received data byte at a time */
-		/* Calculate CRC and bit-reverse data */
-		for (j = 0; j < 8; j++)
-			expected_in_crc =
-				or1k_jtag_mohor_debug_crc_calc(expected_in_crc,
-							       ((data[i] >> j) &
-								0x1));
-
+		expected_in_crc = mohor_compute_crc(expected_in_crc, data[i], 8);
 		data[i] = flip_u32((uint32_t)data[i], 8);
 		LOG_DEBUG("%02x", data[i] & 0xff);
 	}
 
-	for (i = 0; i < 4; i++)
-		expected_in_crc =
-			or1k_jtag_mohor_debug_crc_calc(expected_in_crc,
-						       ((in_status >> i) & 0x1));
-	/* Check CRCs now */
-	/* Bit reverse received CRC */
-	in_crc = flip_u32(in_crc, 32);
+	expected_in_crc = mohor_compute_crc(expected_in_crc, in_status, 4);
 
 	if (in_crc != expected_in_crc) {
 		LOG_ERROR(" received CRC (0x%08x) not same as calculated CRC (0x%08x)"
@@ -746,7 +686,7 @@ int or1k_jtag_mohor_debug_write_go(struct or1k_jtag *jtag_info,
 	int num_data32_fields;
 	int num_data8_fields;
 	int num_data_fields;
-	int i, j;
+	int i;
 	int extra_bit_fix = 0;
 	uint32_t out_module_select_bit;
 	uint32_t out_cmd;
@@ -814,26 +754,16 @@ int or1k_jtag_mohor_debug_write_go(struct or1k_jtag *jtag_info,
 
 	/* CRC calculations */
 	out_crc = 0xffffffff;
-	out_crc = or1k_jtag_mohor_debug_crc_calc(out_crc,
-						 out_module_select_bit);
-	for (i = 0; i < 4; i++)
-		out_crc = or1k_jtag_mohor_debug_crc_calc(out_crc,
-							 ((out_cmd >> i) & 0x1));
+	out_crc = mohor_compute_crc(out_crc, out_module_select_bit, 1);
+	out_crc = mohor_compute_crc(out_crc, out_cmd, 4);
 
-	/*LOG_DEBUG("Debug GO Tx data:");*/
 	for (i = 0; i < length_bytes; i++) {
 		LOG_DEBUG("%02x", data[i] & 0xff);
-		/* Process received data byte at a time */
 		data[i] = flip_u32((uint32_t)data[i], 8);
-		/* Calculate CRC and bit-reverse data */
-		for (j = 0; j < 8; j++)
-			out_crc = or1k_jtag_mohor_debug_crc_calc(out_crc,
-							       ((data[i] >> j) &
-								0x1));
+		out_crc = mohor_compute_crc(out_crc, data[i], 8);
 	}
 
 	/* CRC going out */
-	out_crc = flip_u32(out_crc, 32);
 	fields[2 + num_data_fields].num_bits = 32;
 	fields[2 + num_data_fields].out_value = (uint8_t *)&out_crc;
 	fields[2 + num_data_fields].in_value = NULL;
@@ -870,15 +800,9 @@ int or1k_jtag_mohor_debug_write_go(struct or1k_jtag *jtag_info,
 
 	/* Calculate expected CRC for data and status */
 	expected_in_crc = 0xffffffff;
+	expected_in_crc = mohor_compute_crc(expected_in_crc, in_status, 4);
 
-	for (i = 0; i < 4; i++)
-		expected_in_crc =
-			or1k_jtag_mohor_debug_crc_calc(expected_in_crc,
-						       ((in_status >> i) & 0x1));
 	/* Check CRCs now */
-	/* Bit reverse received CRC */
-	in_crc = flip_u32(in_crc, 32);
-
 	if (in_crc != expected_in_crc) {
 		LOG_ERROR(" received CRC (0x%08x) not same as calculated CRC (0x%08x)"
 			  , in_crc, expected_in_crc);
@@ -967,7 +891,6 @@ static int or1k_mohor_jtag_read_cpu_cr(struct or1k_jtag *jtag_info,
 	struct jtag_tap *tap;
 	struct or1k_tap_ip *tap_ip = jtag_info->tap_ip;
 	struct scan_field fields[8];
-	int i;
 	int extra_bit_fix = 0;
 	uint32_t out_module_select_bit;
 	uint32_t out_cmd;
@@ -975,8 +898,6 @@ static int or1k_mohor_jtag_read_cpu_cr(struct or1k_jtag *jtag_info,
 	uint32_t in_status;
 	uint32_t in_crc;
 	uint32_t expected_in_crc;
-	uint32_t in_reset = 0;
-	uint32_t in_stall = 0;
 	uint32_t in_zeroes0;
 	uint32_t in_zeroes1;
 
@@ -1013,10 +934,8 @@ static int or1k_mohor_jtag_read_cpu_cr(struct or1k_jtag *jtag_info,
 
 	/* CRC calculations */
 	out_crc = 0xffffffff;
-	out_crc = or1k_jtag_mohor_debug_crc_calc(out_crc, out_module_select_bit);
-	for (i = 0; i < 4; i++)
-		out_crc = or1k_jtag_mohor_debug_crc_calc(out_crc, ((out_cmd >> i) & 0x1));
-	out_crc = flip_u32(out_crc, 32);
+	out_crc = mohor_compute_crc(out_crc, out_module_select_bit, 1);
+	out_crc = mohor_compute_crc(out_crc, out_cmd, 4);
 
 	/* CRC going out */
 	fields[2].num_bits = 32;
@@ -1057,30 +976,15 @@ static int or1k_mohor_jtag_read_cpu_cr(struct or1k_jtag *jtag_info,
 		return ERROR_FAIL;
 	}
 
-	/* Calculate expected CRC for status */
-	expected_in_crc = 0xffffffff;
-
 	if (!strcmp(tap_ip->name, "vjtag"))
 		*value >>= 1;
 
-	in_reset = *value & 0x01;
-	in_stall = *value & 0x02;
-
-	expected_in_crc = or1k_jtag_mohor_debug_crc_calc(expected_in_crc, in_reset);
-	expected_in_crc = or1k_jtag_mohor_debug_crc_calc(expected_in_crc, in_stall);
-	/* Assuming next 50 bits are zero - we don't check, though!*/
-	for (i = 0; i < 32; i++)
-		expected_in_crc = or1k_jtag_mohor_debug_crc_calc(expected_in_crc,
-								 ((in_zeroes0 >> i) & 0x1));
-	for (i = 0; i < 18; i++)
-		expected_in_crc = or1k_jtag_mohor_debug_crc_calc(expected_in_crc,
-								 ((in_zeroes1 >> i) & 0x1));
-	for (i = 0; i < 4; i++)
-		expected_in_crc = or1k_jtag_mohor_debug_crc_calc(expected_in_crc,
-								 ((in_status >> i) & 0x1));
-	/* Check CRCs now */
-	/* Bit reverse received CRC */
-	expected_in_crc = flip_u32(expected_in_crc, 32);
+	/* Calculate expected CRC for status */
+	expected_in_crc = 0xffffffff;
+	expected_in_crc = mohor_compute_crc(expected_in_crc, *value, 2);
+	expected_in_crc = mohor_compute_crc(expected_in_crc, in_zeroes0, 32);
+	expected_in_crc = mohor_compute_crc(expected_in_crc, in_zeroes1, 18);
+	expected_in_crc = mohor_compute_crc(expected_in_crc, in_status, 4);
 
 	if (in_crc != expected_in_crc) {
 		LOG_ERROR(" received CRC (0x%08x) not same as calculated CRC (0x%08x)"
@@ -1107,7 +1011,6 @@ static int or1k_mohor_jtag_write_cpu_cr(struct or1k_jtag *jtag_info, uint32_t *v
 	struct jtag_tap *tap;
 	struct or1k_tap_ip *tap_ip = jtag_info->tap_ip;
 	struct scan_field fields[8];
-	int i;
 	int extra_bit_fix = 0;
 	uint32_t out_module_select_bit;
 	uint32_t out_cmd;
@@ -1167,16 +1070,10 @@ static int or1k_mohor_jtag_write_cpu_cr(struct or1k_jtag *jtag_info, uint32_t *v
 
 	/* CRC calculations */
 	out_crc = 0xffffffff;
-	out_crc = or1k_jtag_mohor_debug_crc_calc(out_crc, out_module_select_bit);
-	for (i = 0; i < 4; i++)
-		out_crc = or1k_jtag_mohor_debug_crc_calc(out_crc, ((out_cmd >> i) & 0x1));
-
-	for (i = 0; i < 2; i++)
-		out_crc = or1k_jtag_mohor_debug_crc_calc(out_crc, ((*value >> i) & 0x1));
-
-	for (i = 0; i < 50; i++)
-		out_crc = or1k_jtag_mohor_debug_crc_calc(out_crc, 0);
-	out_crc = flip_u32(out_crc, 32);
+	out_crc = mohor_compute_crc(out_crc, out_module_select_bit, 1);
+	out_crc = mohor_compute_crc(out_crc, out_cmd, 4);
+	out_crc = mohor_compute_crc(out_crc, *value, 2);
+	out_crc = mohor_compute_crc(out_crc, 0, 50);
 
 	/* CRC going out */
 	fields[5].num_bits = 32;
@@ -1208,13 +1105,9 @@ static int or1k_mohor_jtag_write_cpu_cr(struct or1k_jtag *jtag_info, uint32_t *v
 
 	/* Calculate expected CRC for status */
 	expected_in_crc = 0xffffffff;
-	for (i = 0; i < 4; i++)
-		expected_in_crc = or1k_jtag_mohor_debug_crc_calc(expected_in_crc,
-								 ((in_status >> i) & 0x1));
-	/* Check CRCs now */
-	/* Bit reverse received CRC */
-	expected_in_crc = flip_u32(expected_in_crc, 32);
+	expected_in_crc = mohor_compute_crc(expected_in_crc, in_status, 4);
 
+	/* Check CRCs now */
 	if (in_crc != expected_in_crc) {
 		LOG_ERROR(" received CRC (0x%08x) not same as calculated CRC (0x%08x)"
 			  , in_crc, expected_in_crc);
