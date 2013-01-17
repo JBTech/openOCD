@@ -2,7 +2,7 @@ source [find ./tcl/interface/ftdi/olimex-arm-usb-ocd.cfg]
 # Configure the target
 source [find ./tcl/target/or1k.cfg]
 
-adapter_khz 1000
+adapter_khz 3000
 
 # Set GDB port
 gdb_port 50001
