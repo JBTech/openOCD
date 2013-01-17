@@ -340,7 +340,7 @@ static int or1k_jtag_mohor_debug_set_command(struct or1k_jtag *jtag_info,
 		LOG_ERROR("Debug IF CPU command write status: CRC error"
 			  );
 		return ERROR_FAIL;
-	} else if ((in_status & 0x0f) == OR1K_MOHORDBGIF_CMD_OK) {
+	} else if ((in_status & 0xf) == OR1K_MOHORDBGIF_CMD_OK) {
 		/*LOG_DEBUG(" debug IF command write OK");*/
 	} else {
 		LOG_ERROR("Debug IF command write: Unknown status (%d)"
@@ -812,7 +812,7 @@ int or1k_jtag_mohor_debug_write_go(struct or1k_jtag *jtag_info,
 	if (in_status & OR1K_MOHORDBGIF_CMD_CRC_ERROR) {
 		LOG_ERROR(" debug IF go command status: CRC error");
 		return ERROR_FAIL;
-	} else if ((in_status&0xff) == OR1K_MOHORDBGIF_CMD_OK) {
+	} else if ((in_status & 0xf) == OR1K_MOHORDBGIF_CMD_OK) {
 		/*LOG_DEBUG(" debug IF go command OK");*/
 	} else {
 		LOG_ERROR(" debug IF go command: Unknown status (%d)"
@@ -1117,7 +1117,7 @@ static int or1k_mohor_jtag_write_cpu_cr(struct or1k_jtag *jtag_info, uint32_t *v
 	if (in_status & OR1K_MOHORDBGIF_CMD_CRC_ERROR) {
 		LOG_ERROR(" debug IF CPU CR write status: CRC error");
 		return ERROR_FAIL;
-	} else if ((in_status & 0xff) == OR1K_MOHORDBGIF_CMD_OK) {
+	} else if ((in_status & 0xf) == OR1K_MOHORDBGIF_CMD_OK) {
 		LOG_DEBUG(" debug IF CPU CR write OK");
 	} else {
 		LOG_ERROR(" debug IF module select status: Unknown status (%d)"
