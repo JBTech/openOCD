@@ -95,6 +95,8 @@ static int or1k_mohor_jtag_init(struct or1k_jtag *jtag_info)
 	/* TAP reset - not sure what state debug module chain is in now */
 	jtag_info->or1k_jtag_module_selected = -1;
 
+	LOG_DEBUG("Init done");
+
 	return ERROR_OK;
 }
 
@@ -452,8 +454,7 @@ static int or1k_jtag_mohor_debug_single_read_go(struct or1k_jtag *jtag_info,
 	expected_in_crc = 0xffffffff;
 	for (i = 0; i < num_data_fields; i++) {
 		expected_in_crc = mohor_compute_crc(expected_in_crc, data[i], 8);
-		data[i] = flip_u32((uint32_t)data[i], 8);
-		LOG_DEBUG("%02x", data[i] & 0xff);
+		LOG_DEBUG("%02x", flip_u32((uint32_t)data[i], 8) & 0xff);
 	}
 
 	expected_in_crc = mohor_compute_crc(expected_in_crc, in_status, 4);
@@ -572,9 +573,6 @@ static int or1k_jtag_mohor_debug_multiple_read_go(struct or1k_jtag *jtag_info,
 	fields[2].out_value = (uint8_t *)&out_crc;
 	fields[2].in_value = NULL;
 
-	/* Execute this intro to the transfers */
-	jtag_add_dr_scan(tap, 3, fields, TAP_DRSHIFT);
-
 	if (!strcmp(tap_ip->name, "vjtag"))
 		extra_bit_fix = 1;
 
@@ -583,14 +581,9 @@ static int or1k_jtag_mohor_debug_multiple_read_go(struct or1k_jtag *jtag_info,
 	fields[3].in_value = NULL;
 
 	for (i = 0; i < num_32bit_fields; i++) {
-		fields[4+i].num_bits = 32;
-		fields[4+i].out_value = NULL;
-		fields[4+i].in_value = &data[i * 4];
-
-		/* Execute this intro to the transfers */
-		jtag_add_dr_scan(tap, 1,
-				 &fields[4 + i],
-				 TAP_DRSHIFT);
+		fields[4 + i].num_bits = 32;
+		fields[4 + i].out_value = NULL;
+		fields[4 + i].in_value = &data[i * 4];
 	}
 
 	/* Status coming in */
@@ -604,7 +597,7 @@ static int or1k_jtag_mohor_debug_multiple_read_go(struct or1k_jtag *jtag_info,
 	fields[4 + num_32bit_fields + 1].in_value = (uint8_t *)&in_crc;
 
 	/* Execute the final bits */
-	jtag_add_dr_scan(tap, 2, &fields[4 + num_32bit_fields], TAP_IDLE);
+	jtag_add_dr_scan(tap, num_32bit_fields + 6, fields, TAP_IDLE);
 
 	if (jtag_execute_queue() != ERROR_OK) {
 		LOG_ERROR("performing GO command failed");
@@ -615,8 +608,7 @@ static int or1k_jtag_mohor_debug_multiple_read_go(struct or1k_jtag *jtag_info,
 	expected_in_crc = 0xffffffff;
 	for (i = 0; i < num_bytes; i++) {
 		expected_in_crc = mohor_compute_crc(expected_in_crc, data[i], 8);
-		data[i] = flip_u32((uint32_t)data[i], 8);
-		LOG_DEBUG("%02x", data[i] & 0xff);
+		LOG_DEBUG("%02x", flip_u32((uint32_t)data[i], 8) & 0xff);
 	}
 
 	expected_in_crc = mohor_compute_crc(expected_in_crc, in_status, 4);
@@ -847,8 +839,6 @@ static int or1k_mohor_jtag_read_cpu(struct or1k_jtag *jtag_info,
 		if (or1k_jtag_mohor_debug_read_go(jtag_info, 4, 1, (uint8_t *)&value[i]) !=
 				ERROR_OK)
 			return ERROR_FAIL;
-
-		h_u32_to_be((uint8_t *)&value[i], value[i]);
 	}
 
 	return ERROR_OK;
