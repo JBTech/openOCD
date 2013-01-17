@@ -170,6 +170,8 @@ static int or1k_adv_jtag_init(struct or1k_jtag *jtag_info)
 	jtag_info->current_reg_idx = malloc(DBG_MAX_MODULES * sizeof(unsigned long));
 	memset(jtag_info->current_reg_idx, 0, DBG_MAX_MODULES * sizeof(unsigned long));
 
+	LOG_DEBUG("Init done");
+
 	return ERROR_OK;
 
 }
