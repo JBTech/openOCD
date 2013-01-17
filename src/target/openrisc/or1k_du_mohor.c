@@ -95,6 +95,8 @@ static int or1k_mohor_jtag_init(struct or1k_jtag *jtag_info)
 	/* TAP reset - not sure what state debug module chain is in now */
 	jtag_info->or1k_jtag_module_selected = -1;
 
+	LOG_DEBUG("Init done");
+
 	return ERROR_OK;
 }
 
@@ -572,9 +574,6 @@ static int or1k_jtag_mohor_debug_multiple_read_go(struct or1k_jtag *jtag_info,
 	fields[2].out_value = (uint8_t *)&out_crc;
 	fields[2].in_value = NULL;
 
-	/* Execute this intro to the transfers */
-	jtag_add_dr_scan(tap, 3, fields, TAP_DRSHIFT);
-
 	if (!strcmp(tap_ip->name, "vjtag"))
 		extra_bit_fix = 1;
 
@@ -583,14 +582,9 @@ static int or1k_jtag_mohor_debug_multiple_read_go(struct or1k_jtag *jtag_info,
 	fields[3].in_value = NULL;
 
 	for (i = 0; i < num_32bit_fields; i++) {
-		fields[4+i].num_bits = 32;
-		fields[4+i].out_value = NULL;
-		fields[4+i].in_value = &data[i * 4];
-
-		/* Execute this intro to the transfers */
-		jtag_add_dr_scan(tap, 1,
-				 &fields[4 + i],
-				 TAP_DRSHIFT);
+		fields[4 + i].num_bits = 32;
+		fields[4 + i].out_value = NULL;
+		fields[4 + i].in_value = &data[i * 4];
 	}
 
 	/* Status coming in */
@@ -604,7 +598,7 @@ static int or1k_jtag_mohor_debug_multiple_read_go(struct or1k_jtag *jtag_info,
 	fields[4 + num_32bit_fields + 1].in_value = (uint8_t *)&in_crc;
 
 	/* Execute the final bits */
-	jtag_add_dr_scan(tap, 2, &fields[4 + num_32bit_fields], TAP_IDLE);
+	jtag_add_dr_scan(tap, num_32bit_fields + 6, fields, TAP_IDLE);
 
 	if (jtag_execute_queue() != ERROR_OK) {
 		LOG_ERROR("performing GO command failed");
