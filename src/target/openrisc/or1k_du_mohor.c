@@ -75,8 +75,12 @@
 #define OR1K_MOHORDBGIF_CMD_WB_ERROR			0x4
 #define OR1K_MOHORDBGIF_CMD_OURUN_ERROR			0x8
 
-#define OR1K_JTAG_MOHOR_DBG_CRC_POLY			0x04c11db7
-#define ADBG_CRC_POLY 0xedb88320
+/* Polynomial for the CRC calculation
+ * Yes, it's backwards.  Yes, this is on purpose.
+ * The hardware is designed this way to save on logic and routing,
+ * and it's really all the same to us here.
+ */
+#define OR1K_JTAG_MOHOR_DBG_CRC_POLY			0xedb88320
 
 static const char *chain_name[] = {"WISHBONE", "CPU0", "CPU1", "JSP"};
 
@@ -110,7 +114,7 @@ static uint32_t mohor_compute_crc(uint32_t crc_in, uint32_t data_in, int length_
 		d = ((data_in >> i) & 0x1) ? 0xffffffff : 0;
 		c = (crc_out & 0x1) ? 0xffffffff : 0;
 		crc_out = crc_out >> 1;
-		crc_out = crc_out ^ ((d ^ c) & ADBG_CRC_POLY);
+		crc_out = crc_out ^ ((d ^ c) & OR1K_JTAG_MOHOR_DBG_CRC_POLY);
 	}
 
 	return crc_out;
