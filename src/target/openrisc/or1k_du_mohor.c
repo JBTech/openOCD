@@ -487,9 +487,7 @@ static int or1k_jtag_mohor_debug_read_go(struct or1k_jtag *jtag_info,
 		LOG_ERROR("Debug IF go command status: Wishbone error");
 		return ERROR_FAIL;
 	} else if (in_status & OR1K_MOHORDBGIF_CMD_OURUN_ERROR) {
-		LOG_ERROR("Debug IF go command status: Overrun/underrun error"
-			);
-		return ERROR_FAIL;
+		/*LOG_ERROR("Debug IF go command status: Overrun/underrun error");*/
 	} else if ((in_status & 0xf) == OR1K_MOHORDBGIF_CMD_OK) {
 		/*LOG_DEBUG(" debug IF go command OK");*/
 	} else {
