@@ -722,7 +722,7 @@ int or1k_jtag_mohor_debug_write_go(struct or1k_jtag *jtag_info,
 	LOG_DEBUG("Doing mohor debug write go, %d 32-bit fields, %d 8-bit",
 		  num_data32_fields, num_data8_fields);
 
-	fields = malloc((num_data_fields + 5) * sizeof(struct scan_field));
+	fields = malloc((num_data_fields + 3) * sizeof(struct scan_field));
 
 	/* 1st bit is module select, set to '0', we're not selecting a module */
 	out_module_select_bit = 0;
@@ -766,20 +766,22 @@ int or1k_jtag_mohor_debug_write_go(struct or1k_jtag *jtag_info,
 	fields[2 + num_data_fields].out_value = (uint8_t *)&out_crc;
 	fields[2 + num_data_fields].in_value = NULL;
 
+	jtag_add_dr_scan(tap, num_data_fields + 3, fields, TAP_DRSHIFT);
+
 	if (!strcmp(tap_ip->name, "vjtag"))
 		extra_bit_fix = 1;
 
 	/* Status coming in */
-	fields[3 + num_data_fields].num_bits = 4 + extra_bit_fix;
-	fields[3 + num_data_fields].out_value = NULL;
-	fields[3 + num_data_fields].in_value = (uint8_t *)&in_status;
+	fields[0].num_bits = 4 + extra_bit_fix;
+	fields[0].out_value = NULL;
+	fields[0].in_value = (uint8_t *)&in_status;
 
 	/* CRC coming in */
-	fields[3 + num_data_fields + 1].num_bits = 32;
-	fields[3 + num_data_fields + 1].out_value = NULL;
-	fields[3 + num_data_fields + 1].in_value = (uint8_t *)&in_crc;
+	fields[1].num_bits = 32;
+	fields[1].out_value = NULL;
+	fields[1].in_value = (uint8_t *)&in_crc;
 
-	jtag_add_dr_scan(tap, 3 + num_data_fields + 2, fields, TAP_IDLE);
+	jtag_add_dr_scan(tap, 2, fields, TAP_IDLE);
 
 	if (jtag_execute_queue() != ERROR_OK) {
 		LOG_ERROR("performing GO command failed");
