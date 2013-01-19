@@ -1095,6 +1095,10 @@ static int or1k_mohor_jtag_read_memory8(struct or1k_jtag *jtag_info,
 static int or1k_mohor_jtag_write_memory32(struct or1k_jtag *jtag_info,
 			     uint32_t addr, int count, const uint32_t *buffer)
 {
+	int retval;
+
+	LOG_DEBUG("Writing WB32 at 0x%08x", addr);
+
 	if (!jtag_info->or1k_jtag_inited)
 		or1k_mohor_jtag_init(jtag_info);
 
@@ -1102,16 +1106,15 @@ static int or1k_mohor_jtag_write_memory32(struct or1k_jtag *jtag_info,
 		or1k_jtag_mohor_debug_select_module(jtag_info,
 						    OR1K_MOHORDBGIF_MODULE_WB);
 
-	/* Set command register to read a single word */
-	if (or1k_jtag_mohor_debug_set_command(jtag_info,
-					      OR1K_MOHORDBGIF_WB_ACC_WRITE32,
-					      addr,
-					      count * 4) != ERROR_OK)
-		return ERROR_FAIL;
+	retval = or1k_jtag_mohor_debug_set_command(jtag_info,
+						   OR1K_MOHORDBGIF_WB_ACC_WRITE32,
+						   addr, count * 4);
+	if (retval != ERROR_OK)
+		return retval;
 
-	if (or1k_jtag_mohor_debug_write_go(jtag_info, 4, count, (uint8_t *)buffer)
-	    != ERROR_OK)
-		return ERROR_FAIL;
+	retval = or1k_jtag_mohor_debug_write_go(jtag_info, 4, count, (uint8_t *)buffer);
+	if (retval != ERROR_OK)
+		return retval;
 
 	return ERROR_OK;
 
@@ -1120,13 +1123,10 @@ static int or1k_mohor_jtag_write_memory32(struct or1k_jtag *jtag_info,
 static int or1k_mohor_jtag_write_memory16(struct or1k_jtag *jtag_info,
 			     uint32_t addr, int count, const uint16_t *buffer)
 {
-	/* TODO - this function! */
-	return ERROR_OK;
-}
+	int retval;
 
-static int or1k_mohor_jtag_write_memory8(struct or1k_jtag *jtag_info,
-			    uint32_t addr, int count, const uint8_t *buffer)
-{
+	LOG_DEBUG("Writing WB16 at 0x%08x", addr);
+
 	if (!jtag_info->or1k_jtag_inited)
 		or1k_mohor_jtag_init(jtag_info);
 
@@ -1134,15 +1134,42 @@ static int or1k_mohor_jtag_write_memory8(struct or1k_jtag *jtag_info,
 		or1k_jtag_mohor_debug_select_module(jtag_info,
 						    OR1K_MOHORDBGIF_MODULE_WB);
 
-	/* Set command register to read a single word */
-	if (or1k_jtag_mohor_debug_set_command(jtag_info,
-					      OR1K_MOHORDBGIF_WB_ACC_WRITE32,
-					      addr, count) != ERROR_OK)
-		return ERROR_FAIL;
+	retval = or1k_jtag_mohor_debug_set_command(jtag_info,
+						   OR1K_MOHORDBGIF_WB_ACC_WRITE16,
+						   addr, count);
+	if (retval != ERROR_OK)
+		return retval;
 
-	if (or1k_jtag_mohor_debug_write_go(jtag_info, 1, count, (uint8_t *)buffer)
-	    != ERROR_OK)
-		return ERROR_FAIL;
+	retval = or1k_jtag_mohor_debug_write_go(jtag_info, 2, count, (uint8_t *)buffer);
+	if (retval != ERROR_OK)
+		return retval;
+
+	return ERROR_OK;
+}
+
+static int or1k_mohor_jtag_write_memory8(struct or1k_jtag *jtag_info,
+			    uint32_t addr, int count, const uint8_t *buffer)
+{
+	int retval;
+
+	LOG_DEBUG("Writing WB8 at 0x%08x", addr);
+
+	if (!jtag_info->or1k_jtag_inited)
+		or1k_mohor_jtag_init(jtag_info);
+
+	if (jtag_info->or1k_jtag_module_selected != OR1K_MOHORDBGIF_MODULE_WB)
+		or1k_jtag_mohor_debug_select_module(jtag_info,
+						    OR1K_MOHORDBGIF_MODULE_WB);
+
+	retval = or1k_jtag_mohor_debug_set_command(jtag_info,
+						   OR1K_MOHORDBGIF_WB_ACC_WRITE8,
+						   addr, count);
+	if (retval != ERROR_OK)
+		return retval;
+
+	retval = or1k_jtag_mohor_debug_write_go(jtag_info, 1, count, (uint8_t *)buffer);
+	if (retval != ERROR_OK)
+		return retval;
 
 	return ERROR_OK;
 }
