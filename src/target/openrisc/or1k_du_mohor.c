@@ -683,7 +683,7 @@ int or1k_jtag_mohor_debug_write_go(struct or1k_jtag *jtag_info,
 	struct scan_field *fields;
 	int length_bytes;
 	int num_data32_fields;
-	int num_data8_fields;
+	int spare_bytes;
 	int num_data_fields;
 	int i;
 	int extra_bit_fix = 0;
@@ -712,16 +712,13 @@ int or1k_jtag_mohor_debug_write_go(struct or1k_jtag *jtag_info,
 	 * {37+((len-1)*8)'x                    , 4'status, 32'crc }
 	 */
 
-	/* Figure out how many data fields we'll need. At present just do 1
-	   per byte, but in future, maybe figure out how we can do as many
-	   32-bit fields as possible - might speed things up? */
 	length_bytes = length * type_size_bytes;
 	num_data32_fields = length_bytes / 4;
-	num_data8_fields = length_bytes % 4;
-	num_data_fields = num_data32_fields + num_data8_fields;
+	spare_bytes = length_bytes % 4;
+	num_data_fields = num_data32_fields + !!spare_bytes;
 
 	LOG_DEBUG("Doing mohor debug write go, %d 32-bit fields, %d 8-bit",
-		  num_data32_fields, num_data8_fields);
+		  num_data32_fields, spare_bytes);
 
 	fields = malloc((num_data_fields + 3) * sizeof(struct scan_field));
 
@@ -739,16 +736,15 @@ int or1k_jtag_mohor_debug_write_go(struct or1k_jtag *jtag_info,
 	fields[1].in_value = NULL;
 
 	for (i = 0; i < num_data32_fields; i++) {
-		fields[2+i].num_bits = 32;
-		fields[2+i].out_value = &data[i * 4];
-		fields[2+i].in_value = NULL;
+		fields[2 + i].num_bits = 32;
+		fields[2 + i].out_value = &data[i * 4];
+		fields[2 + i].in_value = NULL;
 	}
 
-	for (i = 0; i < num_data8_fields; i++) {
-		fields[2 + num_data32_fields + i].num_bits = 8;
-		fields[2 + num_data32_fields + i].out_value =
-			&data[(num_data32_fields * 4) + i];
-		fields[2 + num_data32_fields + i].in_value = NULL;
+	if (spare_bytes) {
+		fields[2 + i].num_bits = spare_bytes * 8;
+		fields[2 + i].out_value = &data[i * 4];
+		fields[2 + i].in_value = NULL;
 	}
 
 	/* CRC calculations */
