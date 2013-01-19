@@ -139,12 +139,6 @@ static int or1k_jtag_mohor_debug_select_module(struct or1k_jtag *jtag_info,
 	if (tap == NULL)
 		return ERROR_FAIL;
 
-	/* Module can't be more than 4 bits */
-	if (module > 0xf) {
-		LOG_ERROR("Setting debug interface module failed %d", module);
-		return ERROR_FAIL;
-	}
-
 	/*
 	 * CPU control register write
 	 * Send:
@@ -201,11 +195,11 @@ static int or1k_jtag_mohor_debug_select_module(struct or1k_jtag *jtag_info,
 		return retval;
 	}
 
+	/* Remove extra bit fix */
 	if (!strcmp(tap_ip->name, "vjtag"))
 		in_status >>= 1;
 
 	/* Calculate expected CRC for status */
-
 	expected_in_crc = 0xffffffff;
 	expected_in_crc = mohor_compute_crc(expected_in_crc, in_status, 4);
 
@@ -268,7 +262,6 @@ static int or1k_jtag_mohor_debug_set_command(struct or1k_jtag *jtag_info,
 
 	/* 1st bit is module select, set to '0', we're not selecting a module */
 	out_module_select_bit = 0;
-
 	fields[0].num_bits = 1;
 	fields[0].out_value = (uint8_t *)&out_module_select_bit;
 	fields[0].in_value = NULL;
@@ -292,7 +285,7 @@ static int or1k_jtag_mohor_debug_set_command(struct or1k_jtag *jtag_info,
 	fields[3].in_value = NULL;
 
 	/*16-bit length */
-	/* Subtract 1 off it, as module does length+1 accesses */
+	/* Subtract 1 off it, as module does length + 1 accesses */
 	out_length_bytes--;
 	out_length_bytes = flip_u32(out_length_bytes, 16);
 	fields[4].num_bits = 16;
@@ -335,6 +328,7 @@ static int or1k_jtag_mohor_debug_set_command(struct or1k_jtag *jtag_info,
 		return retval;
 	}
 
+	/* Remove extra bit fix */
 	if (!strcmp(tap_ip->name, "vjtag"))
 		in_status >>= 1;
 
@@ -377,6 +371,7 @@ static int or1k_jtag_mohor_debug_read_go(struct or1k_jtag *jtag_info,
 	int num_data_fields;
 	int i;
 	int extra_bit_fix = 0;
+	int retval;
 	uint32_t out_module_select_bit;
 	uint32_t out_cmd;
 	uint32_t out_crc;
@@ -386,9 +381,6 @@ static int or1k_jtag_mohor_debug_read_go(struct or1k_jtag *jtag_info,
 
 	LOG_DEBUG("Doing mohor debug read go for %d bytes", (type_size_bytes *
 							    length));
-
-	assert(type_size_bytes > 0);
-	assert(type_size_bytes < 5);
 
 	tap = jtag_info->tap;
 	if (tap == NULL)
@@ -402,8 +394,8 @@ static int or1k_jtag_mohor_debug_read_go(struct or1k_jtag *jtag_info,
 	 * {37'x               , ((len-1)*8)'data, 4'status, 32'crc }
 	 */
 
-	num_32bit_fields = (length * type_size_bytes) / 4;
-	spare_bytes = (length * type_size_bytes) % 4;
+	num_32bit_fields = num_bytes / 4;
+	spare_bytes = num_bytes % 4;
 	num_data_fields = num_32bit_fields + !!spare_bytes;
 
 	fields = malloc((num_data_fields + 6) * sizeof(struct scan_field));
@@ -431,6 +423,8 @@ static int or1k_jtag_mohor_debug_read_go(struct or1k_jtag *jtag_info,
 	fields[2].out_value = (uint8_t *)&out_crc;
 	fields[2].in_value = NULL;
 
+	/* When used with virtual jtag tap, add one extra bit while reading
+	 * to compensate for TDO extra registering in mohor du. */
 	if (!strcmp(tap_ip->name, "vjtag"))
 		extra_bit_fix = 1;
 
@@ -460,12 +454,15 @@ static int or1k_jtag_mohor_debug_read_go(struct or1k_jtag *jtag_info,
 	fields[4 + num_data_fields + 1].out_value = NULL;
 	fields[4 + num_data_fields + 1].in_value = (uint8_t *)&in_crc;
 
-	/* Execute the final bits */
 	jtag_add_dr_scan(tap, num_data_fields + 6, fields, TAP_IDLE);
 
-	if (jtag_execute_queue() != ERROR_OK) {
-		LOG_ERROR("performing GO command failed");
-		goto error_finish;
+	retval = jtag_execute_queue();
+
+	free(fields);
+
+	if (retval != ERROR_OK) {
+		LOG_ERROR("Performing GO command failed");
+		return retval;
 	}
 
 	/* Calculate expected CRC for data and status */
@@ -478,41 +475,30 @@ static int or1k_jtag_mohor_debug_read_go(struct or1k_jtag *jtag_info,
 	expected_in_crc = mohor_compute_crc(expected_in_crc, in_status, 4);
 
 	if (in_crc != expected_in_crc) {
-		LOG_ERROR(" received CRC (0x%08x) not same as calculated CRC (0x%08x)"
+		LOG_ERROR("Received CRC (0x%08x) not same as calculated CRC (0x%08x)"
 			  , in_crc, expected_in_crc);
-		goto error_finish;
+		return ERROR_FAIL;
 	}
 
 	if (in_status & OR1K_MOHORDBGIF_CMD_CRC_ERROR) {
-		LOG_ERROR(" debug IF go command status: CRC error");
-		goto error_finish;
+		LOG_ERROR("Debug IF go command status: CRC error");
+		return ERROR_FAIL;
 	} else if (in_status & OR1K_MOHORDBGIF_CMD_WB_ERROR) {
-		LOG_ERROR(" debug IF go command status: Wishbone error");
-		goto error_finish;
+		LOG_ERROR("Debug IF go command status: Wishbone error");
+		return ERROR_FAIL;
 	} else if (in_status & OR1K_MOHORDBGIF_CMD_OURUN_ERROR) {
-		LOG_ERROR(" debug IF go command status: Overrun/underrun error"
+		LOG_ERROR("Debug IF go command status: Overrun/underrun error"
 			);
-		/*goto error_finish*/
+		return ERROR_FAIL;
 	} else if ((in_status & 0xf) == OR1K_MOHORDBGIF_CMD_OK) {
 		/*LOG_DEBUG(" debug IF go command OK");*/
 	} else {
-		LOG_ERROR(" debug IF go command: Unknown status (%d)",
+		LOG_ERROR("Debug IF go command: Unknown status (%d)",
 			  in_status);
-		goto error_finish;
+		return ERROR_FAIL;
 	}
 
-	/* Free fields*/
-	free(fields);
-
 	return ERROR_OK;
-
-error_finish:
-
-	/* Free fields*/
-	free(fields);
-
-	return ERROR_FAIL;
-
 }
 
 int or1k_jtag_mohor_debug_write_go(struct or1k_jtag *jtag_info,
@@ -523,24 +509,22 @@ int or1k_jtag_mohor_debug_write_go(struct or1k_jtag *jtag_info,
 	struct jtag_tap *tap;
 	struct or1k_tap_ip *tap_ip = jtag_info->tap_ip;
 	struct scan_field *fields;
-	int length_bytes;
+	int num_bytes = length * type_size_bytes;
 	int num_data32_fields;
 	int spare_bytes;
 	int num_data_fields;
 	int i;
 	int extra_bit_fix = 0;
+	int retval;
 	uint32_t out_module_select_bit;
 	uint32_t out_cmd;
 	uint32_t out_crc;
-	uint32_t in_status = 0;
+	uint32_t in_status;
 	uint32_t in_crc;
 	uint32_t expected_in_crc;
 
 	LOG_DEBUG("Doing mohor debug write go for %d bytes", (type_size_bytes *
 							    length));
-
-	assert(type_size_bytes > 0);
-	assert(type_size_bytes < 5);
 
 	tap = jtag_info->tap;
 	if (tap == NULL)
@@ -554,9 +538,8 @@ int or1k_jtag_mohor_debug_write_go(struct or1k_jtag *jtag_info,
 	 * {37+((len-1)*8)'x                    , 4'status, 32'crc }
 	 */
 
-	length_bytes = length * type_size_bytes;
-	num_data32_fields = length_bytes / 4;
-	spare_bytes = length_bytes % 4;
+	num_data32_fields = num_bytes / 4;
+	spare_bytes = num_bytes % 4;
 	num_data_fields = num_data32_fields + !!spare_bytes;
 
 	LOG_DEBUG("Doing mohor debug write go, %d 32-bit fields, %d 8-bit",
@@ -594,8 +577,7 @@ int or1k_jtag_mohor_debug_write_go(struct or1k_jtag *jtag_info,
 	out_crc = mohor_compute_crc(out_crc, out_module_select_bit, 1);
 	out_crc = mohor_compute_crc(out_crc, out_cmd, 4);
 
-	for (i = 0; i < length_bytes; i++) {
-		LOG_DEBUG("%02x", data[i] & 0xff);
+	for (i = 0; i < num_bytes; i++) {
 		data[i] = flip_u32((uint32_t)data[i], 8);
 		out_crc = mohor_compute_crc(out_crc, data[i], 8);
 	}
@@ -607,6 +589,8 @@ int or1k_jtag_mohor_debug_write_go(struct or1k_jtag *jtag_info,
 
 	jtag_add_dr_scan(tap, num_data_fields + 3, fields, TAP_DRSHIFT);
 
+	/* When used with virtual jtag tap, add one extra bit while reading
+	 * to compensate for TDO extra registering in mohor du. */
 	if (!strcmp(tap_ip->name, "vjtag"))
 		extra_bit_fix = 1;
 
@@ -622,20 +606,18 @@ int or1k_jtag_mohor_debug_write_go(struct or1k_jtag *jtag_info,
 
 	jtag_add_dr_scan(tap, 2, fields, TAP_IDLE);
 
-	if (jtag_execute_queue() != ERROR_OK) {
-		LOG_ERROR("performing GO command failed");
+	retval = jtag_execute_queue();
 
-		/* Free fields*/
-		free(fields);
+	free(fields);
 
-		return ERROR_FAIL;
+	if (retval != ERROR_OK) {
+		LOG_ERROR("Performing GO command failed");
+		return retval;
 	}
 
+	/* Remove extra bit fix */
 	if (!strcmp(tap_ip->name, "vjtag"))
 		in_status >>= 1;
-
-	/* Free fields*/
-	free(fields);
 
 	/* Calculate expected CRC for data and status */
 	expected_in_crc = 0xffffffff;
@@ -643,18 +625,18 @@ int or1k_jtag_mohor_debug_write_go(struct or1k_jtag *jtag_info,
 
 	/* Check CRCs now */
 	if (in_crc != expected_in_crc) {
-		LOG_ERROR(" received CRC (0x%08x) not same as calculated CRC (0x%08x)"
+		LOG_ERROR("Received CRC (0x%08x) not same as calculated CRC (0x%08x)"
 			  , in_crc, expected_in_crc);
 		return ERROR_FAIL;
 	}
 
 	if (in_status & OR1K_MOHORDBGIF_CMD_CRC_ERROR) {
-		LOG_ERROR(" debug IF go command status: CRC error");
+		LOG_ERROR("Debug IF go command status: CRC error");
 		return ERROR_FAIL;
 	} else if ((in_status & 0xf) == OR1K_MOHORDBGIF_CMD_OK) {
 		/*LOG_DEBUG(" debug IF go command OK");*/
 	} else {
-		LOG_ERROR(" debug IF go command: Unknown status (%d)"
+		LOG_ERROR("Debug IF go command: Unknown status (%d)"
 			  , in_status);
 		return ERROR_FAIL;
 	}
@@ -731,6 +713,7 @@ static int or1k_mohor_jtag_read_cpu_cr(struct or1k_jtag *jtag_info,
 	struct or1k_tap_ip *tap_ip = jtag_info->tap_ip;
 	struct scan_field fields[8];
 	int extra_bit_fix = 0;
+	int retval;
 	uint32_t out_module_select_bit;
 	uint32_t out_cmd;
 	uint32_t out_crc;
@@ -781,6 +764,8 @@ static int or1k_mohor_jtag_read_cpu_cr(struct or1k_jtag *jtag_info,
 	fields[2].out_value = (uint8_t *)&out_crc;
 	fields[2].in_value = NULL;
 
+	/* When used with virtual jtag tap, add one extra bit while reading
+	 * to compensate for TDO extra registering in mohor du. */
 	if (!strcmp(tap_ip->name, "vjtag"))
 		extra_bit_fix = 1;
 
@@ -810,11 +795,13 @@ static int or1k_mohor_jtag_read_cpu_cr(struct or1k_jtag *jtag_info,
 
 	jtag_add_dr_scan(tap, 8, fields, TAP_IDLE);
 
-	if (jtag_execute_queue() != ERROR_OK) {
-		LOG_ERROR(" performing CPU CR read failed");
-		return ERROR_FAIL;
+	retval = jtag_execute_queue();
+	if (retval != ERROR_OK) {
+		LOG_ERROR("Performing CPU CR read failed");
+		return retval;
 	}
 
+	/* Remove extra bit fix */
 	if (!strcmp(tap_ip->name, "vjtag"))
 		*value >>= 1;
 
@@ -826,18 +813,18 @@ static int or1k_mohor_jtag_read_cpu_cr(struct or1k_jtag *jtag_info,
 	expected_in_crc = mohor_compute_crc(expected_in_crc, in_status, 4);
 
 	if (in_crc != expected_in_crc) {
-		LOG_ERROR(" received CRC (0x%08x) not same as calculated CRC (0x%08x)"
+		LOG_ERROR("Received CRC (0x%08x) not same as calculated CRC (0x%08x)"
 			  , in_crc, expected_in_crc);
 		return ERROR_FAIL;
 	}
 
 	if (in_status & OR1K_MOHORDBGIF_CMD_CRC_ERROR) {
-		LOG_ERROR(" debug IF CPU CR read status: CRC error");
+		LOG_ERROR("Debug IF CPU CR read status: CRC error");
 		return ERROR_FAIL;
 	} else if ((in_status & 0xf) == OR1K_MOHORDBGIF_CMD_OK) {
 		/*LOG_DEBUG(" debug IF CPU CR read OK");*/
 	} else {
-		LOG_ERROR(" debug IF CPU CR read: Unknown status (%d)"
+		LOG_ERROR("Debug IF CPU CR read: Unknown status (%d)"
 			  , in_status);
 		return ERROR_FAIL;
 	}
@@ -851,6 +838,7 @@ static int or1k_mohor_jtag_write_cpu_cr(struct or1k_jtag *jtag_info, uint32_t *v
 	struct or1k_tap_ip *tap_ip = jtag_info->tap_ip;
 	struct scan_field fields[8];
 	int extra_bit_fix = 0;
+	int retval;
 	uint32_t out_module_select_bit;
 	uint32_t out_cmd;
 	uint32_t out_crc;
@@ -919,6 +907,8 @@ static int or1k_mohor_jtag_write_cpu_cr(struct or1k_jtag *jtag_info, uint32_t *v
 	fields[5].out_value = (uint8_t *)&out_crc;
 	fields[5].in_value = NULL;
 
+	/* When used with virtual jtag tap, add one extra bit while reading
+	 * to compensate for TDO extra registering in mohor du. */
 	if (!strcmp(tap_ip->name, "vjtag"))
 		extra_bit_fix = 1;
 
@@ -934,11 +924,13 @@ static int or1k_mohor_jtag_write_cpu_cr(struct or1k_jtag *jtag_info, uint32_t *v
 
 	jtag_add_dr_scan(tap, 8, fields, TAP_IDLE);
 
-	if (jtag_execute_queue() != ERROR_OK) {
-		LOG_ERROR(" performing CPU CR write failed");
-		return ERROR_FAIL;
+	retval = jtag_execute_queue();
+	if (retval != ERROR_OK) {
+		LOG_ERROR("Performing CPU CR write failed");
+		return retval;
 	}
 
+	/* Remove extra bit fix */
 	if (!strcmp(tap_ip->name, "vjtag"))
 		in_status >>= 1;
 
@@ -948,18 +940,18 @@ static int or1k_mohor_jtag_write_cpu_cr(struct or1k_jtag *jtag_info, uint32_t *v
 
 	/* Check CRCs now */
 	if (in_crc != expected_in_crc) {
-		LOG_ERROR(" received CRC (0x%08x) not same as calculated CRC (0x%08x)"
+		LOG_ERROR("Received CRC (0x%08x) not same as calculated CRC (0x%08x)"
 			  , in_crc, expected_in_crc);
 		return ERROR_FAIL;
 	}
 
 	if (in_status & OR1K_MOHORDBGIF_CMD_CRC_ERROR) {
-		LOG_ERROR(" debug IF CPU CR write status: CRC error");
+		LOG_ERROR("Debug IF CPU CR write status: CRC error");
 		return ERROR_FAIL;
 	} else if ((in_status & 0xf) == OR1K_MOHORDBGIF_CMD_OK) {
-		LOG_DEBUG(" debug IF CPU CR write OK");
+		LOG_DEBUG("Debug IF CPU CR write OK");
 	} else {
-		LOG_ERROR(" debug IF module select status: Unknown status (%d)"
+		LOG_ERROR("Debug IF module select status: Unknown status (%d)"
 			  , in_status);
 		return ERROR_FAIL;
 	}
