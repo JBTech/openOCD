@@ -364,145 +364,7 @@ static int or1k_jtag_mohor_debug_set_command(struct or1k_jtag *jtag_info,
 
 }
 
-static int or1k_jtag_mohor_debug_single_read_go(struct or1k_jtag *jtag_info,
-					 int type_size_bytes,
-					 int length,
-					 uint8_t *data)
-{
-	struct jtag_tap *tap;
-	struct or1k_tap_ip *tap_ip = jtag_info->tap_ip;
-	struct scan_field *fields;
-	int extra_field = 0;
-	int num_data_fields = length * type_size_bytes;
-	int retval;
-	int i;
-	uint32_t out_module_select_bit;
-	uint32_t out_cmd;
-	uint32_t out_crc;
-	uint32_t in_status;
-	uint32_t in_crc;
-	uint32_t expected_in_crc;
-
-	LOG_DEBUG("Doing mohor debug read go for %d bytes", (type_size_bytes *
-							    length));
-
-	tap = jtag_info->tap;
-	if (tap == NULL)
-		return ERROR_FAIL;
-
-	/*
-	 * Debug GO
-	 * Send:
-	 * {1'0, 4'gocmd,32'crc, ((len-1)*8)+4+32'x                 }
-	 * Receive:
-	 * {37'x               , ((len-1)*8)'data, 4'status, 32'crc }
-	 */
-
-	fields = malloc((num_data_fields + 6) * sizeof(struct scan_field));
-
-	/* 1st bit is module select, set to '0', we're not selecting a module */
-	out_module_select_bit = 0;
-
-	fields[0].num_bits = 1;
-	fields[0].out_value = (uint8_t *)&out_module_select_bit;
-	fields[0].in_value = NULL;
-
-	/* Instruction: go command , 4-bits */
-	out_cmd = flip_u32(OR1K_MOHORDBGIF_CPU_MODULE_CMD_GO, 4);
-	fields[1].num_bits = 4;
-	fields[1].out_value = (uint8_t *)&out_cmd;
-	fields[1].in_value = NULL;
-
-	/* CRC calculations */
-	out_crc = 0xffffffff;
-	out_crc = mohor_compute_crc(out_crc, out_module_select_bit, 1);
-	out_crc = mohor_compute_crc(out_crc, out_cmd, 4);
-
-	/* CRC going out */
-	fields[2].num_bits = 32;
-	fields[2].out_value = (uint8_t *)&out_crc;
-	fields[2].in_value = NULL;
-
-	if (!strcmp(tap_ip->name, "vjtag"))
-		extra_field = 1;
-
-	fields[3].num_bits = extra_field;
-	fields[3].out_value = NULL;
-	fields[3].in_value = NULL;
-
-	for (i = 0; i < num_data_fields; i++) {
-		fields[4 + i].num_bits = 8;
-		fields[4 + i].out_value = NULL;
-		fields[4 + i].in_value = &data[i];
-	}
-
-	/* Status coming in */
-	fields[4 + num_data_fields].num_bits = 4;
-	fields[4 + num_data_fields].out_value = NULL;
-	fields[4 + num_data_fields].in_value = (uint8_t *)&in_status;
-
-	/* CRC coming in */
-	fields[4 + num_data_fields + 1].num_bits = 32;
-	fields[4 + num_data_fields + 1].out_value = NULL;
-	fields[4 + num_data_fields + 1].in_value = (uint8_t *)&in_crc;
-
-	jtag_add_dr_scan(tap, 3 + num_data_fields + 3, fields, TAP_IDLE);
-
-	retval = jtag_execute_queue();
-	if (retval != ERROR_OK) {
-		LOG_ERROR("Performing GO command failed");
-		free(fields);
-		return retval;
-	}
-
-	/* Calculate expected CRC for data and status */
-	expected_in_crc = 0xffffffff;
-	for (i = 0; i < num_data_fields; i++) {
-		expected_in_crc = mohor_compute_crc(expected_in_crc, data[i], 8);
-		data[i] = flip_u32((uint32_t)data[i], 8);
-		LOG_DEBUG("%02x", data[i] & 0xff);
-	}
-
-	expected_in_crc = mohor_compute_crc(expected_in_crc, in_status, 4);
-
-	if (in_crc != expected_in_crc) {
-		LOG_ERROR(" received CRC (0x%08x) not same as calculated CRC (0x%08x)"
-			  , in_crc, expected_in_crc);
-		goto error_finish;
-	}
-
-	if (in_status & OR1K_MOHORDBGIF_CMD_CRC_ERROR) {
-		LOG_ERROR(" debug IF go command status: CRC error");
-		goto error_finish;
-	} else if (in_status & OR1K_MOHORDBGIF_CMD_WB_ERROR) {
-		LOG_ERROR(" debug IF go command status: Wishbone error");
-		goto error_finish;
-	} else if (in_status & OR1K_MOHORDBGIF_CMD_OURUN_ERROR) {
-		LOG_ERROR(" debug IF go command status: Overrun/underrun error"
-			);
-		/*goto error_finish*/
-	} else if ((in_status & 0xf) == OR1K_MOHORDBGIF_CMD_OK) {
-		/*LOG_DEBUG(" debug IF go command OK");*/
-	} else {
-		LOG_ERROR(" debug IF go command: Unknown status (%d)",
-			  in_status);
-		goto error_finish;
-	}
-
-	/* Free fields*/
-	free(fields);
-
-	return ERROR_OK;
-
-error_finish:
-
-	/* Free fields*/
-	free(fields);
-
-	return ERROR_FAIL;
-}
-
-static int or1k_jtag_mohor_debug_multiple_read_go(struct or1k_jtag *jtag_info,
+static int or1k_jtag_mohor_debug_read_go(struct or1k_jtag *jtag_info,
 					   int type_size_bytes, int length,
 					   uint8_t *data)
 {
@@ -510,7 +372,8 @@ static int or1k_jtag_mohor_debug_multiple_read_go(struct or1k_jtag *jtag_info,
 	struct or1k_tap_ip *tap_ip = jtag_info->tap_ip;
 	struct scan_field *fields;
 	int num_bytes = length * type_size_bytes;
-	int num_32bit_fields = 0;
+	int num_32bit_fields;
+	int spare_bytes;
 	int num_data_fields;
 	int i;
 	int extra_bit_fix = 0;
@@ -539,22 +402,11 @@ static int or1k_jtag_mohor_debug_multiple_read_go(struct or1k_jtag *jtag_info,
 	 * {37'x               , ((len-1)*8)'data, 4'status, 32'crc }
 	 */
 
-	/* Figure out how many data fields we'll need. At present just do 1
-	   per byte, but in future, maybe figure out how we can do as many
-	   32-bit fields as possible - might speed things up? */
+	num_32bit_fields = (length * type_size_bytes) / 4;
+	spare_bytes = (length * type_size_bytes) % 4;
+	num_data_fields = num_32bit_fields + !!spare_bytes;
 
-	/* Right now, only support word maths */
-	assert(type_size_bytes == 4);
-	if (type_size_bytes == 4)
-		num_32bit_fields = num_bytes / 4;
-
-	num_data_fields = num_32bit_fields;
-	printf("num data fields:%d, num bytes: %d\n",
-	       num_data_fields, num_bytes);
-	assert((num_32bit_fields * 4) == num_bytes);
-
-	LOG_DEBUG("Number of data fields: %d", num_data_fields);
-	fields = malloc((num_32bit_fields + 6) * sizeof(struct scan_field));
+	fields = malloc((num_data_fields + 6) * sizeof(struct scan_field));
 
 	/* 1st bit is module select, set to '0', we're not selecting a module */
 	out_module_select_bit = 0;
@@ -592,18 +444,24 @@ static int or1k_jtag_mohor_debug_multiple_read_go(struct or1k_jtag *jtag_info,
 		fields[4 + i].in_value = &data[i * 4];
 	}
 
+	if (spare_bytes) {
+		fields[4 + i].num_bits = spare_bytes * 8;
+		fields[4 + i].out_value = &data[i * 4];
+		fields[4 + i].in_value = NULL;
+	}
+
 	/* Status coming in */
-	fields[4 + num_32bit_fields].num_bits = 4;
-	fields[4 + num_32bit_fields].out_value = NULL;
-	fields[4 + num_32bit_fields].in_value = (uint8_t *)&in_status;
+	fields[4 + num_data_fields].num_bits = 4;
+	fields[4 + num_data_fields].out_value = NULL;
+	fields[4 + num_data_fields].in_value = (uint8_t *)&in_status;
 
 	/* CRC coming in */
-	fields[4 + num_32bit_fields + 1].num_bits = 32;
-	fields[4 + num_32bit_fields + 1].out_value = NULL;
-	fields[4 + num_32bit_fields + 1].in_value = (uint8_t *)&in_crc;
+	fields[4 + num_data_fields + 1].num_bits = 32;
+	fields[4 + num_data_fields + 1].out_value = NULL;
+	fields[4 + num_data_fields + 1].in_value = (uint8_t *)&in_crc;
 
 	/* Execute the final bits */
-	jtag_add_dr_scan(tap, num_32bit_fields + 6, fields, TAP_IDLE);
+	jtag_add_dr_scan(tap, num_data_fields + 6, fields, TAP_IDLE);
 
 	if (jtag_execute_queue() != ERROR_OK) {
 		LOG_ERROR("performing GO command failed");
@@ -615,7 +473,6 @@ static int or1k_jtag_mohor_debug_multiple_read_go(struct or1k_jtag *jtag_info,
 	for (i = 0; i < num_bytes; i++) {
 		expected_in_crc = mohor_compute_crc(expected_in_crc, data[i], 8);
 		data[i] = flip_u32((uint32_t)data[i], 8);
-		LOG_DEBUG("%02x", data[i] & 0xff);
 	}
 
 	expected_in_crc = mohor_compute_crc(expected_in_crc, in_status, 4);
@@ -656,21 +513,6 @@ error_finish:
 
 	return ERROR_FAIL;
 
-}
-
-static int or1k_jtag_mohor_debug_read_go(struct or1k_jtag *jtag_info,
-				  int type_size_bytes,
-				  int length,
-				  uint8_t *data)
-{
-	if (length == 1)
-		return or1k_jtag_mohor_debug_single_read_go(jtag_info,
-							    type_size_bytes,
-							    length, data);
-	else
-		return or1k_jtag_mohor_debug_multiple_read_go(jtag_info,
-							      type_size_bytes,
-							      length, data);
 }
 
 int or1k_jtag_mohor_debug_write_go(struct or1k_jtag *jtag_info,
