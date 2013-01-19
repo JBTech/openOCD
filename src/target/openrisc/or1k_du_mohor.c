@@ -2,6 +2,9 @@
  *   Copyright (C) 2011 Julius Baxter                                      *
  *   julius@opencores.org                                                  *
  *                                                                         *
+ *   Copyright (C) 2013 by Franck Jullien                                  *
+ *   elec4fun@gmail.com                                                    *
+ *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
  *   the Free Software Foundation; either version 2 of the License, or     *
@@ -631,18 +634,22 @@ int or1k_jtag_mohor_debug_write_go(struct or1k_jtag *jtag_info,
 	if (in_status & OR1K_MOHORDBGIF_CMD_CRC_ERROR) {
 		LOG_ERROR("Debug IF go command status: CRC error");
 		return ERROR_FAIL;
+	} else if (in_status & OR1K_MOHORDBGIF_CMD_WB_ERROR) {
+		LOG_ERROR("Debug IF go command status: Wishbone error");
+		return ERROR_FAIL;
+	} else if (in_status & OR1K_MOHORDBGIF_CMD_OURUN_ERROR) {
+		/*LOG_ERROR("Debug IF go command status: Overrun/underrun error");*/
 	} else if ((in_status & 0xf) == OR1K_MOHORDBGIF_CMD_OK) {
 		/*LOG_DEBUG(" debug IF go command OK");*/
 	} else {
-		LOG_ERROR("Debug IF go command: Unknown status (%d)"
-			  , in_status);
+		LOG_ERROR("Debug IF go command: Unknown status (%d)",
+			  in_status);
 		return ERROR_FAIL;
 	}
 
 	return ERROR_OK;
 }
 
-/* Currently hard set in functions to 32-bits */
 static int or1k_mohor_jtag_read_cpu(struct or1k_jtag *jtag_info,
 		uint32_t addr, int count, uint32_t *value)
 {
@@ -1029,27 +1036,32 @@ static int or1k_mohor_jtag_read_memory32(struct or1k_jtag *jtag_info,
 			    uint32_t addr, int count, uint32_t *buffer)
 {
 	int i;
+	int retval;
+
+	LOG_DEBUG("Reading WB32 at 0x%08x", addr);
 
 	if (!jtag_info->or1k_jtag_inited)
 		or1k_mohor_jtag_init(jtag_info);
 
-	if (jtag_info->or1k_jtag_module_selected != OR1K_MOHORDBGIF_MODULE_WB)
-		or1k_jtag_mohor_debug_select_module(jtag_info,
+	if (jtag_info->or1k_jtag_module_selected != OR1K_MOHORDBGIF_MODULE_WB) {
+		retval = or1k_jtag_mohor_debug_select_module(jtag_info,
 						    OR1K_MOHORDBGIF_MODULE_WB);
+		if (retval != ERROR_OK)
+			return retval;
+	}
 
-	/* transfers of size>1 !working currently. >:(
-	   so loop through count data words and read one at a time*/
+	/* At the moment, old Mohor can't read multiple bytes */
 	for (i = 0; i < count; i++) {
 		/* Set command register to read a single word */
-		if (or1k_jtag_mohor_debug_set_command(jtag_info,
-					      OR1K_MOHORDBGIF_WB_ACC_READ32,
-					      addr + 4 * i,
-					      4) != ERROR_OK)
-			return ERROR_FAIL;
+		retval = or1k_jtag_mohor_debug_set_command(jtag_info,
+							   OR1K_MOHORDBGIF_WB_ACC_READ32,
+							   addr + 4 * i, 4);
+		if (retval != ERROR_OK)
+			return retval;
 
-		if (or1k_jtag_mohor_debug_read_go(jtag_info, 4, 1, (uint8_t *)&buffer[i])
-				!= ERROR_OK)
-			return ERROR_FAIL;
+		retval = or1k_jtag_mohor_debug_read_go(jtag_info, 4, 1, (uint8_t *)&buffer[i]);
+		if (retval != ERROR_OK)
+			return retval;
 	}
 
 	return ERROR_OK;
@@ -1058,35 +1070,68 @@ static int or1k_mohor_jtag_read_memory32(struct or1k_jtag *jtag_info,
 static int or1k_mohor_jtag_read_memory16(struct or1k_jtag *jtag_info,
 			    uint32_t addr, int count, uint16_t *buffer)
 {
-	/* TODO - this function! */
+	int i;
+	int retval;
+
+	LOG_DEBUG("Reading WB16 at 0x%08x", addr);
+
+	if (!jtag_info->or1k_jtag_inited)
+		or1k_mohor_jtag_init(jtag_info);
+
+	if (jtag_info->or1k_jtag_module_selected != OR1K_MOHORDBGIF_MODULE_WB) {
+		retval = or1k_jtag_mohor_debug_select_module(jtag_info,
+						    OR1K_MOHORDBGIF_MODULE_WB);
+		if (retval != ERROR_OK)
+			return retval;
+	}
+
+	/* At the moment, old Mohor can't read multiple bytes */
+	for (i = 0; i < count; i++) {
+		/* Set command register to read a single word */
+		retval = or1k_jtag_mohor_debug_set_command(jtag_info,
+							   OR1K_MOHORDBGIF_WB_ACC_READ16,
+							   addr + 2 * i, 2);
+		if (retval != ERROR_OK)
+			return retval;
+
+		retval = or1k_jtag_mohor_debug_read_go(jtag_info, 2, 1, (uint8_t *)&buffer[i]);
+		if (retval != ERROR_OK)
+			return retval;
+	}
+
 	return ERROR_OK;
 }
 
 static int or1k_mohor_jtag_read_memory8(struct or1k_jtag *jtag_info,
 			   uint32_t addr, int count, uint8_t *buffer)
 {
+	int i;
+	int retval;
+
+	LOG_DEBUG("Reading WB8 at 0x%08x", addr);
+
 	if (!jtag_info->or1k_jtag_inited)
 		or1k_mohor_jtag_init(jtag_info);
 
-	if (jtag_info->or1k_jtag_module_selected != OR1K_MOHORDBGIF_MODULE_WB)
-		or1k_jtag_mohor_debug_select_module(jtag_info,
+	if (jtag_info->or1k_jtag_module_selected != OR1K_MOHORDBGIF_MODULE_WB) {
+		retval = or1k_jtag_mohor_debug_select_module(jtag_info,
 						    OR1K_MOHORDBGIF_MODULE_WB);
+		if (retval != ERROR_OK)
+			return retval;
+	}
 
 	/* At the moment, old Mohor can't read multiple bytes */
-	while (count) {
-		/* Set command register to read a single byte */
-		if (or1k_jtag_mohor_debug_set_command(jtag_info,
-						      OR1K_MOHORDBGIF_WB_ACC_READ8,
-						      addr,
-						      1) != ERROR_OK)
-			return ERROR_FAIL;
+	for (i = 0; i < count; i++) {
+		/* Set command register to read a single word */
+		retval = or1k_jtag_mohor_debug_set_command(jtag_info,
+							   OR1K_MOHORDBGIF_WB_ACC_READ8,
+							   addr + i, 1);
+		if (retval != ERROR_OK)
+			return retval;
 
-		if (or1k_jtag_mohor_debug_read_go(jtag_info, 1, 1, (uint8_t *)buffer)
-		    != ERROR_OK)
-			return ERROR_FAIL;
-
-		count--;
-		buffer++;
+		retval = or1k_jtag_mohor_debug_read_go(jtag_info, 1, 1, (uint8_t *)&buffer[i]);
+		if (retval != ERROR_OK)
+			return retval;
 	}
 
 	return ERROR_OK;
@@ -1136,7 +1181,7 @@ static int or1k_mohor_jtag_write_memory16(struct or1k_jtag *jtag_info,
 
 	retval = or1k_jtag_mohor_debug_set_command(jtag_info,
 						   OR1K_MOHORDBGIF_WB_ACC_WRITE16,
-						   addr, count);
+						   addr, count * 2);
 	if (retval != ERROR_OK)
 		return retval;
 
