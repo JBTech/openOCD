@@ -110,7 +110,7 @@ static uint32_t mohor_compute_crc(uint32_t crc_in, uint32_t data_in, int length_
 	unsigned int d, c;
 	uint32_t crc_out = crc_in;
 
-	for (i = 0; i < length_bits; i = i+1) {
+	for (i = 0; i < length_bits; i++) {
 		d = ((data_in >> i) & 0x1) ? 0xffffffff : 0;
 		c = (crc_out & 0x1) ? 0xffffffff : 0;
 		crc_out = crc_out >> 1;
@@ -127,6 +127,7 @@ static int or1k_jtag_mohor_debug_select_module(struct or1k_jtag *jtag_info,
 	struct or1k_tap_ip *tap_ip = jtag_info->tap_ip;
 	struct scan_field fields[5];
 	int extra_bit_fix = 0;
+	int retval;
 	uint32_t out_module_select_bit;
 	uint32_t out_module;
 	uint32_t out_crc;
@@ -166,7 +167,6 @@ static int or1k_jtag_mohor_debug_select_module(struct or1k_jtag *jtag_info,
 	fields[1].in_value = NULL;
 
 	/* CRC calculations */
-
 	out_crc = 0xffffffff;
 	out_crc = mohor_compute_crc(out_crc, out_module_select_bit, 1);
 	out_crc = mohor_compute_crc(out_crc, out_module, 4);
@@ -176,6 +176,8 @@ static int or1k_jtag_mohor_debug_select_module(struct or1k_jtag *jtag_info,
 	fields[2].out_value = (uint8_t *)&out_crc;
 	fields[2].in_value = NULL;
 
+	/* When used with virtual jtag tap, add one extra bit while reading
+	 * to compensate for TDO extra registering in mohor du. */
 	if (!strcmp(tap_ip->name, "vjtag"))
 		extra_bit_fix = 1;
 
@@ -193,9 +195,10 @@ static int or1k_jtag_mohor_debug_select_module(struct or1k_jtag *jtag_info,
 
 	jtag_add_dr_scan(tap, 5, fields, TAP_IDLE);
 
-	if (jtag_execute_queue() != ERROR_OK) {
+	retval = jtag_execute_queue();
+	if (retval != ERROR_OK) {
 		LOG_ERROR("Performing module change failed");
-		return ERROR_FAIL;
+		return retval;
 	}
 
 	if (!strcmp(tap_ip->name, "vjtag"))
@@ -240,6 +243,7 @@ static int or1k_jtag_mohor_debug_set_command(struct or1k_jtag *jtag_info,
 	struct or1k_tap_ip *tap_ip = jtag_info->tap_ip;
 	struct scan_field fields[8];
 	int extra_bit_fix = 0;
+	int retval;
 	uint32_t out_module_select_bit;
 	uint32_t out_cmd;
 	uint32_t out_crc;
@@ -295,7 +299,6 @@ static int or1k_jtag_mohor_debug_set_command(struct or1k_jtag *jtag_info,
 	fields[4].out_value = (uint8_t *)&out_length_bytes;
 	fields[4].in_value = NULL;
 
-
 	/* CRC calculations */
 	out_crc = 0xffffffff;
 	out_crc = mohor_compute_crc(out_crc, out_module_select_bit, 1);
@@ -309,6 +312,8 @@ static int or1k_jtag_mohor_debug_set_command(struct or1k_jtag *jtag_info,
 	fields[5].out_value = (uint8_t *)&out_crc;
 	fields[5].in_value = NULL;
 
+	/* When used with virtual jtag tap, add one extra bit while reading
+	 * to compensate for TDO extra registering in mohor du. */
 	if (!strcmp(tap_ip->name, "vjtag"))
 		extra_bit_fix = 1;
 
@@ -324,9 +329,10 @@ static int or1k_jtag_mohor_debug_set_command(struct or1k_jtag *jtag_info,
 
 	jtag_add_dr_scan(tap, 8, fields, TAP_IDLE);
 
-	if (jtag_execute_queue() != ERROR_OK) {
+	retval = jtag_execute_queue();
+	if (retval != ERROR_OK) {
 		LOG_ERROR(" performing CPU CR write failed");
-		return ERROR_FAIL;
+		return retval;
 	}
 
 	if (!strcmp(tap_ip->name, "vjtag"))
@@ -366,21 +372,19 @@ static int or1k_jtag_mohor_debug_single_read_go(struct or1k_jtag *jtag_info,
 	struct jtag_tap *tap;
 	struct or1k_tap_ip *tap_ip = jtag_info->tap_ip;
 	struct scan_field *fields;
-	int i;
 	int extra_field = 0;
 	int num_data_fields = length * type_size_bytes;
+	int retval;
+	int i;
 	uint32_t out_module_select_bit;
 	uint32_t out_cmd;
 	uint32_t out_crc;
-	uint32_t in_status = 0;
+	uint32_t in_status;
 	uint32_t in_crc;
 	uint32_t expected_in_crc;
 
 	LOG_DEBUG("Doing mohor debug read go for %d bytes", (type_size_bytes *
 							    length));
-
-	assert(type_size_bytes > 0);
-	assert(type_size_bytes < 5);
 
 	tap = jtag_info->tap;
 	if (tap == NULL)
@@ -394,11 +398,6 @@ static int or1k_jtag_mohor_debug_single_read_go(struct or1k_jtag *jtag_info,
 	 * {37'x               , ((len-1)*8)'data, 4'status, 32'crc }
 	 */
 
-	/* Figure out how many data fields we'll need. At present just do 1
-	   per byte, but in future, maybe figure out how we can do as many
-	   32-bit fields as possible - might speed things up? */
-
-	LOG_DEBUG("Number of data fields: %d", num_data_fields);
 	fields = malloc((num_data_fields + 6) * sizeof(struct scan_field));
 
 	/* 1st bit is module select, set to '0', we're not selecting a module */
@@ -449,9 +448,11 @@ static int or1k_jtag_mohor_debug_single_read_go(struct or1k_jtag *jtag_info,
 
 	jtag_add_dr_scan(tap, 3 + num_data_fields + 3, fields, TAP_IDLE);
 
-	if (jtag_execute_queue() != ERROR_OK) {
-		LOG_ERROR("performing GO command failed");
-		goto error_finish;
+	retval = jtag_execute_queue();
+	if (retval != ERROR_OK) {
+		LOG_ERROR("Performing GO command failed");
+		free(fields);
+		return retval;
 	}
 
 	/* Calculate expected CRC for data and status */
