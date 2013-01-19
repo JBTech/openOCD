@@ -699,7 +699,7 @@ static int adbg_wb_burst_write(struct or1k_jtag *jtag_info, const void *data, in
 	LOG_DEBUG("Doing burst write, word size %d, word count %d, start address 0x%08lx",
 	word_size_bytes, word_count, start_address);
 
-	word_size_bits = word_size_bytes << 3;
+	word_size_bits = word_size_bytes * 8;
 
 	/* Select the appropriate opcode */
 	switch (jtag_info->or1k_jtag_module_selected) {
@@ -752,15 +752,13 @@ retry_full_write:
 	spare_bytes = total_size_bytes % 4;
 
 	/* Allocate correct number of scan fields */
-	field = malloc((word_count + 1) * sizeof(struct scan_field));
+	field = malloc((word_count + 2) * sizeof(struct scan_field));
 
 	/* Write a start bit so it knows when to start counting */
 	value = 1;
 	field[0].num_bits = 1;
 	field[0].out_value = &value;
 	field[0].in_value = NULL;
-
-	jtag_add_dr_scan(tap, 1, &field[0], TAP_DRSHIFT);
 
 	crc_calc = 0xffffffff;
 	for (i = 0; i < word_count; i++) {
@@ -781,22 +779,20 @@ retry_full_write:
 
 	nb_fields = 0;
 	for (i = 0; i < total_size_32; i++) {
-		field[i].num_bits = 32;
-		field[i].out_value = &out_buffer[i * 4];
-		field[i].in_value = NULL;
+		field[i + 1].num_bits = 32;
+		field[i + 1].out_value = &out_buffer[i * 4];
+		field[i + 1].in_value = NULL;
 		nb_fields++;
 	}
 
 	if (spare_bytes) {
-		field[i].num_bits = spare_bytes * 8;
-		field[i].out_value = &out_buffer[i * 4];
-		field[i].in_value = NULL;
+		field[i + 1].num_bits = spare_bytes * 8;
+		field[i + 1].out_value = &out_buffer[i * 4];
+		field[i + 1].in_value = NULL;
 		nb_fields++;
 	}
 
-	jtag_add_dr_scan(tap, nb_fields, field, TAP_DRSHIFT);
-
-	jtag_execute_queue();
+	jtag_add_dr_scan(tap, nb_fields + 1, field, TAP_DRSHIFT);
 
 	/* Read the 'CRC match' bit, and go to idle */
 	field[0].num_bits = 1;
