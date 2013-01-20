@@ -85,7 +85,7 @@
  */
 #define OR1K_JTAG_MOHOR_DBG_CRC_POLY			0xedb88320
 
-static const char *chain_name[] = {"WISHBONE", "CPU0", "CPU1", "JSP"};
+static const char * const chain_name[] = {"WISHBONE", "CPU0", "CPU1", "JSP"};
 
 static int or1k_mohor_jtag_init(struct or1k_jtag *jtag_info)
 {

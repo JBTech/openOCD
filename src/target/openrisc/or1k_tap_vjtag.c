@@ -82,7 +82,7 @@ static unsigned char guess_addr_width(unsigned char number_of_nodes)
 
 	while (number_of_nodes) {
 		number_of_nodes >>= 1;
-		width ++;
+		width++;
 	}
 
 	return width;

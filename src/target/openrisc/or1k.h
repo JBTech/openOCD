@@ -136,7 +136,7 @@ enum or1k_debug_reg_nums {
 /* OR1K Debug registers and bits needed for resuming */
 #define OR1K_DEBUG_REG_BASE	(6 << 11)                  /* Debug registers Base address */
 #define OR1K_DMR1_CPU_REG_ADD	(OR1K_DEBUG_REG_BASE + 16) /* Debug Mode Register 1 0x3010 */
-#define OR1K_DMR1_ST 		0x00400000                 /* Single-step trace */
+#define OR1K_DMR1_ST		0x00400000                 /* Single-step trace */
 #define OR1K_DMR1_BT		0x00800000                 /* Branch trace */
 #define OR1K_DMR2_WGB		0x003ff000                 /* Watchpoints generating breakpoint */
 #define OR1K_DSR_TE		0x00002000                 /* Trap exception */

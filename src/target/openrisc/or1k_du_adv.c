@@ -114,7 +114,7 @@
 #define STATUS_BYTES			1
 #define CRC_LEN				4
 
-static const char *chain_name[] = {"WISHBONE", "CPU0", "CPU1", "JSP"};
+static const char * const chain_name[] = {"WISHBONE", "CPU0", "CPU1", "JSP"};
 
 static uint32_t adbg_compute_crc(uint32_t crc, uint32_t data_in,
 				 int length_bits)
@@ -814,7 +814,7 @@ retry_full_write:
 		}
 	} else
 		LOG_DEBUG("CRC OK!\n");
-		
+
 #ifndef MORE_SPEED_NO_CONTROL
 
 	/* Now, read the error register, and retry/recompute as necessary */

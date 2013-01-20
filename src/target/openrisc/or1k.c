@@ -652,7 +652,6 @@ static int or1k_is_cpu_running(struct target *target, int *running)
 			continue;
 		} else
 			return ERROR_OK;
-		
 	}
 
 	LOG_WARNING("Could not re-establish communication with target");
@@ -748,7 +747,7 @@ static int or1k_resume_or_step(struct target *target, int current,
 	uint32_t debug_reg_list[OR1K_DEBUG_REG_NUM];
 
 	LOG_DEBUG("Addr: 0x%x, stepping: %s, handle breakpoints %s\n",
-		  address, step?"yes":"no", handle_breakpoints?"yes":"no");
+		  address, step ? "yes" : "no", handle_breakpoints ? "yes" : "no");
 
 	if (target->state != TARGET_HALTED) {
 		LOG_WARNING("Target not halted");
