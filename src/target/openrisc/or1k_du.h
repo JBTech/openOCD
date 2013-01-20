@@ -31,6 +31,9 @@
 #define CPU_RESET	0
 #define CPU_NOT_RESET	1
 
+int or1k_du_adv_register(void);
+int or1k_du_mohor_register(void);
+
 /* Linear list over all available or1k debug unit */
 extern struct list_head du_list;
 

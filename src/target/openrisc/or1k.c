@@ -42,12 +42,6 @@
 LIST_HEAD(tap_list);
 LIST_HEAD(du_list);
 
-extern int or1k_tap_vjtag_register(void);
-extern int or1k_tap_mohor_register(void);
-
-extern int or1k_du_mohor_register(void);
-extern int or1k_du_adv_register(void);
-
 static int or1k_read_core_reg(struct target *target, int num);
 static int or1k_write_core_reg(struct target *target, int num);
 

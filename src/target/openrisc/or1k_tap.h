@@ -28,6 +28,9 @@
 #include <helper/list.h>
 #include "or1k.h"
 
+int or1k_tap_vjtag_register(void);
+int or1k_tap_mohor_register(void);
+
 /* Linear list over all available or1k taps */
 extern struct list_head tap_list;
 

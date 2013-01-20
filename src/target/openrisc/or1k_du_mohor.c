@@ -378,7 +378,7 @@ static int or1k_jtag_mohor_debug_read_go(struct or1k_jtag *jtag_info,
 	uint32_t out_module_select_bit;
 	uint32_t out_cmd;
 	uint32_t out_crc;
-	uint32_t in_status = 0;
+	uint32_t in_status;
 	uint32_t in_crc;
 	uint32_t expected_in_crc;
 
@@ -511,7 +511,7 @@ int or1k_jtag_mohor_debug_write_go(struct or1k_jtag *jtag_info,
 	struct or1k_tap_ip *tap_ip = jtag_info->tap_ip;
 	struct scan_field *fields;
 	int num_bytes = length * type_size_bytes;
-	int num_data32_fields;
+	int num_32bit_fields;
 	int spare_bytes;
 	int num_data_fields;
 	int i;
@@ -539,12 +539,9 @@ int or1k_jtag_mohor_debug_write_go(struct or1k_jtag *jtag_info,
 	 * {37+((len-1)*8)'x                    , 4'status, 32'crc }
 	 */
 
-	num_data32_fields = num_bytes / 4;
+	num_32bit_fields = num_bytes / 4;
 	spare_bytes = num_bytes % 4;
-	num_data_fields = num_data32_fields + !!spare_bytes;
-
-	LOG_DEBUG("Doing mohor debug write go, %d 32-bit fields, %d 8-bit",
-		  num_data32_fields, spare_bytes);
+	num_data_fields = num_32bit_fields + !!spare_bytes;
 
 	fields = malloc((num_data_fields + 3) * sizeof(struct scan_field));
 
@@ -561,7 +558,7 @@ int or1k_jtag_mohor_debug_write_go(struct or1k_jtag *jtag_info,
 	fields[1].out_value = (uint8_t *)&out_cmd;
 	fields[1].in_value = NULL;
 
-	for (i = 0; i < num_data32_fields; i++) {
+	for (i = 0; i < num_32bit_fields; i++) {
 		fields[2 + i].num_bits = 32;
 		fields[2 + i].out_value = &data[i * 4];
 		fields[2 + i].in_value = NULL;
