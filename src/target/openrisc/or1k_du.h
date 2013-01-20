@@ -40,6 +40,7 @@ extern struct list_head du_list;
 struct or1k_du {
 	const char *name;
 	struct list_head list;
+	int options;
 
 	int (*or1k_jtag_init)(struct or1k_jtag *jtag_info);
 

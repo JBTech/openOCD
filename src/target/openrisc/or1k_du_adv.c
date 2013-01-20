@@ -37,6 +37,13 @@
 #include "target.h"
 #include "jtag/jtag.h"
 
+/* This an option to the adv debug unit.
+ * If this is defined, status bits will be skipped on burst
+ * reads and writes to improve download speeds.
+ * This option must match the RTL configured option.
+ */
+#define ADBG_USE_HISPEED	1
+
 /* Definitions for the top-level debug unit.  This really just consists
  * of a single register, used to select the active debug module ("chain").
  */
@@ -102,8 +109,6 @@
 #define DBG_CPU1_CMD_IREG_WR		0x9
 #define DBG_CPU1_CMD_IREG_SEL		0xd
 
-#define MORE_SPEED_NO_CONTROL
-
 #define MAX_READ_STATUS_WAIT		10
 #define MAX_READ_BUSY_RETRY		2
 #define MAX_READ_CRC_RETRY		2
@@ -113,6 +118,8 @@
 
 #define STATUS_BYTES			1
 #define CRC_LEN				4
+
+static struct or1k_du or1k_du_adv;
 
 static const char * const chain_name[] = {"WISHBONE", "CPU0", "CPU1", "JSP"};
 
@@ -171,6 +178,9 @@ static int or1k_adv_jtag_init(struct or1k_jtag *jtag_info)
 
 	jtag_info->current_reg_idx = malloc(DBG_MAX_MODULES * sizeof(unsigned long));
 	memset(jtag_info->current_reg_idx, 0, DBG_MAX_MODULES * sizeof(unsigned long));
+
+	if (or1k_du_adv.options & ADBG_USE_HISPEED)
+		LOG_INFO("adv debug unit is configured with option ADBG_USE_HISPEED");
 
 	LOG_DEBUG("Init done");
 
@@ -330,7 +340,7 @@ static int adbg_ctrl_write(struct or1k_jtag *jtag_info, unsigned long regidx,
 
 	num_32bit_fields = length_bits / 32;
 	spare_bits = length_bits % 32;
-	nb_fields = num_32bit_fields + !!spare_bits;
+	nb_fields = num_32bit_fields + !!spare_bits + 1;
 
 	field = malloc(nb_fields * sizeof(struct scan_field));
 
@@ -389,8 +399,9 @@ static int adbg_ctrl_read(struct or1k_jtag *jtag_info, uint32_t regidx,
 
 	/*LOG_DEBUG("Read control register %ld", regidx);*/
 
-	if (adbg_select_ctrl_reg(jtag_info, regidx) != ERROR_OK)
-		return ERROR_FAIL;
+	retval = adbg_select_ctrl_reg(jtag_info, regidx);
+	if (retval != ERROR_OK)
+		return retval;
 
 	/* There is no 'read' command, We write a NOP to read */
 	switch (jtag_info->or1k_jtag_module_selected) {
@@ -417,7 +428,7 @@ static int adbg_ctrl_read(struct or1k_jtag *jtag_info, uint32_t regidx,
 
 	num_32bit_fields = length_bits / 32;
 	spare_bits = length_bits % 32;
-	nb_fields = num_32bit_fields + !!spare_bits;
+	nb_fields = num_32bit_fields + !!spare_bits + 1;
 
 	field = malloc(nb_fields * sizeof(struct scan_field));
 
@@ -631,10 +642,9 @@ retry_read_full:
 	} else
 		LOG_DEBUG("CRC OK!");
 
-#ifndef MORE_SPEED_NO_CONTROL
-
 	/* Now, read the error register, and retry/recompute as necessary */
-	if (jtag_info->or1k_jtag_module_selected == DC_WISHBONE) {
+	if (jtag_info->or1k_jtag_module_selected == DC_WISHBONE &&
+	    !(or1k_du_adv.options & ADBG_USE_HISPEED)) {
 
 		uint32_t err_data[2] = {0, 0};
 		uint32_t addr;
@@ -672,8 +682,6 @@ retry_read_full:
 			goto retry_read_full;
 		}
 	}
-
-#endif
 
 out:
 	free(field);
@@ -761,7 +769,7 @@ static int adbg_wb_burst_write(struct or1k_jtag *jtag_info, const void *data, in
 	spare_bytes = total_size_bytes % 4;
 
 	/* Allocate correct number of scan fields */
-	nb_fields = num_32bit_fields + !!spare_bytes;
+	nb_fields = num_32bit_fields + !!spare_bytes + 1;
 	field = malloc(nb_fields * sizeof(struct scan_field));
 
 	out_buffer = malloc(total_size_bytes);
@@ -829,11 +837,9 @@ retry_full_write:
 	} else
 		LOG_DEBUG("CRC OK!\n");
 
-#ifndef MORE_SPEED_NO_CONTROL
-
 	/* Now, read the error register, and retry/recompute as necessary */
-	if (jtag_info->or1k_jtag_module_selected == DC_WISHBONE) {
-
+	if (jtag_info->or1k_jtag_module_selected == DC_WISHBONE &&
+	    !(or1k_du_adv.options & ADBG_USE_HISPEED)) {
 		uint32_t addr;
 		int bus_error_retries = 0;
 		uint32_t err_data[2] = {0, 0};
@@ -870,8 +876,6 @@ retry_full_write:
 			goto retry_full_write;
 		}
 	}
-
-#endif
 
 out:
 	free(out_buffer);
@@ -1142,7 +1146,8 @@ static int or1k_adv_jtag_write_memory8(struct or1k_jtag *jtag_info,
 }
 
 static struct or1k_du or1k_du_adv = {
-	.name = "adv",
+	.name                     = "adv",
+	.options                  = ADBG_USE_HISPEED,
 	.or1k_jtag_init           = or1k_adv_jtag_init,
 
 	.or1k_is_cpu_running      = or1k_adv_is_cpu_running,

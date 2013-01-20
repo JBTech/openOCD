@@ -12,8 +12,13 @@ gdb_port 50001
 # Select the TAP core we are using
 tap_select vjtag
 
-# Select the debug unit core we are using
-du_select adv
+# Select the debug unit core we are using. This debug unit as an option.
+
+# If ADBG_USE_HISPEED is set (options bit 1), status bits will be skipped
+# on burst reads and writes to improve download speeds.
+# This option must match the RTL configured option.
+
+du_select adv 1
 
 # Add a new register in the cpu register list. This register will be
 # included in the generated target descriptor file.

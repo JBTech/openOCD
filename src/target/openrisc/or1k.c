@@ -1242,8 +1242,9 @@ COMMAND_HANDLER(or1k_du_select_command_handler)
 	struct or1k_common *or1k = target_to_or1k(target);
 	struct or1k_jtag *jtag = &or1k->jtag;
 	struct or1k_du *or1k_du;
+	uint32_t options;
 
-	if (CMD_ARGC != 1)
+	if (CMD_ARGC > 2)
 		return ERROR_COMMAND_SYNTAX_ERROR;
 
 	list_for_each_entry(or1k_du, &du_list, list) {
@@ -1251,6 +1252,14 @@ COMMAND_HANDLER(or1k_du_select_command_handler)
 			if (!strcmp(CMD_ARGV[0], or1k_du->name)) {
 				jtag->du_core = or1k_du;
 				LOG_INFO("%s debug unit selected", or1k_du->name);
+
+				if (CMD_ARGC == 2) {
+					COMMAND_PARSE_NUMBER(u32, CMD_ARGV[1], options);
+					or1k_du->options = options;
+					LOG_INFO("Option %x is passed to %s debug unit"
+						 , options, or1k_du->name);
+				}
+
 				return ERROR_OK;
 			}
 		}
