@@ -214,17 +214,16 @@ int fileio_fgets(struct fileio *fileio_p, size_t size, void *buffer)
 int fileio_fprintf(struct fileio *fileio_p, char *format, ...)
 {
 	va_list argList;
+	int retval = ERROR_OK;
 
 	va_start(argList, format);
 
-	if (vfprintf(fileio_p->fp->file, format, argList) < 0) {
-		va_end(argList);
-		return ERROR_FILEIO_OPERATION_FAILED;
-	}
+	if (vfprintf(fileio_p->fp->file, format, argList) < 0)
+		retval = ERROR_FILEIO_OPERATION_FAILED;
 
 	va_end(argList);
 
-	return ERROR_OK;
+	return retval;
 }
 
 static int fileio_local_write(struct fileio_internal *fileio,
