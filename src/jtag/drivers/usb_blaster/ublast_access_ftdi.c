@@ -28,8 +28,6 @@
 #include <jtag/commands.h>
 
 #include "ublast_access.h"
-
-#if BUILD_USB_BLASTER_LIBFTDI
 #include <ftdi.h>
 
 static struct ftdi_context *ublast_getftdic(struct ublast_lowlevel *low)
@@ -153,10 +151,3 @@ struct ublast_lowlevel *ublast_register_ftdi(void)
 {
 	return &low;
 }
-
-#else
-struct ublast_lowlevel *ublast_register_ftdi(void)
-{
-	return NULL;
-}
-#endif

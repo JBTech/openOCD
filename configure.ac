@@ -987,7 +987,7 @@ if test $build_ft2232_ftd2xx = yes -o $build_presto_ftd2xx = yes -o $build_usb_b
       fi
     fi
     LDFLAGS="${LDFLAGS} ${FTD2XX_LDFLAGS}"
-    LIBS="${LIBS} ${FTD2XX_LIB}"
+    LIBS="${FTD2XX_LIB} ${LIBS}"
     AC_MSG_RESULT([${FTD2XX_LDFLAGS} ${FTD2XX_LIB}])
   else
     AC_CHECK_HEADER([ftd2xx.h],[],[
@@ -1084,7 +1084,7 @@ LDFLAGS=$LDFLAGS_SAVE
 CFLAGS=$CFLAGS_SAVE
 fi
 
-if test $build_ft2232_libftdi = yes ; then
+if test $build_ft2232_libftdi = yes -o $build_usb_blaster_libftdi = yes; then
   # We assume: the package is preinstalled in the proper place
   # these present as 2 libraries..
   LIBS="$LIBS -lftdi -lusb"
@@ -1208,6 +1208,7 @@ AM_CONDITIONAL([FT2232_LIBFTDI], [test $build_ft2232_libftdi = yes])
 AM_CONDITIONAL([FT2232_DRIVER], [test $build_ft2232_ftd2xx = yes -o $build_ft2232_libftdi = yes])
 AM_CONDITIONAL([FTDI_DRIVER], [test $build_ftdi = yes])
 AM_CONDITIONAL([USB_BLASTER_LIBFTDI], [test $build_usb_blaster_libftdi = yes])
+AM_CONDITIONAL([USB_BLASTER_FTD2XX], [test $build_usb_blaster_ftd2xx = yes])
 AM_CONDITIONAL(JTAG_VPI, test $build_jtag_vpi = yes -o $build_jtag_vpi = yes)
 AM_CONDITIONAL(ADV_DEBUG_SYS, test $build_adv_debug_sys = yes -o $build_adv_debug_sys = yes)
 AM_CONDITIONAL(ALTERA_VJTAG, test $build_altera_vjtag = yes -o $build_altera_vjtag = yes)
@@ -1341,6 +1342,7 @@ AC_CONFIG_FILES([
   src/helper/Makefile
   src/jtag/Makefile
   src/jtag/drivers/Makefile
+  src/jtag/drivers/usb_blaster/Makefile
   src/jtag/stlink/Makefile
   src/transport/Makefile
   src/xsvf/Makefile

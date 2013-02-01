@@ -29,7 +29,6 @@
 
 #include "ublast_access.h"
 
-#if BUILD_USB_BLASTER_FTD2XX
 #include <ftd2xx.h>
 #include "jtag/drivers/ftd2xx_common.h"
 
@@ -184,10 +183,3 @@ struct ublast_lowlevel *ublast_register_ftd2xx(void)
 {
 	return &low;
 }
-
-#else
-struct ublast_lowlevel *ublast_register_ftd2xx(void)
-{
-	return NULL;
-}
-#endif

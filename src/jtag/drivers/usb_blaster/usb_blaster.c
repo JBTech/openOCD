@@ -117,8 +117,12 @@ struct drvs_map {
 };
 
 static struct drvs_map lowlevel_drivers_map[] = {
+#if BUILD_USB_BLASTER_LIBFTDI
 	{ .name = "ftdi", .drv_register = ublast_register_ftdi },
+#endif
+#if BUILD_USB_BLASTER_FTD2XX
 	{ .name = "ftd2xx", .drv_register = ublast_register_ftd2xx },
+#endif
 	{ NULL, NULL },
 };
 
@@ -248,8 +252,7 @@ static void ublast_queue_byte(uint8_t abyte)
 	info.buf[info.bufidx++] = abyte;
 	if (nb_buf_remaining() == 0)
 		ublast_flush_buffer();
-	DEBUG_JTAG_IO("(byte=0x%02x) (TDI = %d, TMS = %d, TCK = %d, LED = %d, READ = %d)", abyte,
-			(abyte&TDI)?1:0, (abyte&TMS)?1:0, (abyte&TCK)?1:0, (abyte&LED)?1:0, (abyte&READ)?1:0);
+	DEBUG_JTAG_IO("(byte=0x%02x)", abyte);
 }
 
 /**
@@ -825,18 +828,6 @@ static int ublast_quit(void)
 	return info.drv->close(info.drv);
 }
 
-static int dummy_khz(int khz, int *jtag_speed)
-{
-	*jtag_speed =khz;
-	return ERROR_OK;
-}
-
-static int dummy_speed_div(int speed, int *khz)
-{
-	*khz = speed;
-	return ERROR_OK;
-}
-
 COMMAND_HANDLER(ublast_handle_device_desc_command)
 {
 	if (CMD_ARGC == 1)
@@ -948,9 +939,7 @@ struct jtag_interface usb_blaster_interface = {
 	.commands = ublast_command_handlers,
 	.supported = DEBUG_CAP_TMS_SEQ,
 	.transports = jtag_only,
-
-	.khz = &dummy_khz,
-	.speed_div = &dummy_speed_div,
+	.support_conf_speed = false,
 
 	.execute_queue = ublast_execute_queue,
 	.speed = ublast_speed,
