@@ -352,6 +352,8 @@ static int or1k_save_context(struct target *target)
 	struct or1k_common *or1k = target_to_or1k(target);
 	struct or1k_du *du_core = or1k_to_du(or1k);
 
+	LOG_DEBUG("-");
+
 	for (i = 0; i < OR1KNUMCOREREGS; i++) {
 		if (!or1k->core_cache->reg_list[i].valid) {
 			if (i == OR1K_REG_PPC || i == OR1K_REG_NPC || i == OR1K_REG_SR) {
@@ -538,7 +540,7 @@ static int or1k_generate_tdesc(struct target *target, const char *filename)
 	/* Create the tdesc file, prepare the header and set the architecture
 	 * to or32 in the file.
 	 */
-	retval = open_and_init_tdesc_file(&fileio, filename, "or32");
+	retval = open_and_init_tdesc_file(&fileio, filename, "or1k");
 	if (retval != ERROR_OK)
 		return retval;
 
@@ -550,7 +552,7 @@ static int or1k_generate_tdesc(struct target *target, const char *filename)
 	/* If we found some features associated with registers, create sections */
 	if (features != NULL) {
 		while (features[current_feature]) {
-			retval = generate_feature_section(target, &fileio, "or32", features[current_feature]);
+			retval = generate_feature_section(target, &fileio, "or1k", features[current_feature]);
 			if (retval != ERROR_OK)
 				return retval;
 			current_feature++;
@@ -559,7 +561,7 @@ static int or1k_generate_tdesc(struct target *target, const char *filename)
 
 	/* For registers without features, put them in "nogroup" feature */
 	if (count_reg_without_group(target) > 0) {
-		retval = generate_feature_section(target, &fileio, "or32", NULL);
+		retval = generate_feature_section(target, &fileio, "or1k", NULL);
 		if (retval != ERROR_OK)
 			return retval;
 	}
@@ -572,6 +574,8 @@ static int or1k_generate_tdesc(struct target *target, const char *filename)
 
 static int or1k_debug_entry(struct target *target)
 {
+	LOG_DEBUG("-");
+
 	/* Perhaps do more debugging entry (processor stalled) set up here */
 	or1k_save_context(target);
 	return ERROR_OK;
@@ -756,8 +760,7 @@ static int or1k_resume_or_step(struct target *target, int current,
 		buf_set_u32(or1k->core_cache->reg_list[OR1K_REG_NPC].value, 0,
 			    32, address);
 
-	if (!step)
-		or1k_restore_context(target);
+	or1k_restore_context(target);
 
 	/* read debug registers (starting from DMR1 register) */
 	du_core->or1k_jtag_read_cpu(&or1k->jtag, OR1K_DMR1_CPU_REG_ADD, OR1K_DEBUG_REG_NUM, debug_reg_list);
