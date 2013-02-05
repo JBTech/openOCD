@@ -746,11 +746,6 @@ static int ublast_execute_queue(void)
 	return ret;
 }
 
-static int ublast_speed(int speed)
-{
-	return info.drv->speed(info.drv, speed);
-}
-
 /**
  * ublast_init - Initialize the Altera device
  *
@@ -939,10 +934,7 @@ struct jtag_interface usb_blaster_interface = {
 	.commands = ublast_command_handlers,
 	.supported = DEBUG_CAP_TMS_SEQ,
 	.transports = jtag_only,
-	.support_conf_speed = false,
-
 	.execute_queue = ublast_execute_queue,
-	.speed = ublast_speed,
 	.init = ublast_init,
 	.quit = ublast_quit,
 };
