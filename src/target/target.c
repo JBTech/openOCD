@@ -435,16 +435,14 @@ int target_generate_tdesc_file(struct target *target, const char *filename)
 {
 	int retval;
 
-	if (target->type->generate_tdesc_file) {
+	if (target->type->generate_tdesc_file)
 		retval = target->type->generate_tdesc_file(target, filename);
-		if (retval != ERROR_OK)
-			return retval;
-	} else {
+	else {
 		LOG_ERROR("Target has no generate_tdesc_file");
-		return ERROR_FAIL;
+		retval = ERROR_FAIL;
 	}
 
-	return ERROR_OK;
+	return retval;
 }
 
 int target_poll(struct target *target)

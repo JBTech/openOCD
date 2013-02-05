@@ -2,7 +2,7 @@
  *   Copyright (C) 2013 by Franck Jullien                                  *
  *   elec4fun@gmail.com                                                    *
  *                                                                         *
- *   Inpired from adv_jtag_bridge which is:                                *
+ *   Inspired from adv_jtag_bridge which is:                                *
  *   Copyright (C) 2008-2010 Nathan Yawn                                   *
  *   nyawn@opencores.net                                                   *
  *                                                                         *

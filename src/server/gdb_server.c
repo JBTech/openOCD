@@ -14,7 +14,7 @@
  *   Copyright (C) ST-Ericsson SA 2011                                     *
  *   michel.jaouen@stericsson.com : smp minimum support                    *
  *                                                                         *
- *   Copyright (C) 2012 by Franck Jullien                                  *
+ *   Copyright (C) 2013 by Franck Jullien                                  *
  *   elec4fun@gmail.com : target description file support                  *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -1707,18 +1707,17 @@ static int prepare_file_chunks(struct target *target, const char *filename,
 	struct fileio fileio;
 	size_t read_bytes;
 	int filesize;
-	int retval;
 	char *filebuffer;
 
 	filebuffer = (char *)buffer;
 
-	retval = fileio_open(&fileio, filename, FILEIO_READ, FILEIO_BINARY);
+	int retval = fileio_open(&fileio, filename, FILEIO_READ, FILEIO_BINARY);
 	if (retval != ERROR_OK) {
 		target->remaining_xfer = -1;
 		return retval;
 	}
 
-	fileio_size(&fileio, &filesize);
+	retval = fileio_size(&fileio, &filesize);
 	if (retval != ERROR_OK)
 		goto error;
 
@@ -1897,8 +1896,10 @@ static int gdb_query_packet(struct connection *connection,
 				 "%s.xml", target->cmd_name);
 			if (fileio_exist(tdesc_filename) != FILE_EXIST) {
 				retval = target_generate_tdesc_file(target, tdesc_filename);
-				if (retval != ERROR_OK)
+				if (retval != ERROR_OK) {
+					free(tdesc_filename);
 					goto error;
+				}
 				target->gdb_tdesc_path = realloc(target->gdb_tdesc_path, strlen(tdesc_filename));
 				strcpy(target->gdb_tdesc_path, tdesc_filename);
 			}

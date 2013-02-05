@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2012 by Franck Jullien                                  *
+ *   Copyright (C) 2013 by Franck Jullien                                  *
  *   elec4fun@gmail.com                                                    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -37,12 +37,9 @@ int generate_feature_section(struct target *target, struct fileio *fileio,
 {
 	struct reg **reg_list;
 	int reg_list_size;
-	int retval;
-	int i;
-	int nogroup = 0;
-	int add_reg_to_group = 0;
+	bool nogroup = false;
 
-	retval = target_get_gdb_reg_list(target, &reg_list, &reg_list_size, FULL_LIST);
+	int retval = target_get_gdb_reg_list(target, &reg_list, &reg_list_size, FULL_LIST);
 	if (retval != ERROR_OK)
 		return retval;
 
@@ -50,46 +47,54 @@ int generate_feature_section(struct target *target, struct fileio *fileio,
 	 * it means we want to create a "nogroup" feature section.
 	 */
 	if ((feature_name != NULL && !strcmp(feature_name, "")) || feature_name == NULL)
-		nogroup = 1;
+		nogroup = true;
 
-	if (nogroup)
-		fileio_fprintf(fileio, "  <feature name=\"org.gnu.gdb.%s.%s\">\n",
-			       arch_name, "nogroup");
-	else
-		fileio_fprintf(fileio, "  <feature name=\"org.gnu.gdb.%s.%s\">\n",
-			       arch_name, feature_name);
+	retval = fileio_fprintf(fileio, "  <feature name=\"org.gnu.gdb.%s.%s\">\n",
+				arch_name, nogroup ? "nogroup" : feature_name);
+	if (retval != ERROR_OK)
+		goto out;
 
-	for (i = 0; i < reg_list_size; i++) {
+	for (int i = 0; i < reg_list_size; i++) {
+
+		bool add_reg_to_group = false;
+
 		if (nogroup) {
 			if ((reg_list[i]->feature != NULL && !strcmp(reg_list[i]->feature, ""))
 			     || reg_list[i]->feature == NULL) {
-				add_reg_to_group = 1;
+				add_reg_to_group = true;
 			}
 		} else {
 			if (reg_list[i]->feature != NULL && strcmp(reg_list[i]->feature, "")) {
 				if (!strcmp(reg_list[i]->feature, feature_name))
-					add_reg_to_group = 1;
+					add_reg_to_group = true;
 			}
 		}
 
 		if (add_reg_to_group) {
-			fileio_fprintf(fileio, "    <reg name=\"%s\"   "
+			retval = fileio_fprintf(fileio, "    <reg name=\"%s\"   "
 				       "        bitsize=\"%d\" regnum=\"%d\"",
 				       reg_list[i]->name, reg_list[i]->size, i);
-			add_reg_to_group = 0;
+			if (retval != ERROR_OK)
+				goto out;
 
-			if (reg_list[i]->group != NULL && strcmp(reg_list[i]->group, ""))
-				fileio_fprintf(fileio, " group=\"%s\"", reg_list[i]->group);
+			if (reg_list[i]->group != NULL && strcmp(reg_list[i]->group, "")) {
+				retval = fileio_fprintf(fileio, " group=\"%s\"", reg_list[i]->group);
+				if (retval != ERROR_OK)
+					goto out;
+			}
 
-			fileio_fprintf(fileio, "/>\n");
+			retval = fileio_fprintf(fileio, "/>\n");
+			if (retval != ERROR_OK)
+				goto out;
 		}
 	}
 
-	fileio_fprintf(fileio, "  </feature>\n");
+	retval = fileio_fprintf(fileio, "  </feature>\n");
 
+out:
 	free(reg_list);
 
-	return ERROR_OK;
+	return retval;
 }
 
 /* Get a list of available target registers features. feature_list must
@@ -99,11 +104,9 @@ int get_reg_features_list(struct target *target, char **feature_list[])
 {
 	struct reg **reg_list;
 	int reg_list_size;
-	int retval;
 	int tbl_sz = 0;
-	int i, j;
 
-	retval = target_get_gdb_reg_list(target, &reg_list, &reg_list_size, FULL_LIST);
+	int retval = target_get_gdb_reg_list(target, &reg_list, &reg_list_size, FULL_LIST);
 	if (retval != ERROR_OK) {
 		*feature_list = NULL;
 		return retval;
@@ -112,13 +115,13 @@ int get_reg_features_list(struct target *target, char **feature_list[])
 	/* Start with only one element */
 	*feature_list = calloc(1, sizeof(char *));
 
-	for (i = 0; i < reg_list_size; i++) {
+	for (int i = 0; i < reg_list_size; i++) {
 		if (reg_list[i]->feature != NULL && strcmp(reg_list[i]->feature, "")) {
 			/* We found a feature, check if the feature is already in the
 			 * table. If not, allocate a new entry for the table and
 			 * put the new feature in it.
 			 */
-			for (j = 0; j < (tbl_sz + 1); j++) {
+			for (int j = 0; j < (tbl_sz + 1); j++) {
 					if (!((*feature_list)[j])) {
 						(*feature_list)[tbl_sz++] = strdup(reg_list[i]->feature);
 						*feature_list = realloc(*feature_list, sizeof(char *) * (tbl_sz + 1));
@@ -142,15 +145,13 @@ int count_reg_without_group(struct target *target)
 {
 	struct reg **reg_list;
 	int reg_list_size;
-	int retval;
-	int i;
 	int reg_without_group = 0;
 
-	retval = target_get_gdb_reg_list(target, &reg_list, &reg_list_size, FULL_LIST);
+	int retval = target_get_gdb_reg_list(target, &reg_list, &reg_list_size, FULL_LIST);
 	if (retval != ERROR_OK)
 		return retval;
 
-	for (i = 0; i < reg_list_size; i++) {
+	for (int i = 0; i < reg_list_size; i++) {
 			if ((reg_list[i]->feature != NULL &&
 			     !strcmp(reg_list[i]->feature, "")) ||
 			     reg_list[i]->feature == NULL) {
@@ -170,16 +171,16 @@ int count_reg_without_group(struct target *target)
 int open_and_init_tdesc_file(struct fileio *fileio, const char *filename,
 			     const char *arch_name)
 {
-	int retval;
-
-	retval = fileio_open(fileio, filename, FILEIO_WRITE, FILEIO_TEXT);
+	int retval = fileio_open(fileio, filename, FILEIO_WRITE, FILEIO_TEXT);
 	if (retval != ERROR_OK)
-		return ERROR_FAIL;
+		return retval;
 
-	fileio_fprintf(fileio, "<?xml version=\"1.0\"?>\n");
-	fileio_fprintf(fileio, "<!DOCTYPE target SYSTEM \"gdb-target.dtd\">\n");
-	fileio_fprintf(fileio, "<target>\n");
-	fileio_fprintf(fileio, "  <architecture>%s</architecture>\n\n", arch_name);
+	retval = fileio_fprintf(fileio, "<?xml version=\"1.0\"?>\n"
+					"<!DOCTYPE target SYSTEM \"gdb-target.dtd\">\n"
+					"<target>\n"
+					"  <architecture>%s</architecture>\n\n", arch_name);
+	if (retval != ERROR_OK)
+		return retval;
 
 	return ERROR_OK;
 }
@@ -187,7 +188,10 @@ int open_and_init_tdesc_file(struct fileio *fileio, const char *filename,
 /* Close a target descriptor file */
 int close_tdesc_file(struct fileio *fileio)
 {
-	fileio_fprintf(fileio, "</target>\n");
+	int retval = fileio_fprintf(fileio, "</target>\n");
+	if (retval != ERROR_OK)
+		return retval;
+
 	fileio_close(fileio);
 
 	return ERROR_OK;
