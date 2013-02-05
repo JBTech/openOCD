@@ -1,6 +1,12 @@
 source [find ./tcl/interface/jtag_vpi.cfg]
 source [find ./tcl/target/or1k.cfg]
 
+# Select the TAP core we are using
+tap_select vjtag
+
+# Select the debug unit core we are using
+du_select adv
+
 gdb_port 50002
 
 if { [catch { init } ] } {
