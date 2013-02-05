@@ -1103,6 +1103,18 @@ static int or1k_init_target(struct command_context *cmd_ctx,
 		struct target *target)
 {
 	struct or1k_common *or1k = target_to_or1k(target);
+	struct or1k_du *du_core = or1k_to_du(or1k);
+	struct or1k_jtag *jtag = &or1k->jtag;
+
+	if (du_core == NULL) {
+		LOG_ERROR("No debug unit selected");
+		return ERROR_FAIL;
+	}
+
+	if (jtag->tap_ip == NULL) {
+		LOG_ERROR("No tap selected");
+		return ERROR_FAIL;
+	}
 
 	or1k->jtag.tap = target->tap;
 	or1k->jtag.or1k_jtag_inited = 0;
