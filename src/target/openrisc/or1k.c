@@ -1196,6 +1196,9 @@ static int or1k_target_create(struct target *target, Jim_Interp *interp)
 {
 	struct or1k_common *or1k = calloc(1, sizeof(struct or1k_common));
 
+	if (target->tap == NULL)
+		return ERROR_FAIL;
+
 	target->arch_info = or1k;
 
 	or1k_create_reg_list(target);
