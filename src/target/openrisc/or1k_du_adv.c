@@ -42,7 +42,7 @@
  * reads and writes to improve download speeds.
  * This option must match the RTL configured option.
  */
-#define ADBG_USE_HISPEED	1
+#define ADBG_USE_HISPEED		1
 
 /* Definitions for the top-level debug unit.  This really just consists
  * of a single register, used to select the active debug module ("chain").
@@ -126,10 +126,10 @@ static const char * const chain_name[] = {"WISHBONE", "CPU0", "CPU1", "JSP"};
 static uint32_t adbg_compute_crc(uint32_t crc, uint32_t data_in,
 				 int length_bits)
 {
-	int i;
-	uint32_t d, c;
+	for (int i = 0; i < length_bits; i++) {
 
-	for (i = 0; i < length_bits; i++) {
+		uint32_t d, c;
+
 		d = ((data_in >> i) & 0x1) ? 0xffffffff : 0;
 		c = (crc & 0x1) ? 0xffffffff : 0;
 		crc = crc >> 1;
@@ -161,12 +161,13 @@ static int find_status_bit(void *_buf, int len)
 
 static int or1k_adv_jtag_init(struct or1k_jtag *jtag_info)
 {
-	int retval;
 	struct or1k_tap_ip *tap_ip = jtag_info->tap_ip;
 
-	retval = tap_ip->init(jtag_info);
-	if (retval != ERROR_OK)
+	int retval = tap_ip->init(jtag_info);
+	if (retval != ERROR_OK) {
+		LOG_ERROR("TAP initialization failed");
 		return retval;
+	}
 
 	/* TAP should now be configured to communicate with
 	 * debug interface
@@ -193,14 +194,6 @@ static int or1k_adv_jtag_init(struct or1k_jtag *jtag_info)
  */
 static int adbg_select_module(struct or1k_jtag *jtag_info, int chain)
 {
-	struct jtag_tap *tap;
-	struct scan_field field;
-	uint8_t data;
-	int retval;
-
-	tap = jtag_info->tap;
-	if (tap == NULL)
-		return ERROR_FAIL;
 
 	if (jtag_info->or1k_jtag_module_selected == chain)
 		return ERROR_OK;
@@ -208,16 +201,18 @@ static int adbg_select_module(struct or1k_jtag *jtag_info, int chain)
 	/* MSB of the data out must be set to 1, indicating a module
 	 * select command
 	 */
-	data = chain | (1 << DBG_MODULE_SELECT_REG_SIZE);
+	uint8_t data = chain | (1 << DBG_MODULE_SELECT_REG_SIZE);
 
 	LOG_DEBUG("Select module: %s", chain_name[chain]);
+
+	struct scan_field field;
 
 	field.num_bits = (DBG_MODULE_SELECT_REG_SIZE + 1);
 	field.out_value = &data;
 	field.in_value = NULL;
-	jtag_add_dr_scan(tap, 1, &field, TAP_IDLE);
+	jtag_add_dr_scan(jtag_info->tap, 1, &field, TAP_IDLE);
 
-	retval = jtag_execute_queue();
+	int retval = jtag_execute_queue();
 	if (retval != ERROR_OK)
 		return retval;
 
@@ -234,16 +229,8 @@ static int adbg_select_module(struct or1k_jtag *jtag_info, int chain)
 static int adbg_select_ctrl_reg(struct or1k_jtag *jtag_info,
 				unsigned long regidx)
 {
-	struct jtag_tap *tap;
-	struct scan_field field;
-	int index_len = 0;
-	uint32_t data;
+	int index_len;
 	uint32_t opcode;
-	int retval;
-
-	tap = jtag_info->tap;
-	if (tap == NULL)
-		return ERROR_FAIL;
 
 	/* If this reg is already selected, don't do a JTAG transaction */
 	if (jtag_info->current_reg_idx[jtag_info->or1k_jtag_module_selected] == regidx)
@@ -269,15 +256,17 @@ static int adbg_select_ctrl_reg(struct or1k_jtag *jtag_info,
 	}
 
 	/* MSB must be 0 to access modules */
-	data = (opcode & ~(1 << DBG_WB_OPCODE_LEN)) << index_len;
+	uint32_t data = (opcode & ~(1 << DBG_WB_OPCODE_LEN)) << index_len;
 	data |= regidx;
+
+	struct scan_field field;
 
 	field.num_bits = (DBG_WB_OPCODE_LEN + 1) + index_len;
 	field.out_value = (uint8_t *)&data;
 	field.in_value = NULL;
-	jtag_add_dr_scan(tap, 1, &field, TAP_IDLE);
+	jtag_add_dr_scan(jtag_info->tap, 1, &field, TAP_IDLE);
 
-	retval = jtag_execute_queue();
+	int retval = jtag_execute_queue();
 	if (retval != ERROR_OK)
 		return retval;
 
@@ -298,26 +287,16 @@ static int adbg_select_ctrl_reg(struct or1k_jtag *jtag_info,
 static int adbg_ctrl_write(struct or1k_jtag *jtag_info, unsigned long regidx,
 			   uint32_t *cmd_data, int length_bits)
 {
-	struct jtag_tap *tap;
-	struct scan_field *field;
-	uint32_t data;
-	uint32_t opcode;
 	int index_len;
-	int nb_fields;
-	int num_32bit_fields;
-	int spare_bits;
-	int i = 0;
-	int retval;
-
-	tap = jtag_info->tap;
-	if (tap == NULL)
-		return ERROR_FAIL;
+	uint32_t opcode;
 
 	LOG_DEBUG("Write control register %ld: 0x%08x", regidx, cmd_data[0]);
 
-	retval = adbg_select_ctrl_reg(jtag_info, regidx);
-	if (retval != ERROR_OK)
+	int retval = adbg_select_ctrl_reg(jtag_info, regidx);
+	if (retval != ERROR_OK) {
+		LOG_ERROR("Error while calling adbg_select_ctrl_reg");
 		return retval;
+	}
 
 	switch (jtag_info->or1k_jtag_module_selected) {
 	case DC_WISHBONE:
@@ -338,15 +317,17 @@ static int adbg_ctrl_write(struct or1k_jtag *jtag_info, unsigned long regidx,
 		return ERROR_FAIL;
 	}
 
-	num_32bit_fields = length_bits / 32;
-	spare_bits = length_bits % 32;
-	nb_fields = num_32bit_fields + !!spare_bits + 1;
+	int num_32bit_fields = length_bits / 32;
+	int spare_bits = length_bits % 32;
+	int nb_fields = num_32bit_fields + !!spare_bits + 1;
 
-	field = malloc(nb_fields * sizeof(struct scan_field));
+	struct scan_field *field = malloc(nb_fields * sizeof(struct scan_field));
 
 	/* MSB must be 0 to access modules */
-	data = (opcode & ~(1 << DBG_WB_OPCODE_LEN)) << index_len;
+	uint32_t data = (opcode & ~(1 << DBG_WB_OPCODE_LEN)) << index_len;
 	data |= regidx;
+
+	int i;
 
 	for (i = 0 ; i < num_32bit_fields; i++) {
 		field[i].num_bits = 32;
@@ -364,7 +345,7 @@ static int adbg_ctrl_write(struct or1k_jtag *jtag_info, unsigned long regidx,
 	field[i + 1].out_value = (uint8_t *)&data;
 	field[i + 1].in_value = NULL;
 
-	jtag_add_dr_scan(tap, nb_fields, field, TAP_IDLE);
+	jtag_add_dr_scan(jtag_info->tap, nb_fields, field, TAP_IDLE);
 
 	retval = jtag_execute_queue();
 
@@ -382,26 +363,16 @@ static int adbg_ctrl_write(struct or1k_jtag *jtag_info, unsigned long regidx,
 static int adbg_ctrl_read(struct or1k_jtag *jtag_info, uint32_t regidx,
 			  uint32_t *data, int length_bits)
 {
-	struct jtag_tap *tap;
-	struct scan_field *field;
-	uint32_t outdata;
-	int opcode;
 	int opcode_len;
-	int num_32bit_fields;
-	int spare_bits;
-	int i = 0;
-	int nb_fields;
-	int retval;
-
-	tap = jtag_info->tap;
-	if (tap == NULL)
-		return ERROR_FAIL;
+	uint32_t opcode;
 
 	/*LOG_DEBUG("Read control register %ld", regidx);*/
 
-	retval = adbg_select_ctrl_reg(jtag_info, regidx);
-	if (retval != ERROR_OK)
+	int retval = adbg_select_ctrl_reg(jtag_info, regidx);
+	if (retval != ERROR_OK) {
+		LOG_ERROR("Error while calling adbg_select_ctrl_reg");
 		return retval;
+	}
 
 	/* There is no 'read' command, We write a NOP to read */
 	switch (jtag_info->or1k_jtag_module_selected) {
@@ -424,13 +395,15 @@ static int adbg_ctrl_read(struct or1k_jtag *jtag_info, uint32_t regidx,
 	}
 
 	/* Zero MSB = op for module, not top-level debug unit */
-	outdata = opcode & ~(0x1 << opcode_len);
+	uint32_t outdata = opcode & ~(0x1 << opcode_len);
 
-	num_32bit_fields = length_bits / 32;
-	spare_bits = length_bits % 32;
-	nb_fields = num_32bit_fields + !!spare_bits + 1;
+	int num_32bit_fields = length_bits / 32;
+	int spare_bits = length_bits % 32;
+	int nb_fields = num_32bit_fields + !!spare_bits + 1;
 
-	field = malloc(nb_fields * sizeof(struct scan_field));
+	struct scan_field *field = malloc(nb_fields * sizeof(struct scan_field));
+
+	int i;
 
 	for (i = 0 ; i < num_32bit_fields; i++) {
 		field[i].num_bits = 32;
@@ -448,7 +421,7 @@ static int adbg_ctrl_read(struct or1k_jtag *jtag_info, uint32_t regidx,
 	field[i + 1].out_value = (uint8_t *)&outdata;
 	field[i + 1].in_value = NULL;
 
-	jtag_add_dr_scan(tap, nb_fields, field, TAP_IDLE);
+	jtag_add_dr_scan(jtag_info->tap, nb_fields, field, TAP_IDLE);
 
 	retval = jtag_execute_queue();
 
@@ -469,14 +442,8 @@ static int adbg_ctrl_read(struct or1k_jtag *jtag_info, uint32_t regidx,
 static int adbg_burst_command(struct or1k_jtag *jtag_info, uint32_t opcode,
 			      uint32_t address, int length_words)
 {
-	struct jtag_tap *tap;
 	struct scan_field field[2];
 	uint32_t data[2];
-	int retval;
-
-	tap = jtag_info->tap;
-	if (tap == NULL)
-		return ERROR_FAIL;
 
 	/* Set up the data */
 	data[0] = length_words | (address << 16);
@@ -491,9 +458,9 @@ static int adbg_burst_command(struct or1k_jtag *jtag_info, uint32_t opcode,
 	field[1].out_value = (uint8_t *)&data[1];
 	field[1].in_value = NULL;
 
-	jtag_add_dr_scan(tap, 2, field, TAP_IDLE);
+	jtag_add_dr_scan(jtag_info->tap, 2, field, TAP_IDLE);
 
-	retval = jtag_execute_queue();
+	int retval = jtag_execute_queue();
 	if (retval != ERROR_OK)
 		return retval;
 
@@ -503,25 +470,10 @@ static int adbg_burst_command(struct or1k_jtag *jtag_info, uint32_t opcode,
 static int adbg_wb_burst_read(struct or1k_jtag *jtag_info, int word_size_bytes,
 			      int word_count, uint32_t start_address, void *data)
 {
-	struct jtag_tap *tap;
-	struct scan_field *field;
-	int i = 0;
-	int total_size_bytes;
-	int num_32bit_fields;
-	int spare_bytes;
-	int nb_fields = 0;
 	int retry_full_crc = 0;
 	int retry_full_busy = 0;
+	int retval;
 	uint8_t opcode;
-	uint32_t crc_calc;
-	uint32_t crc_read;
-	uint8_t *in_buffer;
-	int shift;
-	int retval = ERROR_OK;
-
-	tap = jtag_info->tap;
-	if (tap == NULL)
-		return ERROR_FAIL;
 
 	LOG_DEBUG("Doing burst read, word size %d, word count %d, start address 0x%08x",
 		  word_size_bytes, word_count, start_address);
@@ -571,15 +523,15 @@ static int adbg_wb_burst_read(struct or1k_jtag *jtag_info, int word_size_bytes,
 	}
 
 	/* Calculate transfer params */
-	total_size_bytes = (word_count * word_size_bytes) + CRC_LEN + STATUS_BYTES;
-	num_32bit_fields = total_size_bytes / 4;
-	spare_bytes = total_size_bytes % 4;
+	int total_size_bytes = (word_count * word_size_bytes) + CRC_LEN + STATUS_BYTES;
+	int num_32bit_fields = total_size_bytes / 4;
+	int spare_bytes = total_size_bytes % 4;
 
 	/* Allocate correct number of scan fields */
-	nb_fields = num_32bit_fields + !!spare_bytes;
-	field = malloc(nb_fields * sizeof(struct scan_field));
+	int nb_fields = num_32bit_fields + !!spare_bytes;
+	struct scan_field *field = malloc(nb_fields * sizeof(struct scan_field));
 
-	in_buffer = malloc(total_size_bytes);
+	uint8_t *in_buffer = malloc(total_size_bytes);
 
 retry_read_full:
 
@@ -587,6 +539,8 @@ retry_read_full:
 	retval = adbg_burst_command(jtag_info, opcode, start_address, word_count);
 	if (retval != ERROR_OK)
 		goto out;
+
+	int i;
 
 	for (i = 0; i < num_32bit_fields; i++) {
 		field[i].num_bits = 32;
@@ -600,15 +554,14 @@ retry_read_full:
 		field[i].in_value = &in_buffer[i * 4];
 	}
 
-	jtag_add_dr_scan(tap, nb_fields, field, TAP_IDLE);
+	jtag_add_dr_scan(jtag_info->tap, nb_fields, field, TAP_IDLE);
 
 	retval = jtag_execute_queue();
-
 	if (retval != ERROR_OK)
 		goto out;
 
 	/* Look for the start bit in the first (STATUS_BYTES * 8) bits */
-	shift = find_status_bit(in_buffer, STATUS_BYTES);
+	int shift = find_status_bit(in_buffer, STATUS_BYTES);
 
 	/* We expect the status bit to be in the first byte */
 	if (shift < 0) {
@@ -624,10 +577,11 @@ retry_read_full:
 
 	buffer_shr(in_buffer, (word_count * word_size_bytes) + CRC_LEN + STATUS_BYTES, shift);
 
+	uint32_t crc_read;
 	memcpy(data, in_buffer, word_count * word_size_bytes);
 	memcpy(&crc_read, &in_buffer[word_count * word_size_bytes], 4);
 
-	crc_calc = 0xffffffff;
+	uint32_t crc_calc = 0xffffffff;
 	for (i = 0; i < (word_count * word_size_bytes); i++)
 		crc_calc = adbg_compute_crc(crc_calc, ((uint8_t *)data)[i], 8);
 
@@ -695,25 +649,9 @@ out:
 static int adbg_wb_burst_write(struct or1k_jtag *jtag_info, const void *data, int word_size_bytes,
 			int word_count, unsigned long start_address)
 {
-	struct scan_field *field;
-	struct jtag_tap *tap;
-	int i = 0;
-	int word_size_bits;
-	int total_size_bytes;
-	int nb_fields;
-	int num_32bit_fields;
-	int spare_bytes;
 	int retry_full_crc = 0;
 	int retval;
 	uint8_t opcode;
-	uint32_t datawords;
-	uint32_t crc_calc;
-	uint8_t value;
-	uint8_t *out_buffer;
-
-	tap = jtag_info->tap;
-	if (tap == NULL)
-		return ERROR_FAIL;
 
 	if (word_count <= 0) {
 		LOG_DEBUG("Ignoring illegal burst write size (%d)", word_count);
@@ -723,7 +661,7 @@ static int adbg_wb_burst_write(struct or1k_jtag *jtag_info, const void *data, in
 	LOG_DEBUG("Doing burst write, word size %d, word count %d, start address 0x%08lx",
 	word_size_bytes, word_count, start_address);
 
-	word_size_bits = word_size_bytes * 8;
+	int word_size_bits = word_size_bytes * 8;
 
 	/* Select the appropriate opcode */
 	switch (jtag_info->or1k_jtag_module_selected) {
@@ -765,15 +703,15 @@ static int adbg_wb_burst_write(struct or1k_jtag *jtag_info, const void *data, in
 	}
 
 	/* Calculate transfer params */
-	total_size_bytes = (word_count * word_size_bytes) + 4;
-	num_32bit_fields = total_size_bytes / 4;
-	spare_bytes = total_size_bytes % 4;
+	int total_size_bytes = (word_count * word_size_bytes) + 4;
+	int num_32bit_fields = total_size_bytes / 4;
+	int spare_bytes = total_size_bytes % 4;
 
 	/* Allocate correct number of scan fields */
-	nb_fields = num_32bit_fields + !!spare_bytes + 1;
-	field = malloc(nb_fields * sizeof(struct scan_field));
+	int nb_fields = num_32bit_fields + !!spare_bytes + 1;
+	struct scan_field *field = malloc(nb_fields * sizeof(struct scan_field));
 
-	out_buffer = malloc(total_size_bytes);
+	uint8_t *out_buffer = malloc(total_size_bytes);
 
 retry_full_write:
 
@@ -783,12 +721,14 @@ retry_full_write:
 		goto out;
 
 	/* Write a start bit so it knows when to start counting */
-	value = 1;
+	uint8_t value = 1;
 	field[0].num_bits = 1;
 	field[0].out_value = &value;
 	field[0].in_value = NULL;
 
-	crc_calc = 0xffffffff;
+	int i;
+	uint32_t datawords;
+	uint32_t crc_calc = 0xffffffff;
 	for (i = 0; i < word_count; i++) {
 		if (word_size_bytes == 4)
 			datawords = ((const uint32_t *)data)[i];
@@ -815,13 +755,13 @@ retry_full_write:
 		field[i + 1].in_value = NULL;
 	}
 
-	jtag_add_dr_scan(tap, nb_fields, field, TAP_DRSHIFT);
+	jtag_add_dr_scan(jtag_info->tap, nb_fields, field, TAP_DRSHIFT);
 
 	/* Read the 'CRC match' bit, and go to idle */
 	field[0].num_bits = 1;
 	field[0].out_value = NULL;
 	field[0].in_value = &value;
-	jtag_add_dr_scan(tap, 1, &field[0], TAP_IDLE);
+	jtag_add_dr_scan(jtag_info->tap, 1, &field[0], TAP_IDLE);
 
 	retval = jtag_execute_queue();
 	if (retval != ERROR_OK)
@@ -889,12 +829,10 @@ out:
 static int or1k_adv_jtag_read_cpu(struct or1k_jtag *jtag_info,
 		uint32_t addr, int count, uint32_t *value)
 {
-	int retval;
-
 	if (!jtag_info->or1k_jtag_inited)
 		or1k_adv_jtag_init(jtag_info);
 
-	retval = adbg_select_module(jtag_info, DC_CPU0);
+	int retval = adbg_select_module(jtag_info, DC_CPU0);
 	if (retval != ERROR_OK)
 		return retval;
 
@@ -908,12 +846,10 @@ static int or1k_adv_jtag_read_cpu(struct or1k_jtag *jtag_info,
 static int or1k_adv_jtag_write_cpu(struct or1k_jtag *jtag_info,
 		uint32_t addr, int count, const uint32_t *value)
 {
-	int retval;
-
 	if (!jtag_info->or1k_jtag_inited)
 		or1k_adv_jtag_init(jtag_info);
 
-	retval = adbg_select_module(jtag_info, DC_CPU0);
+	int retval = adbg_select_module(jtag_info, DC_CPU0);
 	if (retval != ERROR_OK)
 		return retval;
 
@@ -926,16 +862,14 @@ static int or1k_adv_jtag_write_cpu(struct or1k_jtag *jtag_info,
 
 static int or1k_adv_cpu_stall(struct or1k_jtag *jtag_info, int action)
 {
-	uint32_t cpu_cr;
-	int retval;
-
 	if (!jtag_info->or1k_jtag_inited)
 		or1k_adv_jtag_init(jtag_info);
 
-	retval = adbg_select_module(jtag_info, DC_CPU0);
+	int retval = adbg_select_module(jtag_info, DC_CPU0);
 	if (retval != ERROR_OK)
 		return retval;
 
+	uint32_t cpu_cr;
 	retval = adbg_ctrl_read(jtag_info, DBG_CPU0_REG_STATUS, &cpu_cr, 2);
 	if (retval != ERROR_OK)
 		return retval;
@@ -958,16 +892,14 @@ static int or1k_adv_cpu_stall(struct or1k_jtag *jtag_info, int action)
 
 static int or1k_adv_is_cpu_running(struct or1k_jtag *jtag_info, int *running)
 {
-	uint32_t cpu_cr;
-	int retval;
-
 	if (!jtag_info->or1k_jtag_inited)
 		or1k_adv_jtag_init(jtag_info);
 
-	retval = adbg_select_module(jtag_info, DC_CPU0);
+	int retval = adbg_select_module(jtag_info, DC_CPU0);
 	if (retval != ERROR_OK)
 		return retval;
 
+	uint32_t cpu_cr = 0;
 	retval = adbg_ctrl_read(jtag_info, DBG_CPU0_REG_STATUS, &cpu_cr, 2);
 	if (retval != ERROR_OK)
 		return retval;
@@ -982,16 +914,14 @@ static int or1k_adv_is_cpu_running(struct or1k_jtag *jtag_info, int *running)
 
 static int or1k_adv_cpu_reset(struct or1k_jtag *jtag_info, int action)
 {
-	uint32_t cpu_cr;
-	int retval;
-
 	if (!jtag_info->or1k_jtag_inited)
 		or1k_adv_jtag_init(jtag_info);
 
-	retval = adbg_select_module(jtag_info, DC_CPU0);
+	int retval = adbg_select_module(jtag_info, DC_CPU0);
 	if (retval != ERROR_OK)
 		return retval;
 
+	uint32_t cpu_cr;
 	retval = adbg_ctrl_read(jtag_info, DBG_CPU0_REG_STATUS, &cpu_cr, 2);
 	if (retval != ERROR_OK)
 		return retval;
@@ -1015,14 +945,12 @@ static int or1k_adv_cpu_reset(struct or1k_jtag *jtag_info, int action)
 static int or1k_adv_jtag_read_memory32(struct or1k_jtag *jtag_info,
 			    uint32_t addr, int count, uint32_t *buffer)
 {
-	int i, retval;
-
 	LOG_DEBUG("Reading WB32 at 0x%08X", addr);
 
 	if (!jtag_info->or1k_jtag_inited)
 		or1k_adv_jtag_init(jtag_info);
 
-	retval = adbg_select_module(jtag_info, DC_WISHBONE);
+	int retval = adbg_select_module(jtag_info, DC_WISHBONE);
 	if (retval != ERROR_OK)
 		return retval;
 
@@ -1030,7 +958,7 @@ static int or1k_adv_jtag_read_memory32(struct or1k_jtag *jtag_info,
 	if (retval != ERROR_OK)
 		return retval;
 
-	for (i = 0 ; i < count; i++)
+	for (int i = 0 ; i < count; i++)
 		h_u32_to_be((uint8_t *) &buffer[i], buffer[i]);
 
 	return ERROR_OK;
@@ -1040,14 +968,12 @@ static int or1k_adv_jtag_read_memory32(struct or1k_jtag *jtag_info,
 static int or1k_adv_jtag_read_memory16(struct or1k_jtag *jtag_info,
 			    uint32_t addr, int count, uint16_t *buffer)
 {
-	int retval;
-
 	LOG_DEBUG("Reading WB16 at 0x%08x", addr);
 
 	if (!jtag_info->or1k_jtag_inited)
 		or1k_adv_jtag_init(jtag_info);
 
-	retval = adbg_select_module(jtag_info, DC_WISHBONE);
+	int retval = adbg_select_module(jtag_info, DC_WISHBONE);
 	if (retval != ERROR_OK)
 		return retval;
 
@@ -1061,14 +987,12 @@ static int or1k_adv_jtag_read_memory16(struct or1k_jtag *jtag_info,
 static int or1k_adv_jtag_read_memory8(struct or1k_jtag *jtag_info,
 			   uint32_t addr, int count, uint8_t *buffer)
 {
-	int retval;
-
 	LOG_DEBUG("Reading WB8 at 0x%08x", addr);
 
 	if (!jtag_info->or1k_jtag_inited)
 		or1k_adv_jtag_init(jtag_info);
 
-	retval = adbg_select_module(jtag_info, DC_WISHBONE);
+	int retval = adbg_select_module(jtag_info, DC_WISHBONE);
 	if (retval != ERROR_OK)
 		return retval;
 
@@ -1082,17 +1006,15 @@ static int or1k_adv_jtag_read_memory8(struct or1k_jtag *jtag_info,
 static int or1k_adv_jtag_write_memory32(struct or1k_jtag *jtag_info,
 			     uint32_t addr, int count, const uint32_t *buffer)
 {
-	int i, retval;
-
 	LOG_DEBUG("Writing WB32 at 0x%08x", addr);
 
-	for (i = 0 ; i < count; i++)
+	for (int i = 0 ; i < count; i++)
 		h_u32_to_be((uint8_t *) &buffer[i], buffer[i]);
 
 	if (!jtag_info->or1k_jtag_inited)
 		or1k_adv_jtag_init(jtag_info);
 
-	retval = adbg_select_module(jtag_info, DC_WISHBONE);
+	int retval = adbg_select_module(jtag_info, DC_WISHBONE);
 	if (retval != ERROR_OK)
 		return retval;
 
@@ -1107,14 +1029,12 @@ static int or1k_adv_jtag_write_memory32(struct or1k_jtag *jtag_info,
 static int or1k_adv_jtag_write_memory16(struct or1k_jtag *jtag_info,
 			     uint32_t addr, int count, const uint16_t *buffer)
 {
-	int retval;
-
 	LOG_DEBUG("Writing WB16 at 0x%08x", addr);
 
 	if (!jtag_info->or1k_jtag_inited)
 		or1k_adv_jtag_init(jtag_info);
 
-	retval = adbg_select_module(jtag_info, DC_WISHBONE);
+	int retval = adbg_select_module(jtag_info, DC_WISHBONE);
 	if (retval != ERROR_OK)
 		return retval;
 
@@ -1128,14 +1048,12 @@ static int or1k_adv_jtag_write_memory16(struct or1k_jtag *jtag_info,
 static int or1k_adv_jtag_write_memory8(struct or1k_jtag *jtag_info,
 			    uint32_t addr, int count, const uint8_t *buffer)
 {
-	int retval;
-
 	LOG_DEBUG("Writing WB8 at 0x%08x", addr);
 
 	if (!jtag_info->or1k_jtag_inited)
 		or1k_adv_jtag_init(jtag_info);
 
-	retval = adbg_select_module(jtag_info, DC_WISHBONE);
+	int retval = adbg_select_module(jtag_info, DC_WISHBONE);
 	if (retval != ERROR_OK)
 		return retval;
 
