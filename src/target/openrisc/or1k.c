@@ -701,27 +701,32 @@ static int or1k_poll(struct target *target)
 
 	/* check for processor halted */
 	if (!running) {
-
-		target->state = TARGET_HALTED;
-
-		retval = or1k_debug_entry(target);
-		if (retval != ERROR_OK) {
-			LOG_ERROR("Error while calling or1k_debug_entry");
-			return retval;
-		}
-
 		/* It's actually stalled, so update our software's state */
 		if ((target->state == TARGET_RUNNING) ||
-		    (target->state == TARGET_RESET))
+		    (target->state == TARGET_RESET)) {
+
+			target->state = TARGET_HALTED;
+
+			retval = or1k_debug_entry(target);
+			if (retval != ERROR_OK) {
+				LOG_ERROR("Error while calling or1k_debug_entry");
+				return retval;
+			}
 
 			target_call_event_callbacks(target,
 						    TARGET_EVENT_HALTED);
+		} else if (target->state == TARGET_DEBUG_RUNNING) {
+			target->state = TARGET_HALTED;
 
-		if (target->state == TARGET_DEBUG_RUNNING)
+			retval = or1k_debug_entry(target);
+			if (retval != ERROR_OK) {
+				LOG_ERROR("Error while calling or1k_debug_entry");
+				return retval;
+			}
 
 			target_call_event_callbacks(target,
 						    TARGET_EVENT_DEBUG_HALTED);
-
+		}
 	} else { /* ... target is running */
 
 		/* If target was supposed to be stalled, stall it again */
@@ -1248,13 +1253,6 @@ static int or1k_examine(struct target *target)
 
 static int or1k_arch_state(struct target *target)
 {
-
-	struct or1k_common *or1k = target_to_or1k(target);
-
-	LOG_USER("Target halted due to %s, npc: 0x%08x",
-		debug_reason_name(target),
-		buf_get_u32(or1k->core_cache->reg_list[OR1K_REG_NPC].value, 0, 32));
-
 	return ERROR_OK;
 }
 
