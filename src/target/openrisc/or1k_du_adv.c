@@ -263,7 +263,7 @@ static int adbg_select_ctrl_reg(struct or1k_jtag *jtag_info,
 		opcode = DBG_CPU1_CMD_IREG_SEL;
 		break;
 	default:
-		LOG_DEBUG("Illegal debug chain selected (%i) while selecting control register",
+		LOG_ERROR("Illegal debug chain selected (%i) while selecting control register",
 			  jtag_info->or1k_jtag_module_selected);
 		return ERROR_FAIL;
 	}
@@ -333,7 +333,7 @@ static int adbg_ctrl_write(struct or1k_jtag *jtag_info, unsigned long regidx,
 		opcode = DBG_CPU1_CMD_IREG_WR;
 		break;
 	default:
-		LOG_DEBUG("Illegal debug chain selected (%i) while doing control write",
+		LOG_ERROR("Illegal debug chain selected (%i) while doing control write",
 			  jtag_info->or1k_jtag_module_selected);
 		return ERROR_FAIL;
 	}
@@ -418,7 +418,7 @@ static int adbg_ctrl_read(struct or1k_jtag *jtag_info, uint32_t regidx,
 		opcode_len = DBG_CPU1_OPCODE_LEN;
 		break;
 	default:
-		LOG_DEBUG("Illegal debug chain selected (%i) while doing control read",
+		LOG_ERROR("Illegal debug chain selected (%i) while doing control read",
 			  jtag_info->or1k_jtag_module_selected);
 		 return ERROR_FAIL;
 	}
@@ -527,7 +527,7 @@ static int adbg_wb_burst_read(struct or1k_jtag *jtag_info, int word_size_bytes,
 		  word_size_bytes, word_count, start_address);
 
 	if (word_count <= 0) {
-		LOG_DEBUG("Ignoring illegal read burst length (%d)", word_count);
+		LOG_ERROR("Ignoring illegal read burst length (%d)", word_count);
 		return ERROR_FAIL;
 	}
 
@@ -541,7 +541,7 @@ static int adbg_wb_burst_read(struct or1k_jtag *jtag_info, int word_size_bytes,
 		else if (word_size_bytes == 4)
 			opcode = DBG_WB_CMD_BREAD32;
 		else {
-			LOG_DEBUG("Tried burst read with invalid word size (%d),"
+			LOG_WARNING("Tried burst read with invalid word size (%d),"
 				  "defaulting to 4-byte words", word_size_bytes);
 			opcode = DBG_WB_CMD_BREAD32;
 		}
@@ -550,7 +550,7 @@ static int adbg_wb_burst_read(struct or1k_jtag *jtag_info, int word_size_bytes,
 		if (word_size_bytes == 4)
 			opcode = DBG_CPU0_CMD_BREAD32;
 		else {
-			LOG_DEBUG("Tried burst read with invalid word size (%d),"
+			LOG_WARNING("Tried burst read with invalid word size (%d),"
 				  "defaulting to 4-byte words", word_size_bytes);
 			opcode = DBG_CPU0_CMD_BREAD32;
 		}
@@ -559,13 +559,13 @@ static int adbg_wb_burst_read(struct or1k_jtag *jtag_info, int word_size_bytes,
 		if (word_size_bytes == 4)
 			opcode = DBG_CPU1_CMD_BREAD32;
 		else {
-			LOG_DEBUG("Tried burst read with invalid word size (%d),"
+			LOG_WARNING("Tried burst read with invalid word size (%d),"
 				  "defaulting to 4-byte words", word_size_bytes);
 			opcode = DBG_CPU0_CMD_BREAD32;
 		}
 		break;
 	default:
-		LOG_DEBUG("Illegal debug chain selected (%i) while doing burst read",
+		LOG_ERROR("Illegal debug chain selected (%i) while doing burst read",
 			  jtag_info->or1k_jtag_module_selected);
 		return ERROR_FAIL;
 	}
@@ -613,7 +613,7 @@ retry_read_full:
 	/* We expect the status bit to be in the first byte */
 	if (shift < 0) {
 		if (retry_full_busy++ < MAX_READ_BUSY_RETRY) {
-			LOG_DEBUG("Burst read timed out");
+			LOG_WARNING("Burst read timed out");
 			goto retry_read_full;
 		} else {
 			LOG_ERROR("Burst read failed");
@@ -632,10 +632,11 @@ retry_read_full:
 		crc_calc = adbg_compute_crc(crc_calc, ((uint8_t *)data)[i], 8);
 
 	if (crc_calc != crc_read) {
-		LOG_DEBUG("CRC ERROR! Computed 0x%08x, read CRC 0x%08x", crc_calc, crc_read);
+		LOG_WARNING("CRC ERROR! Computed 0x%08x, read CRC 0x%08x", crc_calc, crc_read);
 		if (retry_full_crc++ < MAX_READ_CRC_RETRY)
 			goto retry_read_full;
 		else {
+			LOG_ERROR("Burst read failed");
 			retval = ERROR_FAIL;
 			goto out;
 		}
@@ -663,11 +664,11 @@ retry_read_full:
 				goto out;
 
 			addr = (err_data[0] >> 1) | (err_data[1] << 31);
-			LOG_DEBUG("WB bus error during burst read, address 0x%08x, retrying!", addr);
+			LOG_WARNING("WB bus error during burst read, address 0x%08x, retrying!", addr);
 
 			bus_error_retries++;
 			if (bus_error_retries > MAX_BUS_ERRORS) {
-				LOG_DEBUG("Max WB bus errors reached during burst read");
+				LOG_ERROR("Max WB bus errors reached during burst read");
 				retval = ERROR_FAIL;
 				goto out;
 			}
@@ -758,7 +759,7 @@ static int adbg_wb_burst_write(struct or1k_jtag *jtag_info, const void *data, in
 		}
 		break;
 	default:
-		LOG_DEBUG("Illegal debug chain selected (%i) while doing burst write",
+		LOG_ERROR("Illegal debug chain selected (%i) while doing burst write",
 			  jtag_info->or1k_jtag_module_selected);
 		return ERROR_FAIL;
 	}
@@ -827,7 +828,7 @@ retry_full_write:
 		goto out;
 
 	if (!value) {
-		LOG_DEBUG("CRC ERROR! match bit after write is %i (computed CRC 0x%08x)", value, crc_calc);
+		LOG_WARNING("CRC ERROR! match bit after write is %i (computed CRC 0x%08x)", value, crc_calc);
 		if (retry_full_crc++ < MAX_WRITE_CRC_RETRY)
 			goto retry_full_write;
 		else {
@@ -857,11 +858,11 @@ retry_full_write:
 				goto out;
 
 			addr = (err_data[0] >> 1) | (err_data[1] << 31);
-			LOG_DEBUG("WB bus error during burst write, address 0x%08x, retrying!", addr);
+			LOG_WARNING("WB bus error during burst write, address 0x%08x, retrying!", addr);
 
 			bus_error_retries++;
 			if (bus_error_retries > MAX_BUS_ERRORS) {
-				LOG_DEBUG("Max WB bus errors reached during burst read");
+				LOG_ERROR("Max WB bus errors reached during burst read");
 				retval = ERROR_FAIL;
 				goto out;
 			}
