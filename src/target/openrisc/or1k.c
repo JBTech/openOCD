@@ -1003,12 +1003,11 @@ static int or1k_bulk_read_memory(struct target *target, uint32_t address,
 	LOG_DEBUG("Read %d bytes at 0x%08x", count << 2, address);
 
 	int block_count_left = count;
+	const int blocks_per_round = 1024; /* some resonable value */
+	uint32_t block_count_address = address;
+	uint8_t *block_count_buffer = (uint8_t *) buffer;
 
 	while (block_count_left) {
-
-		const int blocks_per_round = 1024; /* some resonable value */
-		uint32_t block_count_address = address;
-		uint8_t *block_count_buffer = (uint8_t *) buffer;
 
 		int blocks_this_round = (block_count_left > blocks_per_round) ?
 			blocks_per_round : block_count_left;
@@ -1041,12 +1040,11 @@ static int or1k_bulk_write_memory(struct target *target, uint32_t address,
 	LOG_DEBUG("Write %d bytes at 0x%08x", count << 2, address);
 
 	int block_count_left = count;
+	const int blocks_per_round = 1024; /* some reasonable value */
+	uint32_t block_count_address = address;
+	uint8_t *block_count_buffer = (uint8_t *) buffer;
 
 	while (block_count_left) {
-
-		const int blocks_per_round = 1024; /* some reasonable value */
-		uint32_t block_count_address = address;
-		uint8_t *block_count_buffer = (uint8_t *) buffer;
 
 		int blocks_this_round = (block_count_left > blocks_per_round) ?
 			blocks_per_round : block_count_left;
