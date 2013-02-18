@@ -231,6 +231,7 @@ static int adbg_select_ctrl_reg(struct or1k_jtag *jtag_info,
 {
 	int index_len;
 	uint32_t opcode;
+	uint32_t opcode_len;
 
 	/* If this reg is already selected, don't do a JTAG transaction */
 	if (jtag_info->current_reg_idx[jtag_info->or1k_jtag_module_selected] == regidx)
@@ -240,14 +241,17 @@ static int adbg_select_ctrl_reg(struct or1k_jtag *jtag_info,
 	case DC_WISHBONE:
 		index_len = DBG_WB_REG_SEL_LEN;
 		opcode = DBG_WB_CMD_IREG_SEL;
+		opcode_len = DBG_WB_OPCODE_LEN;
 		break;
 	case DC_CPU0:
 		index_len = DBG_CPU0_REG_SEL_LEN;
 		opcode = DBG_CPU0_CMD_IREG_SEL;
+		opcode_len = DBG_CPU0_OPCODE_LEN;
 		break;
 	case DC_CPU1:
 		index_len = DBG_CPU1_REG_SEL_LEN;
 		opcode = DBG_CPU1_CMD_IREG_SEL;
+		opcode_len = DBG_CPU1_OPCODE_LEN;
 		break;
 	default:
 		LOG_ERROR("Illegal debug chain selected (%i) while selecting control register",
@@ -256,12 +260,12 @@ static int adbg_select_ctrl_reg(struct or1k_jtag *jtag_info,
 	}
 
 	/* MSB must be 0 to access modules */
-	uint32_t data = (opcode & ~(1 << DBG_WB_OPCODE_LEN)) << index_len;
+	uint32_t data = (opcode & ~(1 << opcode_len)) << index_len;
 	data |= regidx;
 
 	struct scan_field field;
 
-	field.num_bits = (DBG_WB_OPCODE_LEN + 1) + index_len;
+	field.num_bits = (opcode_len + 1) + index_len;
 	field.out_value = (uint8_t *)&data;
 	field.in_value = NULL;
 	jtag_add_dr_scan(jtag_info->tap, 1, &field, TAP_IDLE);
@@ -289,6 +293,7 @@ static int adbg_ctrl_write(struct or1k_jtag *jtag_info, unsigned long regidx,
 {
 	int index_len;
 	uint32_t opcode;
+	uint32_t opcode_len;
 
 	LOG_DEBUG("Write control register %ld: 0x%08x", regidx, cmd_data[0]);
 
@@ -302,14 +307,17 @@ static int adbg_ctrl_write(struct or1k_jtag *jtag_info, unsigned long regidx,
 	case DC_WISHBONE:
 		index_len = DBG_WB_REG_SEL_LEN;
 		opcode = DBG_WB_CMD_IREG_WR;
+		opcode_len = DBG_WB_OPCODE_LEN;
 		break;
 	case DC_CPU0:
 		index_len = DBG_CPU0_REG_SEL_LEN;
 		opcode = DBG_CPU0_CMD_IREG_WR;
+		opcode_len = DBG_CPU0_OPCODE_LEN;
 		break;
 	case DC_CPU1:
 		index_len = DBG_CPU1_REG_SEL_LEN;
 		opcode = DBG_CPU1_CMD_IREG_WR;
+		opcode_len = DBG_CPU1_OPCODE_LEN;
 		break;
 	default:
 		LOG_ERROR("Illegal debug chain selected (%i) while doing control write",
@@ -324,7 +332,7 @@ static int adbg_ctrl_write(struct or1k_jtag *jtag_info, unsigned long regidx,
 	struct scan_field *field = malloc(nb_fields * sizeof(struct scan_field));
 
 	/* MSB must be 0 to access modules */
-	uint32_t data = (opcode & ~(1 << DBG_WB_OPCODE_LEN)) << index_len;
+	uint32_t data = (opcode & ~(1 << opcode_len)) << index_len;
 	data |= regidx;
 
 	int i;
@@ -341,7 +349,7 @@ static int adbg_ctrl_write(struct or1k_jtag *jtag_info, unsigned long regidx,
 		field[i].in_value = NULL;
 	}
 
-	field[i + 1].num_bits = (DBG_WB_OPCODE_LEN + 1) + index_len;
+	field[i + 1].num_bits = (opcode_len + 1) + index_len;
 	field[i + 1].out_value = (uint8_t *)&data;
 	field[i + 1].in_value = NULL;
 
@@ -407,13 +415,13 @@ static int adbg_ctrl_read(struct or1k_jtag *jtag_info, uint32_t regidx,
 
 	for (i = 0 ; i < num_32bit_fields; i++) {
 		field[i].num_bits = 32;
-		field[i].out_value = (uint8_t *)&outdata;
+		field[i].out_value = NULL;
 		field[i].in_value = (uint8_t *)&data[i * 4];
 	}
 
 	if (spare_bits) {
 		field[i].num_bits = spare_bits;
-		field[i].out_value = (uint8_t *)&outdata;
+		field[i].out_value = NULL;
 		field[i].in_value = (uint8_t *)&data[i * 4];
 	}
 
