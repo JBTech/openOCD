@@ -42,6 +42,9 @@
 LIST_HEAD(tap_list);
 LIST_HEAD(du_list);
 
+static int or1k_remove_breakpoint(struct target *target,
+				  struct breakpoint *breakpoint);
+
 static int or1k_read_core_reg(struct target *target, int num);
 static int or1k_write_core_reg(struct target *target, int num);
 
@@ -808,6 +811,17 @@ static int or1k_soft_reset_halt(struct target *target)
 	return ERROR_OK;
 }
 
+bool is_any_soft_breakpoint(struct target *target)
+{
+	struct breakpoint *breakpoint = target->breakpoints;
+
+	while (breakpoint)
+		if (breakpoint->type == BKPT_SOFT)
+			return true;
+
+	return false;
+}
+
 static int or1k_resume_or_step(struct target *target, int current,
 			       uint32_t address, int handle_breakpoints,
 			       int debug_execution, int step)
@@ -861,14 +875,13 @@ static int or1k_resume_or_step(struct target *target, int current,
 		debug_reg_list[OR1K_DEBUG_REG_DMR1] &= ~(OR1K_DMR1_ST | OR1K_DMR1_BT);
 
 	/* Set traps to be handled by the debug unit in the Debug Stop
-	   Register (DSR) */
+	   Register (DSR). Check if we have any software breakpoints in
+	   place before setting this value - the kernel, for instance,
+	   relies on l.trap instructions not stalling the processor ! */
+	if (is_any_soft_breakpoint(target) == true)
+		debug_reg_list[OR1K_DEBUG_REG_DSR] |= OR1K_DSR_TE;
 
-	/* TODO - check if we have any software breakpoints in place before
-	   setting this value - the kernel, for instance, relies on l.trap
-	   instructions not stalling the processor! */
-	debug_reg_list[OR1K_DEBUG_REG_DSR] |= OR1K_DSR_TE;
-
-	/* write debug registers (starting from DMR1 register) */
+	/* Write debug registers (starting from DMR1 register) */
 	retval = du_core->or1k_jtag_write_cpu(&or1k->jtag, OR1K_DMR1_CPU_REG_ADD,
 					      OR1K_DEBUG_REG_NUM, debug_reg_list);
 	if (retval != ERROR_OK) {
@@ -878,19 +891,20 @@ static int or1k_resume_or_step(struct target *target, int current,
 
 	resume_pc = buf_get_u32(or1k->core_cache->reg_list[OR1K_REG_NPC].value,
 				0, 32);
-	/* the front-end may request us not to handle breakpoints */
+
+	/* The front-end may request us not to handle breakpoints */
 	if (handle_breakpoints) {
 		/* Single step past breakpoint at current address */
 		breakpoint = breakpoint_find(target, resume_pc);
 		if (breakpoint) {
 			LOG_DEBUG("Unset breakpoint at 0x%08x", breakpoint->address);
-#if 0
-			/* Do appropriate things here to remove breakpoint. */
-#endif
+			retval = or1k_remove_breakpoint(target, breakpoint);
+			if (retval != ERROR_OK)
+				return retval;
 		}
 	}
-	/* Unstall time */
 
+	/* Unstall time */
 	retval = du_core->or1k_cpu_stall(&or1k->jtag, CPU_UNSTALL);
 	if (retval != ERROR_OK) {
 		LOG_ERROR("Error while unstalling the CPU");
@@ -902,7 +916,7 @@ static int or1k_resume_or_step(struct target *target, int current,
 	else
 		target->debug_reason = DBG_REASON_NOTHALTED;
 
-	/* registers are now invalid */
+	/* Registers are now invalid */
 	register_cache_invalidate(or1k->core_cache);
 
 	if (!debug_execution) {
