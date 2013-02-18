@@ -430,7 +430,8 @@ static int or1k_read_core_reg(struct target *target, int num)
 		or1k->core_cache->reg_list[num].dirty = 0;
 	} else {
 		/* This is an spr, always read value from HW */
-		int retval = du_core->or1k_jtag_read_cpu(&or1k->jtag, or1k->arch_info[num].spr_num, 1, &reg_value);
+		int retval = du_core->or1k_jtag_read_cpu(&or1k->jtag,
+							 or1k->arch_info[num].spr_num, 1, &reg_value);
 		if (retval != ERROR_OK) {
 			LOG_ERROR("Error while reading spr 0x%08x", or1k->arch_info[num].spr_num);
 			return retval;
@@ -486,7 +487,8 @@ static int or1k_set_core_reg(struct reg *reg, uint8_t *buf)
 		reg->valid = 1;
 	} else {
 		/* This is an spr, write it to the HW */
-		int retval = du_core->or1k_jtag_write_cpu(&or1k->jtag, or1k_reg->spr_num, 1, &value);
+		int retval = du_core->or1k_jtag_write_cpu(&or1k->jtag,
+							  or1k_reg->spr_num, 1, &value);
 		if (retval != ERROR_OK) {
 			LOG_ERROR("Error while writing spr 0x%08x", or1k_reg->spr_num);
 			return retval;
@@ -563,9 +565,11 @@ static int or1k_generate_tdesc(struct target *target, const char *filename)
 
 	if (features != NULL) {
 		while (features[current_feature]) {
-			retval = generate_feature_section(target, &fileio, "or1k", features[current_feature]);
+			retval = generate_feature_section(target, &fileio,
+							  "or1k", features[current_feature]);
 			if (retval != ERROR_OK) {
-				LOG_ERROR("Can't write the feature section [%s]", features[current_feature]);
+				LOG_ERROR("Can't write the feature section [%s]",
+					   features[current_feature]);
 				return retval;
 			}
 			current_feature++;
@@ -599,7 +603,15 @@ static int or1k_debug_entry(struct target *target)
 		return retval;
 	}
 
-	return ERROR_OK;
+	struct or1k_common *or1k = target_to_or1k(target);
+	uint32_t addr = or1k->core_regs[OR1K_REG_NPC];
+
+	if (breakpoint_find(target, addr))
+		/* Halted on a breakpoint, step back to permit executing the instruction there */
+		retval = or1k_set_core_reg(&or1k->core_cache->reg_list[OR1K_REG_NPC],
+					   (uint8_t *)&addr);
+
+	return retval;
 }
 
 static int or1k_halt(struct target *target)
@@ -749,19 +761,51 @@ static int or1k_poll(struct target *target)
 
 static int or1k_assert_reset(struct target *target)
 {
-	LOG_ERROR("%s: implement me", __func__);
+	struct or1k_common *or1k = target_to_or1k(target);
+	struct or1k_du *du_core = or1k_to_du(or1k);
+
+	int retval = du_core->or1k_cpu_reset(&or1k->jtag, CPU_RESET);
+	if (retval != ERROR_OK) {
+		LOG_ERROR("Error while asserting RESET");
+		return retval;
+	}
+
 	return ERROR_OK;
 }
 
 static int or1k_deassert_reset(struct target *target)
 {
-	LOG_ERROR("%s: implement me", __func__);
+	struct or1k_common *or1k = target_to_or1k(target);
+	struct or1k_du *du_core = or1k_to_du(or1k);
+
+	int retval = du_core->or1k_cpu_reset(&or1k->jtag, CPU_NOT_RESET);
+	if (retval != ERROR_OK) {
+		LOG_ERROR("Error while desasserting RESET");
+		return retval;
+	}
+
 	return ERROR_OK;
 }
 
 static int or1k_soft_reset_halt(struct target *target)
 {
-	LOG_ERROR("%s: implement me", __func__);
+	struct or1k_common *or1k = target_to_or1k(target);
+	struct or1k_du *du_core = or1k_to_du(or1k);
+
+	int retval = du_core->or1k_cpu_stall(&or1k->jtag, CPU_STALL);
+	if (retval != ERROR_OK) {
+		LOG_ERROR("Error while stalling the CPU");
+		return retval;
+	}
+
+	retval = or1k_assert_reset(target);
+	if (retval != ERROR_OK)
+		return retval;
+
+	retval = or1k_deassert_reset(target);
+	if (retval != ERROR_OK)
+		return retval;
+
 	return ERROR_OK;
 }
 
@@ -798,7 +842,8 @@ static int or1k_resume_or_step(struct target *target, int current,
 	}
 
 	/* read debug registers (starting from DMR1 register) */
-	retval = du_core->or1k_jtag_read_cpu(&or1k->jtag, OR1K_DMR1_CPU_REG_ADD, OR1K_DEBUG_REG_NUM, debug_reg_list);
+	retval = du_core->or1k_jtag_read_cpu(&or1k->jtag, OR1K_DMR1_CPU_REG_ADD,
+					     OR1K_DEBUG_REG_NUM, debug_reg_list);
 	if (retval != ERROR_OK) {
 		LOG_ERROR("Error while reading debug registers");
 		return retval;
@@ -825,7 +870,8 @@ static int or1k_resume_or_step(struct target *target, int current,
 	debug_reg_list[OR1K_DEBUG_REG_DSR] |= OR1K_DSR_TE;
 
 	/* write debug registers (starting from DMR1 register) */
-	retval = du_core->or1k_jtag_write_cpu(&or1k->jtag, OR1K_DMR1_CPU_REG_ADD, OR1K_DEBUG_REG_NUM, debug_reg_list);
+	retval = du_core->or1k_jtag_write_cpu(&or1k->jtag, OR1K_DMR1_CPU_REG_ADD,
+					      OR1K_DEBUG_REG_NUM, debug_reg_list);
 	if (retval != ERROR_OK) {
 		LOG_ERROR("Error while writing back debug registers");
 		return retval;
@@ -916,7 +962,8 @@ static int or1k_add_breakpoint(struct target *target,
 					 1,
 					 (uint32_t *)breakpoint->orig_instr);
 	if (retval != ERROR_OK) {
-		LOG_ERROR("Error while reading the instruction at 0x%08x", breakpoint->address);
+		LOG_ERROR("Error while reading the instruction at 0x%08x",
+			   breakpoint->address);
 		return retval;
 	}
 
@@ -929,7 +976,8 @@ static int or1k_add_breakpoint(struct target *target,
 					  1,
 					  (uint32_t *)&or1k_trap_insn);
 	if (retval != ERROR_OK) {
-		LOG_ERROR("Error while writing OR1K_TRAP_INSTR at 0x%08x", breakpoint->address);
+		LOG_ERROR("Error while writing OR1K_TRAP_INSTR at 0x%08x",
+			   breakpoint->address);
 		return retval;
 	}
 
@@ -964,7 +1012,8 @@ static int or1k_remove_breakpoint(struct target *target,
 					  1,
 					  (uint32_t *)breakpoint->orig_instr);
 	if (retval != ERROR_OK) {
-		LOG_ERROR("Error while writing back the instruction at 0x%08x", breakpoint->address);
+		LOG_ERROR("Error while writing back the instruction at 0x%08x",
+			   breakpoint->address);
 		return retval;
 	}
 
@@ -1147,15 +1196,15 @@ static int or1k_write_memory(struct target *target, uint32_t address,
 	switch (size) {
 	case 4:
 		return du_core->or1k_jtag_write_memory32(&or1k->jtag, address, count,
-						(uint32_t *)(void *)buffer);
+							 (uint32_t *)buffer);
 		break;
 	case 2:
 		return du_core->or1k_jtag_write_memory16(&or1k->jtag, address, count,
-						(uint16_t *)(void *)buffer);
+							 (uint16_t *)buffer);
 		break;
 	case 1:
 		return du_core->or1k_jtag_write_memory8(&or1k->jtag, address, count,
-					       buffer);
+							buffer);
 		break;
 	default:
 		break;
@@ -1391,42 +1440,6 @@ COMMAND_HANDLER(or1k_addreg_command_handler)
 	return ERROR_OK;
 }
 
-COMMAND_HANDLER(or1k_readreg_command_handler)
-{
-	struct target *target = get_current_target(CMD_CTX);
-	struct or1k_common *or1k = target_to_or1k(target);
-	struct or1k_du *du_core = or1k_to_du(or1k);
-
-	if (CMD_ARGC != 1)
-		return ERROR_COMMAND_SYNTAX_ERROR;
-
-	for (int i = 0; i < or1k->nb_regs; i++) {
-
-		if (or1k->arch_info[i].name == NULL)
-			continue;
-
-		if (!strcmp(or1k->arch_info[i].name, CMD_ARGV[0])) {
-
-			uint32_t reg_value;
-
-			int retval = du_core->or1k_jtag_read_cpu(&or1k->jtag,
-							     or1k->arch_info[i].spr_num,
-							     1,
-							     &reg_value);
-			if (retval != ERROR_OK)
-				return retval;
-			command_print(CMD_CTX, "name        value         group");
-			command_print(CMD_CTX, "-------------------------------");
-			command_print(CMD_CTX, "%-10s  0x%08x    %s", or1k->arch_info[i].name,
-				      reg_value, or1k->arch_info[i].group);
-			return ERROR_OK;
-		}
-	}
-
-	LOG_INFO("Couldn't find register %s", CMD_ARGV[0]);
-	return ERROR_OK;
-}
-
 COMMAND_HANDLER(or1k_readgroup_command_handler)
 {
 	struct target *target = get_current_target(CMD_CTX);
@@ -1501,13 +1514,6 @@ static const struct command_registration or1k_reg_command_handlers[] = {
 		.mode = COMMAND_ANY,
 		.usage = "addreg name addr feature group",
 		.help = "Add a register to the register list",
-	},
-	{
-		"readreg",
-		.handler = or1k_readreg_command_handler,
-		.mode = COMMAND_ANY,
-		.usage = "readreg name",
-		.help = "Read the register *name*",
 	},
 	{
 		"readgroup",
