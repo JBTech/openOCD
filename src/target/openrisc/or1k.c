@@ -811,7 +811,7 @@ static int or1k_soft_reset_halt(struct target *target)
 	return ERROR_OK;
 }
 
-bool is_any_soft_breakpoint(struct target *target)
+static bool is_any_soft_breakpoint(struct target *target)
 {
 	struct breakpoint *breakpoint = target->breakpoints;
 
