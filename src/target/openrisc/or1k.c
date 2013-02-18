@@ -678,7 +678,6 @@ static int or1k_is_cpu_running(struct target *target, int *running)
 
 			LOG_WARNING("...attempt %d of %d", tries, RETRIES_MAX);
 
-			/* TODO: perhaps some sort of time delay here. 1s? */
 			sleep(1);
 
 			continue;
