@@ -238,6 +238,8 @@ static int or1k_add_reg(struct target *target, struct or1k_core_reg *new_reg)
 	struct or1k_common *or1k = target_to_or1k(target);
 	int reg_list_size = or1k->nb_regs * sizeof(struct or1k_core_reg);
 
+	LOG_DEBUG("-");
+
 	or1k_core_reg_list_arch_info = realloc(or1k_core_reg_list_arch_info,
 				reg_list_size + sizeof(struct or1k_core_reg));
 
@@ -254,6 +256,8 @@ static int or1k_add_reg(struct target *target, struct or1k_core_reg *new_reg)
 static int or1k_create_reg_list(struct target *target)
 {
 	struct or1k_common *or1k = target_to_or1k(target);
+
+	LOG_DEBUG("-");
 
 	or1k_core_reg_list_arch_info = malloc(ARRAY_SIZE(or1k_init_reg_list) *
 				       sizeof(struct or1k_core_reg));
@@ -318,6 +322,8 @@ static int or1k_jtag_read_regs(struct or1k_common *or1k, uint32_t *regs)
 {
 	struct or1k_du *du_core = or1k_jtag_to_du(&or1k->jtag);
 
+	LOG_DEBUG("-");
+
 	int retval = du_core->or1k_jtag_read_cpu(&or1k->jtag,
 			or1k->arch_info[OR1K_REG_R0].spr_num, OR1K_REG_R31 + 1,
 			regs + OR1K_REG_R0);
@@ -331,6 +337,8 @@ static int or1k_jtag_read_regs(struct or1k_common *or1k, uint32_t *regs)
 static int or1k_jtag_write_regs(struct or1k_common *or1k, uint32_t *regs)
 {
 	struct or1k_du *du_core = or1k_jtag_to_du(&or1k->jtag);
+
+	LOG_DEBUG("-");
 
 	int retval = du_core->or1k_jtag_write_cpu(&or1k->jtag,
 			or1k->arch_info[OR1K_REG_R0].spr_num, OR1K_REG_R31 + 1,
@@ -387,6 +395,8 @@ static int or1k_restore_context(struct target *target)
 	int reg_write = 0;
 	int retval;
 
+	LOG_DEBUG("-");
+
 	for (int i = 0; i < OR1KNUMCOREREGS; i++) {
 		if (or1k->core_cache->reg_list[i].dirty) {
 			or1k_write_core_reg(target, i);
@@ -422,6 +432,8 @@ static int or1k_read_core_reg(struct target *target, int num)
 	struct or1k_du *du_core = or1k_to_du(or1k);
 	uint32_t reg_value;
 
+	LOG_DEBUG("-");
+
 	if ((num < 0) || (num >= or1k->nb_regs))
 		return ERROR_COMMAND_SYNTAX_ERROR;
 
@@ -450,6 +462,8 @@ static int or1k_write_core_reg(struct target *target, int num)
 {
 	struct or1k_common *or1k = target_to_or1k(target);
 
+	LOG_DEBUG("-");
+
 	if ((num < 0) || (num >= OR1KNUMCOREREGS))
 		return ERROR_COMMAND_SYNTAX_ERROR;
 
@@ -467,6 +481,8 @@ static int or1k_get_core_reg(struct reg *reg)
 	struct or1k_core_reg *or1k_reg = reg->arch_info;
 	struct target *target = or1k_reg->target;
 
+	LOG_DEBUG("-");
+
 	if (target->state != TARGET_HALTED)
 		return ERROR_TARGET_NOT_HALTED;
 
@@ -480,6 +496,8 @@ static int or1k_set_core_reg(struct reg *reg, uint8_t *buf)
 	struct or1k_common *or1k = target_to_or1k(target);
 	struct or1k_du *du_core = or1k_to_du(or1k);
 	uint32_t value = buf_get_u32(buf, 0, 32);
+
+	LOG_DEBUG("-");
 
 	if (target->state != TARGET_HALTED)
 		return ERROR_TARGET_NOT_HALTED;
@@ -515,8 +533,10 @@ static struct reg_cache *or1k_build_reg_cache(struct target *target)
 	struct or1k_core_reg *arch_info =
 		malloc((or1k->nb_regs) * sizeof(struct or1k_core_reg));
 
+	LOG_DEBUG("-");
+
 	/* Build the process context cache */
-	cache->name = "openrisc 1000 registers";
+	cache->name = "OpenRISC 1000 registers";
 	cache->next = NULL;
 	cache->reg_list = reg_list;
 	cache->num_regs = or1k->nb_regs;
@@ -546,6 +566,8 @@ static int or1k_generate_tdesc(struct target *target, const char *filename)
 {
 	struct fileio fileio;
 	char **features = NULL;
+
+	LOG_DEBUG("-");
 
 	/* Create the tdesc file, prepare the header and set the architecture
 	 * to or32 in the file.
@@ -596,10 +618,9 @@ static int or1k_generate_tdesc(struct target *target, const char *filename)
 
 static int or1k_debug_entry(struct target *target)
 {
-	LOG_DEBUG("-");
-
-	/* Perhaps do more debugging entry (processor stalled) set up here */
 	int retval = or1k_save_context(target);
+
+	LOG_DEBUG("-");
 
 	if (retval != ERROR_OK) {
 		LOG_ERROR("Error while calling or1k_save_context");
@@ -766,6 +787,8 @@ static int or1k_assert_reset(struct target *target)
 	struct or1k_common *or1k = target_to_or1k(target);
 	struct or1k_du *du_core = or1k_to_du(or1k);
 
+	LOG_DEBUG("-");
+
 	int retval = du_core->or1k_cpu_reset(&or1k->jtag, CPU_RESET);
 	if (retval != ERROR_OK) {
 		LOG_ERROR("Error while asserting RESET");
@@ -780,6 +803,8 @@ static int or1k_deassert_reset(struct target *target)
 	struct or1k_common *or1k = target_to_or1k(target);
 	struct or1k_du *du_core = or1k_to_du(or1k);
 
+	LOG_DEBUG("-");
+
 	int retval = du_core->or1k_cpu_reset(&or1k->jtag, CPU_NOT_RESET);
 	if (retval != ERROR_OK) {
 		LOG_ERROR("Error while desasserting RESET");
@@ -793,6 +818,8 @@ static int or1k_soft_reset_halt(struct target *target)
 {
 	struct or1k_common *or1k = target_to_or1k(target);
 	struct or1k_du *du_core = or1k_to_du(or1k);
+
+	LOG_DEBUG("-");
 
 	int retval = du_core->or1k_cpu_stall(&or1k->jtag, CPU_STALL);
 	if (retval != ERROR_OK) {
@@ -814,6 +841,8 @@ static int or1k_soft_reset_halt(struct target *target)
 static bool is_any_soft_breakpoint(struct target *target)
 {
 	struct breakpoint *breakpoint = target->breakpoints;
+
+	LOG_DEBUG("-");
 
 	while (breakpoint)
 		if (breakpoint->type == BKPT_SOFT)
@@ -938,8 +967,7 @@ static int or1k_resume(struct target *target, int current,
 	return or1k_resume_or_step(target, current, address,
 				   handle_breakpoints,
 				   debug_execution,
-				   /* Single step? No. */
-				   0);
+				   NO_SINGLE_STEP);
 }
 
 static int or1k_step(struct target *target, int current,
@@ -947,11 +975,8 @@ static int or1k_step(struct target *target, int current,
 {
 	return or1k_resume_or_step(target, current, address,
 				   handle_breakpoints,
-				   /* TARGET_EVENT_RESUMED:
-				      target resumed to execute user code */
 				   0,
-				   /* Single step? Yes. */
-				   1);
+				   SINGLE_STEP);
 
 }
 
