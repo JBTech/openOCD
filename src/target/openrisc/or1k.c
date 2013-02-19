@@ -740,7 +740,7 @@ static int or1k_poll(struct target *target)
 
 			retval = or1k_halt(target);
 			if (retval != ERROR_OK) {
-				LOG_ERROR("Error while calling or1k_debug_entry");
+				LOG_ERROR("Error while calling or1k_halt");
 				return retval;
 			}
 
@@ -1292,6 +1292,14 @@ static int or1k_examine(struct target *target)
 				target->state = TARGET_RUNNING;
 			else {
 				LOG_DEBUG("Target is halted");
+
+				/* This is the first time we examine the target,
+				 * it is stalled and we don't know why. Let's
+				 * assume this is because of a rebug reason.
+				 */
+				if (target->state == TARGET_UNKNOWN)
+					target->debug_reason = DBG_REASON_DBGRQ;
+
 				target->state = TARGET_HALTED;
 			}
 		}

@@ -25,6 +25,12 @@ du_select adv 1
 # format is addreg [name] [address] [feature] [reg_group]
 addreg rtest 0x1234 group0 system
 
+# Override default init_reset
+proc init_reset {mode} {
+	soft_reset_halt
+	resume
+}
+
 # Target initialization
 init
 echo "Halting processor"
