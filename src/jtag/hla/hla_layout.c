@@ -2,6 +2,9 @@
  *   Copyright (C) 2011 by Mathias Kuester                                 *
  *   Mathias Kuester <kesmtp@freenet.de>                                   *
  *                                                                         *
+ *   Copyright (C) 2012 by Spencer Oliver                                  *
+ *   spen@spen-soft.co.uk                                                  *
+ *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
  *   the Free Software Foundation; either version 2 of the License, or     *
@@ -27,67 +30,67 @@
 #include <transport/transport.h>
 #include <helper/time_support.h>
 
-#include <jtag/stlink/stlink_layout.h>
-#include <jtag/stlink/stlink_tcl.h>
-#include <jtag/stlink/stlink_transport.h>
-#include <jtag/stlink/stlink_interface.h>
+#include <jtag/hla/hla_layout.h>
+#include <jtag/hla/hla_tcl.h>
+#include <jtag/hla/hla_transport.h>
+#include <jtag/hla/hla_interface.h>
 
-#define STLINK_LAYOUT_UNKNOWN	0
-#define STLINK_LAYOUT_SG	1
-#define STLINK_LAYOUT_USB	2
-
-static int stlink_layout_open(struct stlink_interface_s *stlink_if)
+static int hl_layout_open(struct hl_interface_s *adapter)
 {
 	int res;
 
-	LOG_DEBUG("stlink_layout_open");
+	LOG_DEBUG("hl_layout_open");
 
-	stlink_if->fd = NULL;
+	adapter->fd = NULL;
 
-	res = stlink_if->layout->api->open(&stlink_if->param, &stlink_if->fd);
+	res = adapter->layout->api->open(&adapter->param, &adapter->fd);
 
 	if (res != ERROR_OK) {
 		LOG_DEBUG("failed");
 		return res;
 	}
 
+	/* make sure adapter has set the buffer size */
+	if (!adapter->param.max_buffer) {
+		LOG_ERROR("buffer size not set");
+		return ERROR_FAIL;
+	}
+
 	return ERROR_OK;
 }
 
-static int stlink_layout_close(struct stlink_interface_s *stlink_if)
+static int hl_layout_close(struct hl_interface_s *adapter)
 {
 	return ERROR_OK;
 }
 
-static const struct stlink_layout stlink_layouts[] = {
+static const struct hl_layout hl_layouts[] = {
 	{
-	 .name = "usb",
-	 .type = STLINK_LAYOUT_USB,
-	 .open = stlink_layout_open,
-	 .close = stlink_layout_close,
+	 .name = "stlink",
+	 .open = hl_layout_open,
+	 .close = hl_layout_close,
 	 .api = &stlink_usb_layout_api,
 	 },
 	{
-	 .name = "sg",
-	 .type = STLINK_LAYOUT_SG,
-	 .open = stlink_layout_open,
-	 .close = stlink_layout_close,
-	 .api = &stlink_usb_layout_api,
-	 },
+	 .name = "ti-icdi",
+	 .open = hl_layout_open,
+	 .close = hl_layout_close,
+	 .api = &icdi_usb_layout_api,
+	},
 	{.name = NULL, /* END OF TABLE */ },
 };
 
 /** */
-const struct stlink_layout *stlink_layout_get_list(void)
+const struct hl_layout *hl_layout_get_list(void)
 {
-	return stlink_layouts;
+	return hl_layouts;
 }
 
-int stlink_layout_init(struct stlink_interface_s *stlink_if)
+int hl_layout_init(struct hl_interface_s *adapter)
 {
-	LOG_DEBUG("stlink_layout_init");
+	LOG_DEBUG("hl_layout_init");
 
-	if (stlink_if->layout == NULL) {
+	if (adapter->layout == NULL) {
 		LOG_ERROR("no layout specified");
 		return ERROR_FAIL;
 	}

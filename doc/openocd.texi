@@ -155,13 +155,13 @@ OpenOCD internally. @xref{Debug Adapter Hardware}.
 
 @b{GDB Debug:} It allows ARM7 (ARM7TDMI and ARM720t), ARM9 (ARM920T,
 ARM922T, ARM926EJ--S, ARM966E--S), XScale (PXA25x, IXP42x) and
-Cortex-M3 (Stellaris LM3 and ST STM32) based cores to be
+Cortex-M3 (Stellaris LM3, ST STM32 and Energy Micro EFM32) based cores to be
 debugged via the GDB protocol.
 
 @b{Flash Programing:} Flash writing is supported for external CFI
 compatible NOR flashes (Intel and AMD/Spansion command set) and several
-internal flashes (LPC1700, LPC2000, AT91SAM7, AT91SAM3U, STR7x, STR9x, LM3, and
-STM32x). Preliminary support for various NAND flash controllers
+internal flashes (LPC1700, LPC2000, AT91SAM7, AT91SAM3U, STR7x, STR9x, LM3,
+STM32x and EFM32). Preliminary support for various NAND flash controllers
 (LPC3180, Orion, S3C24xx, more) controller is included.
 
 @section OpenOCD Web Site
@@ -357,13 +357,13 @@ a built-in low cost debug adapter and usb-to-serial solution.
 @item @b{signalyzer}
 @* See: @url{http://www.signalyzer.com}
 @item @b{Stellaris Eval Boards}
-@* See: @url{http://www.luminarymicro.com} - The Stellaris eval boards
+@* See: @url{http://www.ti.com} - The Stellaris eval boards
 bundle FT2232-based JTAG and SWD support, which can be used to debug
 the Stellaris chips.  Using separate JTAG adapters is optional.
 These boards can also be used in a "pass through" mode as JTAG adapters
 to other target boards, disabling the Stellaris chip.
-@item @b{Luminary ICDI}
-@* See: @url{http://www.luminarymicro.com} - Luminary In-Circuit Debug
+@item @b{TI/Luminary ICDI}
+@* See: @url{http://www.ti.com} - TI/Luminary In-Circuit Debug
 Interface (ICDI) Boards are included in Stellaris LM3S9B9x
 Evaluation Kits.  Like the non-detachable FT2232 support on the other
 Stellaris eval boards, they can be used to debug other target boards.
@@ -455,6 +455,11 @@ The simplest solution is to get linux to ignore the ST-LINK using one of the fol
 @item modprobe -r usb-storage && modprobe usb-storage quirks=483:3744:i
 @item add "options usb-storage quirks=483:3744:i" to /etc/modprobe.conf
 @end itemize
+
+@section USB TI/Stellaris ICDI based
+Texas Instruments has an adapter called @b{ICDI}.
+It is not to be confused with the FTDI based adapters that were originally fitted to their
+evaluation boards. This is the adapter fitted to the Stellaris LaunchPad.
 
 @section USB Other
 @itemize @bullet
@@ -2457,6 +2462,10 @@ Cirrus Logic EP93xx based single-board computer bit-banging (in development)
 
 @deffn {Interface Driver} {ft2232}
 FTDI FT2232 (USB) based devices over one of the userspace libraries.
+
+Note that this driver has several flaws and the @command{ftdi} driver is
+recommended as its replacement.
+
 These interfaces have several commands, used to configure the driver
 before initializing the JTAG scan chain:
 
@@ -2484,12 +2493,12 @@ Currently valid layout @var{name} values include:
 @item @b{axm0432_jtag} Axiom AXM-0432
 @item @b{comstick} Hitex STR9 comstick
 @item @b{cortino} Hitex Cortino JTAG interface
-@item @b{evb_lm3s811} Luminary Micro EVB_LM3S811 as a JTAG interface,
+@item @b{evb_lm3s811} TI/Luminary Micro EVB_LM3S811 as a JTAG interface,
 either for the local Cortex-M3 (SRST only)
 or in a passthrough mode (neither SRST nor TRST)
 This layout can not support the SWO trace mechanism, and should be
 used only for older boards (before rev C).
-@item @b{luminary_icdi} This layout should be used with most Luminary
+@item @b{luminary_icdi} This layout should be used with most TI/Luminary
 eval boards, including Rev C LM3S811 eval boards and the eponymous
 ICDI boards, to debug either the local Cortex-M3 or in passthrough mode
 to debug some other target.  It can support the SWO trace mechanism.
@@ -2538,6 +2547,119 @@ ft2232_device_desc "Turtelizer JTAG/RS232 Adapter"
 ft2232_layout turtelizer2
 ft2232_vid_pid 0x0403 0xbdc8
 @end example
+@end deffn
+
+@deffn {Interface Driver} {ftdi}
+This driver is for adapters using the MPSSE (Multi-Protocol Synchronous Serial
+Engine) mode built into many FTDI chips, such as the FT2232, FT4232 and FT232H.
+It is a complete rewrite to address a large number of problems with the ft2232
+interface driver.
+
+The driver is using libusb-1.0 in asynchronous mode to talk to the FTDI device,
+bypassing intermediate libraries like libftdi of D2XX. Performance-wise it is
+consistently faster than the ft2232 driver, sometimes several times faster.
+
+A major improvement of this driver is that support for new FTDI based adapters
+can be added competely through configuration files, without the need to patch
+and rebuild OpenOCD.
+
+The driver uses a signal abstraction to enable Tcl configuration files to
+define outputs for one or several FTDI GPIO. These outputs can then be
+controlled using the @command{ftdi_set_signal} command. Special signal names
+are reserved for nTRST, nSRST and LED (for blink) so that they, if defined,
+will be used for their customary purpose.
+
+Depending on the type of buffer attached to the FTDI GPIO, the outputs have to
+be controlled differently. In order to support tristateable signals such as
+nSRST, both a data GPIO and an output-enable GPIO can be specified for each
+signal. The following output buffer configurations are supported:
+
+@itemize @minus
+@item Push-pull with one FTDI output as (non-)inverted data line
+@item Open drain with one FTDI output as (non-)inverted output-enable
+@item Tristate with one FTDI output as (non-)inverted data line and another
+      FTDI output as (non-)inverted output-enable
+@item Unbuffered, using the FTDI GPIO as a tristate output directly by
+      switching data and direction as necessary
+@end itemize
+
+These interfaces have several commands, used to configure the driver
+before initializing the JTAG scan chain:
+
+@deffn {Config Command} {ftdi_vid_pid} [vid pid]+
+The vendor ID and product ID of the adapter. If not specified, the FTDI
+default values are used.
+Currently, up to eight [@var{vid}, @var{pid}] pairs may be given, e.g.
+@example
+ftdi_vid_pid 0x0403 0xcff8 0x15ba 0x0003
+@end example
+@end deffn
+
+@deffn {Config Command} {ftdi_device_desc} description
+Provides the USB device description (the @emph{iProduct string})
+of the adapter. If not specified, the device description is ignored
+during device selection.
+@end deffn
+
+@deffn {Config Command} {ftdi_serial} serial-number
+Specifies the @var{serial-number} of the adapter to use,
+in case the vendor provides unique IDs and more than one adapter
+is connected to the host.
+If not specified, serial numbers are not considered.
+(Note that USB serial numbers can be arbitrary Unicode strings,
+and are not restricted to containing only decimal digits.)
+@end deffn
+
+@deffn {Config Command} {ftdi_channel} channel
+Selects the channel of the FTDI device to use for MPSSE operations. Most
+adapters use the default, channel 0, but there are exceptions.
+@end deffn
+
+@deffn {Config Command} {ftdi_layout_init} data direction
+Specifies the initial values of the FTDI GPIO data and direction registers.
+Each value is a 16-bit number corresponding to the concatenation of the high
+and low FTDI GPIO registers. The values should be selected based on the
+schematics of the adapter, such that all signals are set to safe levels with
+minimal impact on the target system. Avoid floating inputs, conflicting outputs
+and initially asserted reset signals.
+@end deffn
+
+@deffn {Config Command} {ftdi_layout_signal} name [@option{-data}|@option{-ndata} data_mask] [@option{-oe}|@option{-noe} oe_mask]
+Creates a signal with the specified @var{name}, controlled by one or more FTDI
+GPIO pins via a range of possible buffer connections. The masks are FTDI GPIO
+register bitmasks to tell the driver the connection and type of the output
+buffer driving the respective signal. @var{data_mask} is the bitmask for the
+pin(s) connected to the data input of the output buffer. @option{-ndata} is
+used with inverting data inputs and @option{-data} with non-inverting inputs.
+The @option{-oe} (or @option{-noe}) option tells where the output-enable (or
+not-output-enable) input to the output buffer is connected.
+
+Both @var{data_mask} and @var{oe_mask} need not be specified. For example, a
+simple open-collector transistor driver would be specified with @option{-oe}
+only. In that case the signal can only be set to drive low or to Hi-Z and the
+driver will complain if the signal is set to drive high. Which means that if
+it's a reset signal, @command{reset_config} must be specified as
+@option{srst_open_drain}, not @option{srst_push_pull}.
+
+A special case is provided when @option{-data} and @option{-oe} is set to the
+same bitmask. Then the FTDI pin is considered being connected straight to the
+target without any buffer. The FTDI pin is then switched between output and
+input as necessary to provide the full set of low, high and Hi-Z
+characteristics. In all other cases, the pins specified in a signal definition
+are always driven by the FTDI.
+@end deffn
+
+@deffn {Command} {ftdi_set_signal} name @option{0}|@option{1}|@option{z}
+Set a previously defined signal to the specified level.
+@itemize @minus
+@item @option{0}, drive low
+@item @option{1}, drive high
+@item @option{z}, set to high-impedance
+@end itemize
+@end deffn
+
+For example adapter definitions, see the configuration files shipped in the
+@file{interface/ftdi} directory.
 @end deffn
 
 @deffn {Interface Driver} {remote_bitbang}
@@ -2804,27 +2926,31 @@ which are not currently documented here.
 @end quotation
 @end deffn
 
-@deffn {Interface Driver} {stlink}
-ST Micro ST-LINK adapter.
+@deffn {Interface Driver} {hla}
+This is a driver that supports multiple High Level Adapters.
+This type of adapter does not expose some of the lower level api's
+that OpenOCD would normally use to access the target.
 
-@deffn {Config Command} {stlink_device_desc} description
+Currently supported adapters include the ST STLINK and TI ICDI.
+
+@deffn {Config Command} {hla_device_desc} description
 Currently Not Supported.
 @end deffn
 
-@deffn {Config Command} {stlink_serial} serial
+@deffn {Config Command} {hla_serial} serial
 Currently Not Supported.
 @end deffn
 
-@deffn {Config Command} {stlink_layout} (@option{sg}|@option{usb})
-Specifies the stlink layout to use.
+@deffn {Config Command} {hla_layout} (@option{stlink}|@option{icdi})
+Specifies the adapter layout to use.
 @end deffn
 
-@deffn {Config Command} {stlink_vid_pid} vid pid
-The vendor ID and product ID of the STLINK device.
+@deffn {Config Command} {hla_vid_pid} vid pid
+The vendor ID and product ID of the device.
 @end deffn
 
 @deffn {Config Command} {stlink_api} api_level
-Manually sets the stlink api used, valid options are 1 or 2.
+Manually sets the stlink api used, valid options are 1 or 2. (@b{STLINK Only}).
 @end deffn
 @end deffn
 
@@ -3156,10 +3282,9 @@ from a particular combination of interface and board.
 with a board that only wires up SRST.)
 
 The @var{mode_flag} options can be specified in any order, but only one
-of each type -- @var{signals}, @var{combination},
-@var{gates},
-@var{trst_type},
-and @var{srst_type} -- may be specified at a time.
+of each type -- @var{signals}, @var{combination}, @var{gates},
+@var{trst_type}, @var{srst_type} and @var{connect_type}
+-- may be specified at a time.
 If you don't provide a new value for a given type, its previous
 value (perhaps the default) is unchanged.
 For example, this means that you don't need to say anything at all about
@@ -3201,6 +3326,18 @@ JTAG clock. This means that no communication can happen on JTAG
 while SRST is asserted.
 Its converse is @option{srst_nogate}, indicating that JTAG commands
 can safely be issued while SRST is active.
+
+@item
+The @var{connect_type} tokens control flags that describe some cases where
+SRST is asserted while connecting to the target. @option{srst_nogate}
+is required to use this option.
+@option{connect_deassert_srst} (default)
+indicates that SRST will not be asserted while connecting to the target.
+Its converse is @option{connect_assert_srst}, indicating that SRST will
+be asserted before any target connection.
+Only some targets support this feature, STM32 and STR9 are examples.
+This feature is useful if you are unable to connect to your target due
+to incorrect options byte config or illegal program execution.
 @end itemize
 
 The optional @var{trst_type} and @var{srst_type} parameters allow the
@@ -4843,6 +4980,18 @@ The AVR 8-bit microcontrollers from Atmel integrate flash memory.
 @comment - defines mass_erase ... pointless given flash_erase_address
 @end deffn
 
+@deffn {Flash Driver} efm32
+All members of the EFM32 microcontroller family from Energy Micro include
+internal flash and use ARM Cortex M3 cores. The driver automatically recognizes
+a number of these chips using the chip identification register, and
+autoconfigures itself.
+@example
+flash bank $_FLASHNAME efm32 0 0 0 0 $_TARGETNAME
+@end example
+@emph{The current implementation is incomplete. Unprotecting flash pages is not
+supported.}
+@end deffn
+
 @deffn {Flash Driver} lpc2000
 Most members of the LPC1700 and LPC2000 microcontroller families from NXP
 include internal flash and use Cortex-M3 (LPC1700) or ARM7TDMI (LPC2000) cores.
@@ -5067,7 +5216,6 @@ standard @command{flash erase_address} command.}
 @example
 flash bank $_FLASHNAME stellaris 0 0 0 0 $_TARGETNAME
 @end example
-@end deffn
 
 @deffn Command {stellaris recover bank_id}
 Performs the @emph{Recovering a "Locked" Device} procedure to
@@ -5083,10 +5231,11 @@ if more than one Stellaris chip is connected, the procedure is
 applied to all of them.
 @end quotation
 @end deffn
+@end deffn
 
 @deffn {Flash Driver} stm32f1x
-All members of the STM32f1x microcontroller family from ST Microelectronics
-include internal flash and use ARM Cortex M3 cores.
+All members of the STM32F0, STM32F1 and STM32F3 microcontroller families
+from ST Microelectronics include internal flash and use ARM Cortex-M0/M3/M4 cores.
 The driver automatically recognizes a number of these chips using
 the chip identification register, and autoconfigures itself.
 
@@ -5129,10 +5278,22 @@ The @var{num} parameter is a value shown by @command{flash banks}.
 @end deffn
 
 @deffn {Flash Driver} stm32f2x
-All members of the STM32f2x microcontroller family from ST Microelectronics
-include internal flash and use ARM Cortex M3 cores.
+All members of the STM32F2 and STM32F4 microcontroller families from ST Microelectronics
+include internal flash and use ARM Cortex-M3/M4 cores.
 The driver automatically recognizes a number of these chips using
 the chip identification register, and autoconfigures itself.
+
+Some stm32f2x-specific commands are defined:
+
+@deffn Command {stm32f2x lock} num
+Locks the entire stm32 device.
+The @var{num} parameter is a value shown by @command{flash banks}.
+@end deffn
+
+@deffn Command {stm32f2x unlock} num
+Unlocks the entire stm32 device.
+The @var{num} parameter is a value shown by @command{flash banks}.
+@end deffn
 @end deffn
 
 @deffn {Flash Driver} str7x

@@ -110,6 +110,7 @@
 struct stm32x_options {
 	uint16_t RDP;
 	uint16_t user_options;
+	uint16_t user_data;
 	uint16_t protection[4];
 };
 
@@ -121,10 +122,14 @@ struct stm32x_flash_bank {
 	bool has_dual_banks;
 	/* used to access dual flash bank stm32xl */
 	uint32_t register_base;
+	uint16_t default_rdp;
+	int user_data_offset;
 };
 
 static int stm32x_mass_erase(struct flash_bank *bank);
 static int stm32x_get_device_id(struct flash_bank *bank, uint32_t *device_id);
+static int stm32x_write_block(struct flash_bank *bank, uint8_t *buffer,
+		uint32_t offset, uint32_t count);
 
 /* flash bank stm32x <base> <size> 0 0 <target#>
  */
@@ -226,7 +231,8 @@ static int stm32x_read_options(struct flash_bank *bank)
 	if (retval != ERROR_OK)
 		return retval;
 
-	stm32x_info->option_bytes.user_options = (uint16_t)0xFFF8 | ((optiondata >> 2) & 0x07);
+	stm32x_info->option_bytes.user_options = (uint16_t)0xFFF0 | ((optiondata >> 2) & 0x0f);
+	stm32x_info->option_bytes.user_data = (optiondata >> stm32x_info->user_data_offset) & 0xffff;
 	stm32x_info->option_bytes.RDP = (optiondata & (1 << OPT_READOUT)) ? 0xFFFF : 0x5AA5;
 
 	if (optiondata & (1 << OPT_READOUT))
@@ -251,14 +257,6 @@ static int stm32x_erase_options(struct flash_bank *bank)
 	struct target *target = bank->target;
 
 	stm32x_info = bank->driver_priv;
-
-	/* stlink is currently does not support 16bit
-	 * read/writes. so we cannot write option bytes */
-	struct armv7m_common *armv7m = target_to_armv7m(target);
-	if (armv7m && armv7m->stlink) {
-		LOG_ERROR("Option bytes currently unsupported for stlink");
-		return ERROR_FAIL;
-	}
 
 	/* read current options */
 	stm32x_read_options(bank);
@@ -294,7 +292,7 @@ static int stm32x_erase_options(struct flash_bank *bank)
 
 	/* clear readout protection and complementary option bytes
 	 * this will also force a device unlock if set */
-	stm32x_info->option_bytes.RDP = 0x5AA5;
+	stm32x_info->option_bytes.RDP = stm32x_info->default_rdp;
 
 	return ERROR_OK;
 }
@@ -327,59 +325,24 @@ static int stm32x_write_options(struct flash_bank *bank)
 	if (retval != ERROR_OK)
 		return retval;
 
-	/* write user option byte */
-	retval = target_write_u16(target, STM32_OB_USER, stm32x_info->option_bytes.user_options);
-	if (retval != ERROR_OK)
-		return retval;
+	uint8_t opt_bytes[16];
 
-	retval = stm32x_wait_status_busy(bank, FLASH_WRITE_TIMEOUT);
-	if (retval != ERROR_OK)
-		return retval;
+	target_buffer_set_u16(target, opt_bytes, stm32x_info->option_bytes.RDP);
+	target_buffer_set_u16(target, opt_bytes + 2, stm32x_info->option_bytes.user_options);
+	target_buffer_set_u16(target, opt_bytes + 4, stm32x_info->option_bytes.user_data & 0xff);
+	target_buffer_set_u16(target, opt_bytes + 6, (stm32x_info->option_bytes.user_data >> 8) & 0xff);
+	target_buffer_set_u16(target, opt_bytes + 8, stm32x_info->option_bytes.protection[0]);
+	target_buffer_set_u16(target, opt_bytes + 10, stm32x_info->option_bytes.protection[1]);
+	target_buffer_set_u16(target, opt_bytes + 12, stm32x_info->option_bytes.protection[2]);
+	target_buffer_set_u16(target, opt_bytes + 14, stm32x_info->option_bytes.protection[3]);
 
-	/* write protection byte 1 */
-	retval = target_write_u16(target, STM32_OB_WRP0, stm32x_info->option_bytes.protection[0]);
-	if (retval != ERROR_OK)
+	uint32_t offset = STM32_OB_RDP - bank->base;
+	retval = stm32x_write_block(bank, opt_bytes, offset, sizeof(opt_bytes) / 2);
+	if (retval != ERROR_OK) {
+		if (retval == ERROR_TARGET_RESOURCE_NOT_AVAILABLE)
+			LOG_ERROR("working area required to erase options bytes");
 		return retval;
-
-	retval = stm32x_wait_status_busy(bank, FLASH_WRITE_TIMEOUT);
-	if (retval != ERROR_OK)
-		return retval;
-
-	/* write protection byte 2 */
-	retval = target_write_u16(target, STM32_OB_WRP1, stm32x_info->option_bytes.protection[1]);
-	if (retval != ERROR_OK)
-		return retval;
-
-	retval = stm32x_wait_status_busy(bank, FLASH_WRITE_TIMEOUT);
-	if (retval != ERROR_OK)
-		return retval;
-
-	/* write protection byte 3 */
-	retval = target_write_u16(target, STM32_OB_WRP2, stm32x_info->option_bytes.protection[2]);
-	if (retval != ERROR_OK)
-		return retval;
-
-	retval = stm32x_wait_status_busy(bank, FLASH_WRITE_TIMEOUT);
-	if (retval != ERROR_OK)
-		return retval;
-
-	/* write protection byte 4 */
-	retval = target_write_u16(target, STM32_OB_WRP3, stm32x_info->option_bytes.protection[3]);
-	if (retval != ERROR_OK)
-		return retval;
-
-	retval = stm32x_wait_status_busy(bank, FLASH_WRITE_TIMEOUT);
-	if (retval != ERROR_OK)
-		return retval;
-
-	/* write readout protection bit */
-	retval = target_write_u16(target, STM32_OB_RDP, stm32x_info->option_bytes.RDP);
-	if (retval != ERROR_OK)
-		return retval;
-
-	retval = stm32x_wait_status_busy(bank, FLASH_WRITE_TIMEOUT);
-	if (retval != ERROR_OK)
-		return retval;
+	}
 
 	retval = target_write_u32(target, STM32_FLASH_CR_B0, FLASH_LOCK);
 	if (retval != ERROR_OK)
@@ -693,7 +656,7 @@ static int stm32x_write_block(struct flash_bank *bank, uint8_t *buffer,
 	buf_set_u32(reg_params[4].value, 0, 32, address);
 
 	armv7m_info.common_magic = ARMV7M_COMMON_MAGIC;
-	armv7m_info.core_mode = ARMV7M_MODE_ANY;
+	armv7m_info.core_mode = ARM_MODE_THREAD;
 
 	retval = target_run_flash_async_algorithm(target, buffer, count, 2,
 			0, NULL,
@@ -893,6 +856,10 @@ static int stm32x_probe(struct flash_bank *bank)
 
 	stm32x_info->probed = 0;
 	stm32x_info->register_base = FLASH_REG_BASE_B0;
+	stm32x_info->user_data_offset = 10;
+
+	/* default factory protection level */
+	stm32x_info->default_rdp = 0x5AA5;
 
 	/* read stm32 device id register */
 	int retval = stm32x_get_device_id(bank, &device_id);
@@ -932,6 +899,8 @@ static int stm32x_probe(struct flash_bank *bank)
 		page_size = 2048;
 		stm32x_info->ppage_size = 2;
 		max_flash_size_in_kb = 256;
+		stm32x_info->user_data_offset = 16;
+		stm32x_info->default_rdp = 0x55AA;
 		break;
 	case 0x428: /* value line High density */
 		page_size = 2048;
@@ -948,11 +917,15 @@ static int stm32x_probe(struct flash_bank *bank)
 		page_size = 2048;
 		stm32x_info->ppage_size = 2;
 		max_flash_size_in_kb = 256;
+		stm32x_info->user_data_offset = 16;
+		stm32x_info->default_rdp = 0x55AA;
 		break;
 	case 0x440: /* stm32f0x */
 		page_size = 1024;
 		stm32x_info->ppage_size = 4;
 		max_flash_size_in_kb = 64;
+		stm32x_info->user_data_offset = 16;
+		stm32x_info->default_rdp = 0x55AA;
 		break;
 	default:
 		LOG_WARNING("Cannot identify target as a STM32 family.");
@@ -1379,6 +1352,11 @@ COMMAND_HANDLER(stm32x_handle_options_read_command)
 			command_print(CMD_CTX, "Boot: Bank 1");
 	}
 
+	command_print(CMD_CTX, "User Option0: 0x%02" PRIx8,
+			(optionbyte >> stm32x_info->user_data_offset) & 0xff);
+	command_print(CMD_CTX, "User Option1: 0x%02" PRIx8,
+			(optionbyte >> (stm32x_info->user_data_offset + 8)) & 0xff);
+
 	return ERROR_OK;
 }
 
@@ -1386,9 +1364,9 @@ COMMAND_HANDLER(stm32x_handle_options_write_command)
 {
 	struct target *target = NULL;
 	struct stm32x_flash_bank *stm32x_info = NULL;
-	uint16_t optionbyte = 0xF8;
+	uint16_t optionbyte;
 
-	if (CMD_ARGC < 4)
+	if (CMD_ARGC < 2)
 		return ERROR_COMMAND_SYNTAX_ERROR;
 
 	struct flash_bank *bank;
@@ -1409,34 +1387,41 @@ COMMAND_HANDLER(stm32x_handle_options_write_command)
 	if (ERROR_OK != retval)
 		return retval;
 
-	/* REVISIT: ignores some options which we will display...
-	 * and doesn't insist on the specified syntax.
-	 */
+	retval = stm32x_read_options(bank);
+	if (ERROR_OK != retval)
+		return retval;
 
-	/* OPT_RDWDGSW */
-	if (strcmp(CMD_ARGV[1], "SWWDG") == 0)
-		optionbyte |= (1 << 0);
-	else	/* REVISIT must be "HWWDG" then ... */
-		optionbyte &= ~(1 << 0);
+	/* start with current options */
+	optionbyte = stm32x_info->option_bytes.user_options;
 
-	/* OPT_RDRSTSTOP */
-	if (strcmp(CMD_ARGV[2], "NORSTSTOP") == 0)
-		optionbyte |= (1 << 1);
-	else	/* REVISIT must be "RSTSTNDBY" then ... */
-		optionbyte &= ~(1 << 1);
+	/* skip over flash bank */
+	CMD_ARGC--;
+	CMD_ARGV++;
 
-	/* OPT_RDRSTSTDBY */
-	if (strcmp(CMD_ARGV[3], "NORSTSTNDBY") == 0)
-		optionbyte |= (1 << 2);
-	else	/* REVISIT must be "RSTSTOP" then ... */
-		optionbyte &= ~(1 << 2);
-
-	if (CMD_ARGC > 4 && stm32x_info->has_dual_banks) {
-		/* OPT_BFB2 */
-		if (strcmp(CMD_ARGV[4], "BOOT0") == 0)
-			optionbyte |= (1 << 3);
-		else
-			optionbyte &= ~(1 << 3);
+	while (CMD_ARGC) {
+		if (strcmp("SWWDG", CMD_ARGV[0]) == 0)
+			optionbyte |= (1 << 0);
+		else if (strcmp("HWWDG", CMD_ARGV[0]) == 0)
+			optionbyte &= ~(1 << 0);
+		else if (strcmp("NORSTSTOP", CMD_ARGV[0]) == 0)
+			optionbyte &= ~(1 << 1);
+		else if (strcmp("RSTSTNDBY", CMD_ARGV[0]) == 0)
+			optionbyte &= ~(1 << 1);
+		else if (strcmp("NORSTSTNDBY", CMD_ARGV[0]) == 0)
+			optionbyte &= ~(1 << 2);
+		else if (strcmp("RSTSTOP", CMD_ARGV[0]) == 0)
+			optionbyte &= ~(1 << 2);
+		else if (stm32x_info->has_dual_banks) {
+			if (strcmp("BOOT0", CMD_ARGV[0]) == 0)
+				optionbyte |= (1 << 3);
+			else if (strcmp("BOOT1", CMD_ARGV[0]) == 0)
+				optionbyte &= ~(1 << 3);
+			else
+				return ERROR_COMMAND_SYNTAX_ERROR;
+		} else
+			return ERROR_COMMAND_SYNTAX_ERROR;
+		CMD_ARGC--;
+		CMD_ARGV++;
 	}
 
 	if (stm32x_erase_options(bank) != ERROR_OK) {

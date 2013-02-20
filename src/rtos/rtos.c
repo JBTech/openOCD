@@ -199,36 +199,47 @@ int rtos_qsymbol(struct connection *connection, char *packet, int packet_size)
 	if (!os)
 		goto done;
 
-	if (sscanf(packet, "qSymbol:%" SCNx64 ":", &addr))
-		hex_to_str(cur_sym, strchr(packet + 8, ':') + 1);
-	else if (target->rtos_auto_detect && !rtos_try_next(target))
-		goto done;
+	/* Decode any symbol name in the packet*/
+	hex_to_str(cur_sym, strchr(packet + 8, ':') + 1);
 
+	if ((strcmp(packet, "qSymbol::") != 0) &&               /* GDB is not offering symbol lookup for the first time */
+	    (!sscanf(packet, "qSymbol:%" SCNx64 ":", &addr))) { /* GDB did not found an address for a symbol */
+		/* GDB could not find an address for the previous symbol */
+		if (!target->rtos_auto_detect) {
+			LOG_WARNING("RTOS %s not detected. (GDB could not find symbol \'%s\')", os->type->name, cur_sym);
+			goto done;
+		} else {
+			/* Autodetecting RTOS - try next RTOS */
+			if (!rtos_try_next(target))
+				goto done;
+
+			/* Next RTOS selected - invalidate current symbol */
+			cur_sym[0] = '\x00';
+
+		}
+	}
 	next_sym = next_symbol(os, cur_sym, addr);
+
 	if (!next_sym) {
+		/* No more symbols need looking up */
+
 		if (!target->rtos_auto_detect) {
 			rtos_detected = 1;
 			goto done;
 		}
 
 		if (os->type->detect_rtos(target)) {
-			LOG_OUTPUT("Auto-detected RTOS: %s\r\n", os->type->name);
+			LOG_INFO("Auto-detected RTOS: %s", os->type->name);
 			rtos_detected = 1;
 			goto done;
+		} else {
+			LOG_WARNING("No RTOS could be auto-detected!");
+			goto done;
 		}
-
-		if (!rtos_try_next(target))
-			goto done;
-
-		os->type->get_symbol_list_to_lookup(&os->symbols);
-
-		next_sym = os->symbols[0].symbol_name;
-		if (!next_sym)
-			goto done;
 	}
 
 	if (8 + (strlen(next_sym) * 2) + 1 > sizeof(reply)) {
-		LOG_OUTPUT("ERROR: RTOS symbol '%s' name is too long for GDB!", next_sym);
+		LOG_ERROR("ERROR: RTOS symbol '%s' name is too long for GDB!", next_sym);
 		goto done;
 	}
 
@@ -418,7 +429,7 @@ int rtos_generic_stack_read(struct target *target,
 	int retval;
 
 	if (stack_ptr == 0) {
-		LOG_OUTPUT("Error: null stack pointer in thread\r\n");
+		LOG_ERROR("Error: null stack pointer in thread");
 		return -5;
 	}
 	/* Read the stack */
@@ -429,7 +440,7 @@ int rtos_generic_stack_read(struct target *target,
 		address -= stacking->stack_registers_size;
 	retval = target_read_buffer(target, address, stacking->stack_registers_size, stack_data);
 	if (retval != ERROR_OK) {
-		LOG_OUTPUT("Error reading stack frame from FreeRTOS thread\r\n");
+		LOG_ERROR("Error reading stack frame from thread");
 		return retval;
 	}
 #if 0

@@ -391,3 +391,30 @@ void buffer_shr(void *_buf, unsigned buf_len, unsigned count)
 		memset(&buf[buf_len - bytes_to_remove], 0, bytes_to_remove);
 	}
 }
+
+int unhexify(char *bin, const char *hex, int count)
+{
+	int i, tmp;
+
+	for (i = 0; i < count; i++) {
+		if (sscanf(hex + (2 * i), "%02x", &tmp) != 1)
+			return i;
+		bin[i] = tmp;
+	}
+
+	return i;
+}
+
+int hexify(char *hex, const char *bin, int count, int out_maxlen)
+{
+	int i, cmd_len = 0;
+
+	/* May use a length, or a null-terminated string as input. */
+	if (count == 0)
+		count = strlen(bin);
+
+	for (i = 0; i < count; i++)
+		cmd_len += snprintf(hex + cmd_len, out_maxlen - cmd_len, "%02x", bin[i] & 0xff);
+
+	return cmd_len;
+}

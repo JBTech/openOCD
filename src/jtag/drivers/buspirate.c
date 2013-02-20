@@ -32,8 +32,6 @@
 #undef DEBUG_SERIAL
 /*#define DEBUG_SERIAL */
 static int buspirate_execute_queue(void);
-static int buspirate_speed(int speed);
-static int buspirate_khz(int khz, int *jtag_speed);
 static int buspirate_init(void);
 static int buspirate_quit(void);
 
@@ -116,19 +114,6 @@ static int buspirate_serial_write(int fd, char *buf, int size);
 static int buspirate_serial_read(int fd, char *buf, int size);
 static void buspirate_serial_close(int fd);
 static void buspirate_print_buffer(char *buf, int size);
-
-static int buspirate_speed(int speed)
-{
-	/* TODO */
-	LOG_INFO("Want to set speed to %dkHz, but not implemented yet", speed);
-	return ERROR_OK;
-}
-
-static int buspirate_khz(int khz, int *jtag_speed)
-{
-	*jtag_speed = khz;
-	return ERROR_OK;
-}
 
 static int buspirate_execute_queue(void)
 {
@@ -426,8 +411,6 @@ static const struct command_registration buspirate_command_handlers[] = {
 struct jtag_interface buspirate_interface = {
 	.name = "buspirate",
 	.execute_queue = buspirate_execute_queue,
-	.speed = buspirate_speed,
-	.khz = buspirate_khz,
 	.commands = buspirate_command_handlers,
 	.init = buspirate_init,
 	.quit = buspirate_quit
@@ -520,7 +503,10 @@ static void buspirate_scan(bool ir_scan, enum scan_type type,
 	saved_end_state = tap_get_end_state();
 
 	buspirate_end_state(ir_scan ? TAP_IRSHIFT : TAP_DRSHIFT);
-	buspirate_state_move();
+
+	/* Only move if we're not already there */
+	if (tap_get_state() != tap_get_end_state())
+		buspirate_state_move();
 
 	buspirate_tap_append_scan(scan_size, buffer, command);
 

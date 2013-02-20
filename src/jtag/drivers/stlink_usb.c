@@ -30,25 +30,25 @@
 /* project specific includes */
 #include <helper/binarybuffer.h>
 #include <jtag/interface.h>
-#include <jtag/stlink/stlink_layout.h>
-#include <jtag/stlink/stlink_transport.h>
-#include <jtag/stlink/stlink_interface.h>
+#include <jtag/hla/hla_layout.h>
+#include <jtag/hla/hla_transport.h>
+#include <jtag/hla/hla_interface.h>
 #include <target/target.h>
 
 #include <target/cortex_m.h>
 
 #include "libusb_common.h"
 
-#define ENDPOINT_IN	0x80
-#define ENDPOINT_OUT	0x00
+#define ENDPOINT_IN  0x80
+#define ENDPOINT_OUT 0x00
 
-#define STLINK_NULL_EP		0
-#define STLINK_RX_EP		(1|ENDPOINT_IN)
-#define STLINK_TX_EP		(2|ENDPOINT_OUT)
-#define STLINK_SG_SIZE		(31)
-#define STLINK_DATA_SIZE	(4*128)
-#define STLINK_CMD_SIZE_V2	(16)
-#define STLINK_CMD_SIZE_V1	(10)
+#define STLINK_NULL_EP     0
+#define STLINK_RX_EP       (1|ENDPOINT_IN)
+#define STLINK_TX_EP       (2|ENDPOINT_OUT)
+#define STLINK_SG_SIZE     (31)
+#define STLINK_DATA_SIZE   (4*128)
+#define STLINK_CMD_SIZE_V2 (16)
+#define STLINK_CMD_SIZE_V1 (10)
 
 enum stlink_jtag_api_version {
 	STLINK_JTAG_API_V1 = 1,
@@ -82,7 +82,7 @@ struct stlink_usb_handle_s {
 	/** */
 	uint8_t databuf[STLINK_DATA_SIZE];
 	/** */
-	enum stlink_transports transport;
+	enum hl_transports transport;
 	/** */
 	struct stlink_usb_version version;
 	/** */
@@ -93,73 +93,74 @@ struct stlink_usb_handle_s {
 	enum stlink_jtag_api_version jtag_api;
 };
 
-#define STLINK_DEBUG_ERR_OK			0x80
-#define STLINK_DEBUG_ERR_FAULT		0x81
-#define STLINK_SWD_AP_WAIT			0x10
-#define STLINK_SWD_DP_WAIT			0x14
+#define STLINK_DEBUG_ERR_OK            0x80
+#define STLINK_DEBUG_ERR_FAULT         0x81
+#define STLINK_SWD_AP_WAIT             0x10
+#define STLINK_SWD_DP_WAIT             0x14
 
-#define STLINK_CORE_RUNNING			0x80
-#define STLINK_CORE_HALTED			0x81
-#define STLINK_CORE_STAT_UNKNOWN		-1
+#define STLINK_CORE_RUNNING            0x80
+#define STLINK_CORE_HALTED             0x81
+#define STLINK_CORE_STAT_UNKNOWN       -1
 
-#define STLINK_GET_VERSION			0xF1
-#define STLINK_DEBUG_COMMAND			0xF2
-#define STLINK_DFU_COMMAND			0xF3
-#define STLINK_SWIM_COMMAND			0xF4
-#define STLINK_GET_CURRENT_MODE			0xF5
+#define STLINK_GET_VERSION             0xF1
+#define STLINK_DEBUG_COMMAND           0xF2
+#define STLINK_DFU_COMMAND             0xF3
+#define STLINK_SWIM_COMMAND            0xF4
+#define STLINK_GET_CURRENT_MODE        0xF5
+#define STLINK_GET_TARGET_VOLTAGE      0xF7
 
-#define STLINK_DEV_DFU_MODE			0x00
-#define STLINK_DEV_MASS_MODE			0x01
-#define STLINK_DEV_DEBUG_MODE			0x02
-#define STLINK_DEV_SWIM_MODE			0x03
-#define STLINK_DEV_BOOTLOADER_MODE		0x04
-#define STLINK_DEV_UNKNOWN_MODE			-1
+#define STLINK_DEV_DFU_MODE            0x00
+#define STLINK_DEV_MASS_MODE           0x01
+#define STLINK_DEV_DEBUG_MODE          0x02
+#define STLINK_DEV_SWIM_MODE           0x03
+#define STLINK_DEV_BOOTLOADER_MODE     0x04
+#define STLINK_DEV_UNKNOWN_MODE        -1
 
-#define STLINK_DFU_EXIT				0x07
+#define STLINK_DFU_EXIT                0x07
 
-#define STLINK_SWIM_ENTER			0x00
-#define STLINK_SWIM_EXIT			0x01
+#define STLINK_SWIM_ENTER              0x00
+#define STLINK_SWIM_EXIT               0x01
 
-#define STLINK_DEBUG_ENTER_JTAG			0x00
-#define STLINK_DEBUG_GETSTATUS			0x01
-#define STLINK_DEBUG_FORCEDEBUG			0x02
-#define STLINK_DEBUG_APIV1_RESETSYS		0x03
-#define STLINK_DEBUG_APIV1_READALLREGS		0x04
-#define STLINK_DEBUG_APIV1_READREG		0x05
-#define STLINK_DEBUG_APIV1_WRITEREG		0x06
-#define STLINK_DEBUG_READMEM_32BIT		0x07
-#define STLINK_DEBUG_WRITEMEM_32BIT		0x08
-#define STLINK_DEBUG_RUNCORE			0x09
-#define STLINK_DEBUG_STEPCORE			0x0a
-#define STLINK_DEBUG_APIV1_SETFP		0x0b
-#define STLINK_DEBUG_READMEM_8BIT		0x0c
-#define STLINK_DEBUG_WRITEMEM_8BIT		0x0d
-#define STLINK_DEBUG_APIV1_CLEARFP		0x0e
-#define STLINK_DEBUG_APIV1_WRITEDEBUGREG	0x0f
-#define STLINK_DEBUG_APIV1_SETWATCHPOINT	0x10
+#define STLINK_DEBUG_ENTER_JTAG            0x00
+#define STLINK_DEBUG_GETSTATUS             0x01
+#define STLINK_DEBUG_FORCEDEBUG            0x02
+#define STLINK_DEBUG_APIV1_RESETSYS        0x03
+#define STLINK_DEBUG_APIV1_READALLREGS     0x04
+#define STLINK_DEBUG_APIV1_READREG         0x05
+#define STLINK_DEBUG_APIV1_WRITEREG        0x06
+#define STLINK_DEBUG_READMEM_32BIT         0x07
+#define STLINK_DEBUG_WRITEMEM_32BIT        0x08
+#define STLINK_DEBUG_RUNCORE               0x09
+#define STLINK_DEBUG_STEPCORE              0x0a
+#define STLINK_DEBUG_APIV1_SETFP           0x0b
+#define STLINK_DEBUG_READMEM_8BIT          0x0c
+#define STLINK_DEBUG_WRITEMEM_8BIT         0x0d
+#define STLINK_DEBUG_APIV1_CLEARFP         0x0e
+#define STLINK_DEBUG_APIV1_WRITEDEBUGREG   0x0f
+#define STLINK_DEBUG_APIV1_SETWATCHPOINT   0x10
 
-#define STLINK_DEBUG_ENTER_JTAG			0x00
-#define STLINK_DEBUG_ENTER_SWD			0xa3
+#define STLINK_DEBUG_ENTER_JTAG            0x00
+#define STLINK_DEBUG_ENTER_SWD             0xa3
 
-#define STLINK_DEBUG_APIV1_ENTER		0x20
-#define STLINK_DEBUG_EXIT			0x21
-#define STLINK_DEBUG_READCOREID			0x22
+#define STLINK_DEBUG_APIV1_ENTER           0x20
+#define STLINK_DEBUG_EXIT                  0x21
+#define STLINK_DEBUG_READCOREID            0x22
 
-#define STLINK_DEBUG_APIV2_ENTER		0x30
-#define STLINK_DEBUG_APIV2_READ_IDCODES		0x31
-#define STLINK_DEBUG_APIV2_RESETSYS		0x32
-#define STLINK_DEBUG_APIV2_READREG		0x33
-#define STLINK_DEBUG_APIV2_WRITEREG		0x34
-#define STLINK_DEBUG_APIV2_WRITEDEBUGREG	0x35
-#define STLINK_DEBUG_APIV2_READDEBUGREG	0x36
+#define STLINK_DEBUG_APIV2_ENTER           0x30
+#define STLINK_DEBUG_APIV2_READ_IDCODES    0x31
+#define STLINK_DEBUG_APIV2_RESETSYS        0x32
+#define STLINK_DEBUG_APIV2_READREG         0x33
+#define STLINK_DEBUG_APIV2_WRITEREG        0x34
+#define STLINK_DEBUG_APIV2_WRITEDEBUGREG   0x35
+#define STLINK_DEBUG_APIV2_READDEBUGREG    0x36
 
-#define STLINK_DEBUG_APIV2_READALLREGS		0x3A
-#define STLINK_DEBUG_APIV2_GETLASTRWSTATUS	0x3B
-#define STLINK_DEBUG_APIV2_DRIVE_NRST		0x3C
+#define STLINK_DEBUG_APIV2_READALLREGS     0x3A
+#define STLINK_DEBUG_APIV2_GETLASTRWSTATUS 0x3B
+#define STLINK_DEBUG_APIV2_DRIVE_NRST      0x3C
 
-#define STLINK_DEBUG_APIV2_DRIVE_NRST_LOW	0x00
-#define STLINK_DEBUG_APIV2_DRIVE_NRST_HIGH	0x01
-#define STLINK_DEBUG_APIV2_DRIVE_NRST_PULSE	0x02
+#define STLINK_DEBUG_APIV2_DRIVE_NRST_LOW   0x00
+#define STLINK_DEBUG_APIV2_DRIVE_NRST_HIGH  0x01
+#define STLINK_DEBUG_APIV2_DRIVE_NRST_PULSE 0x02
 
 /** */
 enum stlink_mode {
@@ -171,8 +172,8 @@ enum stlink_mode {
 	STLINK_MODE_DEBUG_SWIM
 };
 
-#define REQUEST_SENSE		0x03
-#define REQUEST_SENSE_LENGTH	18
+#define REQUEST_SENSE        0x03
+#define REQUEST_SENSE_LENGTH 18
 
 static void stlink_usb_init_buffer(void *handle, uint8_t direction, uint32_t size);
 
@@ -413,13 +414,47 @@ static int stlink_usb_version(void *handle)
 	else
 		h->version.jtag_api_max = STLINK_JTAG_API_V1;
 
-	LOG_DEBUG("STLINK v%d JTAG v%d API v%d SWIM v%d VID 0x%04X PID 0x%04X",
+	LOG_INFO("STLINK v%d JTAG v%d API v%d SWIM v%d VID 0x%04X PID 0x%04X",
 		h->version.stlink,
 		h->version.jtag,
 		(h->version.jtag_api_max == STLINK_JTAG_API_V1) ? 1 : 2,
 		h->version.swim,
 		h->vid,
 		h->pid);
+
+	return ERROR_OK;
+}
+
+static int stlink_usb_check_voltage(void *handle, float *target_voltage)
+{
+	struct stlink_usb_handle_s *h;
+	uint32_t adc_results[2];
+
+	h = (struct stlink_usb_handle_s *)handle;
+
+	/* only supported by stlink/v2 and for firmware >= 13 */
+	if (h->version.stlink == 1 || h->version.jtag < 13)
+		return ERROR_COMMAND_NOTFOUND;
+
+	stlink_usb_init_buffer(handle, STLINK_RX_EP, 8);
+
+	h->cmdbuf[h->cmdidx++] = STLINK_GET_TARGET_VOLTAGE;
+
+	int result = stlink_usb_xfer(handle, h->databuf, 8);
+
+	if (result != ERROR_OK)
+		return result;
+
+	/* convert result */
+	adc_results[0] = le_to_h_u32(h->databuf);
+	adc_results[1] = le_to_h_u32(h->databuf + 4);
+
+	*target_voltage = 0;
+
+	if (adc_results[0])
+		*target_voltage = 2 * ((float)adc_results[1]) * (float)(1.2 / adc_results[0]);
+
+	LOG_INFO("Target voltage: %f", (double)*target_voltage);
 
 	return ERROR_OK;
 }
@@ -593,17 +628,40 @@ static int stlink_usb_init_mode(void *handle)
 	if (res != ERROR_OK)
 		return res;
 
+	/* we check the target voltage here as an aid to debugging connection problems.
+	 * the stlink requires the target Vdd to be connected for reliable debugging.
+	 * this cmd is supported in all modes except DFU
+	 */
+	if (mode != STLINK_DEV_DFU_MODE) {
+
+		float target_voltage;
+
+		/* check target voltage (if supported) */
+		res = stlink_usb_check_voltage(h, &target_voltage);
+
+		if (res != ERROR_OK) {
+			if (res != ERROR_COMMAND_NOTFOUND)
+				LOG_ERROR("voltage check failed");
+			/* attempt to continue as it is not a catastrophic failure */
+		} else {
+			/* check for a sensible target voltage, operating range is 1.65-5.5v
+			 * according to datasheet */
+			if (target_voltage < 1.5)
+				LOG_ERROR("target voltage may be too low for reliable debugging");
+		}
+	}
+
 	LOG_DEBUG("MODE: 0x%02X", mode);
 
 	/* set selected mode */
 	switch (h->transport) {
-		case STLINK_TRANSPORT_SWD:
+		case HL_TRANSPORT_SWD:
 			emode = STLINK_MODE_DEBUG_SWD;
 			break;
-		case STLINK_TRANSPORT_JTAG:
+		case HL_TRANSPORT_JTAG:
 			emode = STLINK_MODE_DEBUG_JTAG;
 			break;
-		case STLINK_TRANSPORT_SWIM:
+		case HL_TRANSPORT_SWIM:
 			emode = STLINK_MODE_DEBUG_SWIM;
 			break;
 		default:
@@ -1143,7 +1201,22 @@ static int stlink_usb_write_mem32(void *handle, uint32_t addr, uint16_t len,
 }
 
 /** */
-static int stlink_usb_open(struct stlink_interface_param_s *param, void **fd)
+static int stlink_usb_close(void *fd)
+{
+	struct stlink_usb_handle_s *h;
+
+	h = (struct stlink_usb_handle_s *)fd;
+
+	if (h->fd)
+		jtag_libusb_close(h->fd);
+
+	free(fd);
+
+	return ERROR_OK;
+}
+
+/** */
+static int stlink_usb_open(struct hl_interface_param_s *param, void **fd)
 {
 	int err;
 	struct stlink_usb_handle_s *h;
@@ -1151,7 +1224,7 @@ static int stlink_usb_open(struct stlink_interface_param_s *param, void **fd)
 
 	LOG_DEBUG("stlink_usb_open");
 
-	h = malloc(sizeof(struct stlink_usb_handle_s));
+	h = calloc(1, sizeof(struct stlink_usb_handle_s));
 
 	if (h == 0) {
 		LOG_DEBUG("malloc failed");
@@ -1159,6 +1232,9 @@ static int stlink_usb_open(struct stlink_interface_param_s *param, void **fd)
 	}
 
 	h->transport = param->transport;
+
+	/* set max read/write buffer size in bytes */
+	param->max_buffer = 512;
 
 	const uint16_t vids[] = { param->vid, 0 };
 	const uint16_t pids[] = { param->pid, 0 };
@@ -1168,14 +1244,14 @@ static int stlink_usb_open(struct stlink_interface_param_s *param, void **fd)
 
 	if (jtag_libusb_open(vids, pids, &h->fd) != ERROR_OK) {
 		LOG_ERROR("open failed");
-		return ERROR_FAIL;
+		goto error_open;
 	}
 
 	jtag_libusb_set_configuration(h->fd, 0);
 
 	if (jtag_libusb_claim_interface(h->fd, 0) != ERROR_OK) {
 		LOG_DEBUG("claim interface failed");
-		return ERROR_FAIL;
+		goto error_open;
 	}
 
 	/* wrap version for first read */
@@ -1193,9 +1269,7 @@ static int stlink_usb_open(struct stlink_interface_param_s *param, void **fd)
 
 	if (err != ERROR_OK) {
 		LOG_ERROR("read version failed");
-		jtag_libusb_close(h->fd);
-		free(h);
-		return err;
+		goto error_open;
 	}
 
 	/* compare usb vid/pid */
@@ -1208,12 +1282,12 @@ static int stlink_usb_open(struct stlink_interface_param_s *param, void **fd)
 	err = ERROR_OK;
 
 	switch (h->transport) {
-		case STLINK_TRANSPORT_SWD:
-		case STLINK_TRANSPORT_JTAG:
+		case HL_TRANSPORT_SWD:
+		case HL_TRANSPORT_JTAG:
 			if (h->version.jtag == 0)
 				err = ERROR_FAIL;
 			break;
-		case STLINK_TRANSPORT_SWIM:
+		case HL_TRANSPORT_SWIM:
 			if (h->version.swim == 0)
 				err = ERROR_FAIL;
 			break;
@@ -1224,9 +1298,7 @@ static int stlink_usb_open(struct stlink_interface_param_s *param, void **fd)
 
 	if (err != ERROR_OK) {
 		LOG_ERROR("mode (transport) not supported by device");
-		jtag_libusb_close(h->fd);
-		free(h);
-		return err;
+		goto error_open;
 	}
 
 	api = h->version.jtag_api_max;
@@ -1246,24 +1318,21 @@ static int stlink_usb_open(struct stlink_interface_param_s *param, void **fd)
 
 	if (err != ERROR_OK) {
 		LOG_ERROR("init mode failed");
-		jtag_libusb_close(h->fd);
-		free(h);
-		return err;
+		goto error_open;
 	}
 
 	*fd = h;
 
 	return ERROR_OK;
+
+error_open:
+	stlink_usb_close(h);
+
+	return ERROR_FAIL;
 }
 
 /** */
-static int stlink_usb_close(void *fd)
-{
-	return ERROR_OK;
-}
-
-/** */
-struct stlink_layout_api_s stlink_usb_layout_api = {
+struct hl_layout_api_s stlink_usb_layout_api = {
 	/** */
 	.open = stlink_usb_open,
 	/** */

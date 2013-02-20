@@ -103,8 +103,9 @@ endif
 if REMOTE_BITBANG
 DRIVERFILES += remote_bitbang.c
 endif
-if STLINK
+if HLADAPTER
 DRIVERFILES += stlink_usb.c
+DRIVERFILES += ti_icdi_usb.c
 endif
 if OSBDM
 DRIVERFILES += osbdm.c

@@ -88,7 +88,7 @@ extern struct target_type dsp5680xx_target;
 extern struct target_type testee_target;
 extern struct target_type avr32_ap7k_target;
 extern struct target_type or1k_target;
-extern struct target_type stm32_stlink_target;
+extern struct target_type hla_target;
 
 static struct target_type *target_types[] = {
 	&arm7tdmi_target,
@@ -112,7 +112,7 @@ static struct target_type *target_types[] = {
 	&testee_target,
 	&avr32_ap7k_target,
 	&or1k_target,
-	&stm32_stlink_target,
+	&hla_target,
 	NULL,
 };
 
@@ -4944,6 +4944,15 @@ static int target_create(Jim_GetOptInfo *goi)
 		if (0 == strcmp(cp, target_types[x]->name)) {
 			/* found */
 			break;
+		}
+
+		/* check for deprecated name */
+		if (target_types[x]->deprecated_name) {
+			if (0 == strcmp(cp, target_types[x]->deprecated_name)) {
+				/* found */
+				LOG_WARNING("target name is deprecated use: \'%s\'", target_types[x]->name);
+				break;
+			}
 		}
 	}
 	if (target_types[x] == NULL) {

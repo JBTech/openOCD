@@ -80,7 +80,16 @@ const struct ThreadX_params ThreadX_params_list[] = {
 	48,							/* thread_state_offset; */
 	136,						/* thread_next_offset */
 	&rtos_standard_Cortex_M3_stacking,	/* stacking_info */
-	}
+	},
+	{
+	"cortex_r4",				/* target_name */
+	4,							/* pointer_width; */
+	8,							/* thread_stack_offset; */
+	40,							/* thread_name_offset; */
+	48,							/* thread_state_offset; */
+	136,						/* thread_next_offset */
+	&rtos_standard_Cortex_R4_stacking,	/* stacking_info */
+	},
 };
 
 #define THREADX_NUM_PARAMS ((int)(sizeof(ThreadX_params_list)/sizeof(struct ThreadX_params)))
@@ -125,12 +134,12 @@ static int ThreadX_update_threads(struct rtos *rtos)
 	param = (const struct ThreadX_params *) rtos->rtos_specific_params;
 
 	if (rtos->symbols == NULL) {
-		LOG_OUTPUT("No symbols for ThreadX\r\n");
+		LOG_ERROR("No symbols for ThreadX");
 		return -4;
 	}
 
 	if (rtos->symbols[ThreadX_VAL_tx_thread_created_count].address == 0) {
-		LOG_OUTPUT("Don't have the number of threads in ThreadX \r\n");
+		LOG_ERROR("Don't have the number of threads in ThreadX");
 		return -2;
 	}
 
@@ -141,7 +150,7 @@ static int ThreadX_update_threads(struct rtos *rtos)
 			(uint8_t *)&thread_list_size);
 
 	if (retval != ERROR_OK) {
-		LOG_OUTPUT("Could not read ThreadX thread count from target\r\n");
+		LOG_ERROR("Could not read ThreadX thread count from target");
 		return retval;
 	}
 
@@ -173,7 +182,7 @@ static int ThreadX_update_threads(struct rtos *rtos)
 			(uint8_t *)&rtos->current_thread);
 
 	if (retval != ERROR_OK) {
-		LOG_OUTPUT("Could not read ThreadX current thread from target\r\n");
+		LOG_ERROR("Could not read ThreadX current thread from target");
 		return retval;
 	}
 
@@ -210,7 +219,7 @@ static int ThreadX_update_threads(struct rtos *rtos)
 			param->pointer_width,
 			(uint8_t *)&thread_ptr);
 	if (retval != ERROR_OK) {
-		LOG_OUTPUT("Could not read ThreadX thread location from target\r\n");
+		LOG_ERROR("Could not read ThreadX thread location from target");
 		return retval;
 	}
 
@@ -232,7 +241,7 @@ static int ThreadX_update_threads(struct rtos *rtos)
 				param->pointer_width,
 				(uint8_t *)&name_ptr);
 		if (retval != ERROR_OK) {
-			LOG_OUTPUT("Could not read ThreadX thread name pointer from target\r\n");
+			LOG_ERROR("Could not read ThreadX thread name pointer from target");
 			return retval;
 		}
 
@@ -243,7 +252,7 @@ static int ThreadX_update_threads(struct rtos *rtos)
 				THREADX_THREAD_NAME_STR_SIZE,
 				(uint8_t *)&tmp_str);
 		if (retval != ERROR_OK) {
-			LOG_OUTPUT("Error reading thread name from ThreadX target\r\n");
+			LOG_ERROR("Error reading thread name from ThreadX target");
 			return retval;
 		}
 		tmp_str[THREADX_THREAD_NAME_STR_SIZE-1] = '\x00';
@@ -262,7 +271,7 @@ static int ThreadX_update_threads(struct rtos *rtos)
 				4,
 				(uint8_t *)&thread_status);
 		if (retval != ERROR_OK) {
-			LOG_OUTPUT("Error reading thread state from ThreadX target\r\n");
+			LOG_ERROR("Error reading thread state from ThreadX target");
 			return retval;
 		}
 
@@ -295,7 +304,7 @@ static int ThreadX_update_threads(struct rtos *rtos)
 				param->pointer_width,
 				(uint8_t *) &thread_ptr);
 		if (retval != ERROR_OK) {
-			LOG_OUTPUT("Error reading next thread pointer in ThreadX thread list\r\n");
+			LOG_ERROR("Error reading next thread pointer in ThreadX thread list");
 			return retval;
 		}
 	}
@@ -330,7 +339,7 @@ static int ThreadX_get_thread_reg_list(struct rtos *rtos, int64_t thread_id, cha
 			param->pointer_width,
 			(uint8_t *)&stack_ptr);
 	if (retval != ERROR_OK) {
-		LOG_OUTPUT("Error reading stack frame from ThreadX thread\r\n");
+		LOG_ERROR("Error reading stack frame from ThreadX thread");
 		return retval;
 	}
 
@@ -390,7 +399,7 @@ static int ThreadX_get_thread_detail(struct rtos *rtos,
 	param = (const struct ThreadX_params *) rtos->rtos_specific_params;
 
 	if (rtos->symbols == NULL) {
-		LOG_OUTPUT("No symbols for ThreadX\r\n");
+		LOG_ERROR("No symbols for ThreadX");
 		return -3;
 	}
 
@@ -403,7 +412,7 @@ static int ThreadX_get_thread_detail(struct rtos *rtos,
 			param->pointer_width,
 			(uint8_t *)&name_ptr);
 	if (retval != ERROR_OK) {
-		LOG_OUTPUT("Could not read ThreadX thread name pointer from target\r\n");
+		LOG_ERROR("Could not read ThreadX thread name pointer from target");
 		return retval;
 	}
 
@@ -413,7 +422,7 @@ static int ThreadX_get_thread_detail(struct rtos *rtos,
 			THREADX_THREAD_NAME_STR_SIZE,
 			(uint8_t *)&tmp_str);
 	if (retval != ERROR_OK) {
-		LOG_OUTPUT("Error reading thread name from ThreadX target\r\n");
+		LOG_ERROR("Error reading thread name from ThreadX target");
 		return retval;
 	}
 	tmp_str[THREADX_THREAD_NAME_STR_SIZE-1] = '\x00';
@@ -431,7 +440,7 @@ static int ThreadX_get_thread_detail(struct rtos *rtos,
 			4,
 			(uint8_t *)&thread_status);
 	if (retval != ERROR_OK) {
-		LOG_OUTPUT("Error reading thread state from ThreadX target\r\n");
+		LOG_ERROR("Error reading thread state from ThreadX target");
 		return retval;
 	}
 
@@ -465,7 +474,7 @@ static int ThreadX_create(struct target *target)
 		i++;
 	}
 	if (i >= THREADX_NUM_PARAMS) {
-		LOG_OUTPUT("Could not find target in ThreadX compatibility list\r\n");
+		LOG_ERROR("Could not find target in ThreadX compatibility list");
 		return -1;
 	}
 
