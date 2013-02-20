@@ -6,6 +6,8 @@ else
 OOCD_TRACE_FILES =
 endif
 
+SUBDIRS=
+
 BIN2C		= $(top_builddir)/src/helper/bin2char$(EXEEXT_FOR_BUILD)
 
 DEBUG_HANDLER	= $(srcdir)/xscale/debug_handler.bin
@@ -22,6 +24,7 @@ $(DEBUG_HEADER): $(BIN2C) $(DEBUG_HANDLER)
 
 METASOURCES = AUTO
 noinst_LTLIBRARIES = libtarget.la
+libtarget_la_LIBADD =
 libtarget_la_SOURCES = \
 	$(TARGET_CORE_SRC) \
 	$(ARM_DEBUG_SRC) \
@@ -109,13 +112,8 @@ MIPS32_SRC = \
 	mips32_dmaacc.c \
 	mips_ejtag.c
 
-OR1K_SRC = \
-	openrisc/or1k.c \
-	openrisc/or1k_tap_vjtag.c \
-	openrisc/or1k_tap_mohor.c \
-	openrisc/or1k_du_adv.c \
-	openrisc/or1k_du_mohor.c
-
+SUBDIRS += openrisc
+libtarget_la_LIBADD += $(top_builddir)/src/target/openrisc/libopenrisc.la
 
 noinst_HEADERS = \
 	algorithm.h \
@@ -171,10 +169,7 @@ noinst_HEADERS = \
 	avr32_ap7k.h \
 	avr32_jtag.h \
 	avr32_mem.h \
-	avr32_regs.h \
-	openrisc/or1k.h \
-	openrisc/or1k_tap.h \
-	openrisc/or1k_du.h
+	avr32_regs.h
 
 ocddatadir = $(pkglibdir)
 nobase_dist_ocddata_DATA =

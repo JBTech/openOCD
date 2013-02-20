@@ -34,8 +34,8 @@
 #include "or1k.h"
 #include "or1k_du.h"
 
-#include "target.h"
-#include "jtag/jtag.h"
+#include <target/target.h>
+#include <jtag/jtag.h>
 
 /* This an option to the adv debug unit.
  * If this is defined, status bits will be skipped on burst

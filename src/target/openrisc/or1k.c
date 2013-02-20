@@ -28,13 +28,13 @@
 #include "config.h"
 #endif
 
-#include "jtag/jtag.h"
-#include "register.h"
-#include "target.h"
-#include "tdesc.h"
-#include "breakpoints.h"
-#include "target_type.h"
-#include "fileio.h"
+#include <jtag/jtag.h>
+#include <target/register.h>
+#include <target/target.h>
+#include <target/tdesc.h>
+#include <target/breakpoints.h>
+#include <target/target_type.h>
+#include <helper/fileio.h>
 #include "or1k_tap.h"
 #include "or1k.h"
 #include "or1k_du.h"

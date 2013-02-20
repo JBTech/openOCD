@@ -1348,6 +1348,7 @@ AC_CONFIG_FILES([
   src/xsvf/Makefile
   src/svf/Makefile
   src/target/Makefile
+  src/target/openrisc/Makefile
   src/rtos/Makefile
   src/server/Makefile
   src/flash/Makefile

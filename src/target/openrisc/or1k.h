@@ -25,7 +25,7 @@
 #include "config.h"
 #endif
 
-#include <target.h>
+#include <target/target.h>
 
 /* SPR groups start address */
 #define GROUP0		(0  << 11)

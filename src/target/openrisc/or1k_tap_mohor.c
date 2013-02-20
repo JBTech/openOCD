@@ -25,7 +25,7 @@
 #include "or1k_tap.h"
 #include "or1k.h"
 
-#include "jtag/jtag.h"
+#include <jtag/jtag.h>
 
 #define OR1K_TAP_INST_DEBUG	0x8
 

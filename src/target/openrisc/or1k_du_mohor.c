@@ -29,8 +29,8 @@
 #include "or1k.h"
 #include "or1k_du.h"
 
-#include "target.h"
-#include "jtag/jtag.h"
+#include <target/target.h>
+#include <jtag/jtag.h>
 
 /* Mohor SoC debug interface defines */
 

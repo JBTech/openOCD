@@ -25,7 +25,7 @@
 #include "or1k_tap.h"
 #include "or1k.h"
 
-#include "jtag/jtag.h"
+#include <jtag/jtag.h>
 
 /* Contains constants relevant to the Altera Virtual JTAG
  * device, which are not included in the BSDL.
