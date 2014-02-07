@@ -46,6 +46,7 @@ struct ublast_lowlevel {
 
 	void *priv;
 	int flags;
+	int clock_frequency;
 };
 
 /**
